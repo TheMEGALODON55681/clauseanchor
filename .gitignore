@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Data and model weights
+data/*
+!data/.gitkeep
+models/
+*.pt
+*.bin
+*.safetensors
+*.onnx
+*.faiss
+*.index
+
+# Env and local
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite3
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
