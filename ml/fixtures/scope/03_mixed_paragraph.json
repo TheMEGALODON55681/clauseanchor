@@ -1,0 +1,188 @@
+{
+  "fixture_format_version": "1.0",
+  "family": 3,
+  "title": "Partial highlights preserve the whole paragraph",
+  "cases": [
+    {
+      "id": "scope-03-mixed-paragraph",
+      "purpose": "Review candidates do not count as accepted coverage; keep the entire mixed paragraph and context.",
+      "document": {
+        "doc_id": "scope-03-mixed-paragraph",
+        "text": "Liability is limited to the fees paid under this agreement. The supplier may substitute blue packaging with green packaging. Claims for delay may have a separate, unspecified limit.",
+        "text_sha256": "e2066caac954239d06a7d153a2550f64a9cb96b6fa42e27a57e5ed1a096c11aa"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "p1",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 0,
+            "end": 181
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "completed",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-03-mixed-paragraph",
+        "text_sha256": "e2066caac954239d06a7d153a2550f64a9cb96b6fa42e27a57e5ed1a096c11aa",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 1,
+            "clauses": [
+              {
+                "id": "cap-1",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-03-mixed-paragraph",
+                  "text_sha256": "e2066caac954239d06a7d153a2550f64a9cb96b6fa42e27a57e5ed1a096c11aa",
+                  "start": 0,
+                  "end": 59,
+                  "text": "Liability is limited to the fees paid under this agreement."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              },
+              {
+                "id": "candidate-1",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-03-mixed-paragraph",
+                  "text_sha256": "e2066caac954239d06a7d153a2550f64a9cb96b6fa42e27a57e5ed1a096c11aa",
+                  "start": 125,
+                  "end": 181,
+                  "text": "Claims for delay may have a separate, unspecified limit."
+                },
+                "status": "review_candidate",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [
+        {
+          "id": "outside",
+          "role": "outside_fixture_catalogue",
+          "span": {
+            "doc_id": "scope-03-mixed-paragraph",
+            "text_sha256": "e2066caac954239d06a7d153a2550f64a9cb96b6fa42e27a57e5ed1a096c11aa",
+            "start": 60,
+            "end": 124,
+            "text": "The supplier may substitute blue packaging with green packaging."
+          }
+        }
+      ],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found"
+        },
+        "navigation": {
+          "status": "ready",
+          "processing_label": null,
+          "unit_source": "parser_leaves_with_gaps",
+          "display_units": [
+            {
+              "id": "p1",
+              "start": 0,
+              "end": 181,
+              "text": "Liability is limited to the fees paid under this agreement. The supplier may substitute blue packaging with green packaging. Claims for delay may have a separate, unspecified limit.",
+              "accepted_finding_ids": [
+                "cap-1"
+              ],
+              "coverage": "partial"
+            }
+          ],
+          "manual_review_items": [
+            {
+              "unit_id": "p1",
+              "label": "Partly highlighted"
+            }
+          ],
+          "manual_review_count": 1,
+          "accepted_finding_ids": [
+            "cap-1"
+          ],
+          "review_candidate_ids": [
+            "candidate-1"
+          ],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": false,
+            "manual_review_count": 1,
+            "unavailable_regions": []
+          }
+        }
+      }
+    }
+  ]
+}

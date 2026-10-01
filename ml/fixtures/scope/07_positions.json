@@ -1,0 +1,786 @@
+{
+  "fixture_format_version": "1.0",
+  "family": 7,
+  "title": "Position, union, hierarchy and gap edge cases",
+  "cases": [
+    {
+      "id": "scope-07-unicode-repeat-overlap-nesting",
+      "purpose": "Only the SECOND repeated clause is accepted. Nested parents are not cards. Gaps remain visible; emoji offsets count code points.",
+      "document": {
+        "doc_id": "scope-07-unicode-repeat-overlap-nesting",
+        "text": "📘 Schedule\n\nLiability is limited to the fees paid under this agreement.\n\nUnmapped note: packaging may change.\n\nLiability is limited to the fees paid under this agreement.\n\nEnd of schedule.",
+        "text_sha256": "a0940d488ad65cd49bc62137136ef817842a253c0abac97aa192b75367b47c03"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "root",
+            "parent_id": null,
+            "kind": "section",
+            "start": 0,
+            "end": 188
+          },
+          {
+            "id": "p2",
+            "parent_id": "root",
+            "kind": "paragraph",
+            "start": 12,
+            "end": 71
+          },
+          {
+            "id": "p4",
+            "parent_id": "root",
+            "kind": "paragraph",
+            "start": 111,
+            "end": 170
+          },
+          {
+            "id": "p5",
+            "parent_id": "root",
+            "kind": "paragraph",
+            "start": 172,
+            "end": 188
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "completed",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-07-unicode-repeat-overlap-nesting",
+        "text_sha256": "a0940d488ad65cd49bc62137136ef817842a253c0abac97aa192b75367b47c03",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "second-copy",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-07-unicode-repeat-overlap-nesting",
+                  "text_sha256": "a0940d488ad65cd49bc62137136ef817842a253c0abac97aa192b75367b47c03",
+                  "start": 111,
+                  "end": 170,
+                  "text": "Liability is limited to the fees paid under this agreement."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              },
+              {
+                "id": "overlapping-limit",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-07-unicode-repeat-overlap-nesting",
+                  "text_sha256": "a0940d488ad65cd49bc62137136ef817842a253c0abac97aa192b75367b47c03",
+                  "start": 139,
+                  "end": 170,
+                  "text": "fees paid under this agreement."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [
+        {
+          "id": "first-copy",
+          "role": "repeated_unaccepted_context",
+          "span": {
+            "doc_id": "scope-07-unicode-repeat-overlap-nesting",
+            "text_sha256": "a0940d488ad65cd49bc62137136ef817842a253c0abac97aa192b75367b47c03",
+            "start": 12,
+            "end": 71,
+            "text": "Liability is limited to the fees paid under this agreement."
+          }
+        },
+        {
+          "id": "second-copy-anchor",
+          "role": "repeated_accepted_context",
+          "span": {
+            "doc_id": "scope-07-unicode-repeat-overlap-nesting",
+            "text_sha256": "a0940d488ad65cd49bc62137136ef817842a253c0abac97aa192b75367b47c03",
+            "start": 111,
+            "end": 170,
+            "text": "Liability is limited to the fees paid under this agreement."
+          }
+        }
+      ],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found"
+        },
+        "navigation": {
+          "status": "ready",
+          "processing_label": null,
+          "unit_source": "parser_leaves_with_gaps",
+          "display_units": [
+            {
+              "id": "gap-0-12",
+              "start": 0,
+              "end": 12,
+              "text": "📘 Schedule\n\n",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            },
+            {
+              "id": "p2",
+              "start": 12,
+              "end": 71,
+              "text": "Liability is limited to the fees paid under this agreement.",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            },
+            {
+              "id": "gap-71-111",
+              "start": 71,
+              "end": 111,
+              "text": "\n\nUnmapped note: packaging may change.\n\n",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            },
+            {
+              "id": "p4",
+              "start": 111,
+              "end": 170,
+              "text": "Liability is limited to the fees paid under this agreement.",
+              "accepted_finding_ids": [
+                "second-copy",
+                "overlapping-limit"
+              ],
+              "coverage": "full"
+            },
+            {
+              "id": "p5",
+              "start": 172,
+              "end": 188,
+              "text": "End of schedule.",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            }
+          ],
+          "manual_review_items": [
+            {
+              "unit_id": "gap-0-12",
+              "label": "Text without accepted findings"
+            },
+            {
+              "unit_id": "p2",
+              "label": "Text without accepted findings"
+            },
+            {
+              "unit_id": "gap-71-111",
+              "label": "Text without accepted findings"
+            },
+            {
+              "unit_id": "p5",
+              "label": "Text without accepted findings"
+            }
+          ],
+          "manual_review_count": 4,
+          "accepted_finding_ids": [
+            "second-copy",
+            "overlapping-limit"
+          ],
+          "review_candidate_ids": [],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": false,
+            "manual_review_count": 4,
+            "unavailable_regions": []
+          }
+        }
+      }
+    },
+    {
+      "id": "scope-07-invalid-nodes-fallback",
+      "purpose": "Overlapping sibling leaves force exact-paragraph fallback, not dropped text or double-counted ranges.",
+      "document": {
+        "doc_id": "scope-07-invalid-nodes-fallback",
+        "text": "Liability is limited to the fees paid under this agreement.\n\nThe supplier may substitute blue packaging with green packaging.",
+        "text_sha256": "3cefa1f736195aecd2ab8369f413a3949af5d9f0af2dc2d66d66f419f5f423ed"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "bad-a",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 0,
+            "end": 63
+          },
+          {
+            "id": "bad-b",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 58,
+            "end": 125
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "completed",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-07-invalid-nodes-fallback",
+        "text_sha256": "3cefa1f736195aecd2ab8369f413a3949af5d9f0af2dc2d66d66f419f5f423ed",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "cap-1",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-07-invalid-nodes-fallback",
+                  "text_sha256": "3cefa1f736195aecd2ab8369f413a3949af5d9f0af2dc2d66d66f419f5f423ed",
+                  "start": 0,
+                  "end": 59,
+                  "text": "Liability is limited to the fees paid under this agreement."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found"
+        },
+        "navigation": {
+          "status": "ready",
+          "processing_label": null,
+          "unit_source": "paragraph_fallback",
+          "display_units": [
+            {
+              "id": "paragraph-0-59",
+              "start": 0,
+              "end": 59,
+              "text": "Liability is limited to the fees paid under this agreement.",
+              "accepted_finding_ids": [
+                "cap-1"
+              ],
+              "coverage": "full"
+            },
+            {
+              "id": "paragraph-61-125",
+              "start": 61,
+              "end": 125,
+              "text": "The supplier may substitute blue packaging with green packaging.",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            }
+          ],
+          "manual_review_items": [
+            {
+              "unit_id": "paragraph-61-125",
+              "label": "Text without accepted findings"
+            }
+          ],
+          "manual_review_count": 1,
+          "accepted_finding_ids": [
+            "cap-1"
+          ],
+          "review_candidate_ids": [],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": false,
+            "manual_review_count": 1,
+            "unavailable_regions": []
+          }
+        }
+      }
+    },
+    {
+      "id": "scope-07-boundaries-and-whitespace",
+      "purpose": "Leading/trailing separators count in full coverage. Whitespace-only leaves need no card and remain in the full text.",
+      "document": {
+        "doc_id": "scope-07-boundaries-and-whitespace",
+        "text": "  Liability is limited to the fees paid under this agreement. \n\n\t ",
+        "text_sha256": "106d79eac52bcdceccf0aa8d04408b737ff21d3290e91c704581bc643c2fab8a"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "padded",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 0,
+            "end": 62
+          },
+          {
+            "id": "whitespace",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 62,
+            "end": 66
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "completed",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-07-boundaries-and-whitespace",
+        "text_sha256": "106d79eac52bcdceccf0aa8d04408b737ff21d3290e91c704581bc643c2fab8a",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "inner-cap",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-07-boundaries-and-whitespace",
+                  "text_sha256": "106d79eac52bcdceccf0aa8d04408b737ff21d3290e91c704581bc643c2fab8a",
+                  "start": 2,
+                  "end": 61,
+                  "text": "Liability is limited to the fees paid under this agreement."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found"
+        },
+        "navigation": {
+          "status": "ready",
+          "processing_label": null,
+          "unit_source": "parser_leaves_with_gaps",
+          "display_units": [
+            {
+              "id": "padded",
+              "start": 0,
+              "end": 62,
+              "text": "  Liability is limited to the fees paid under this agreement. ",
+              "accepted_finding_ids": [
+                "inner-cap"
+              ],
+              "coverage": "partial"
+            }
+          ],
+          "manual_review_items": [
+            {
+              "unit_id": "padded",
+              "label": "Partly highlighted"
+            }
+          ],
+          "manual_review_count": 1,
+          "accepted_finding_ids": [
+            "inner-cap"
+          ],
+          "review_candidate_ids": [],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": false,
+            "manual_review_count": 1,
+            "unavailable_regions": []
+          }
+        }
+      }
+    },
+    {
+      "id": "scope-07-cross-category-union",
+      "purpose": "Adjacent accepted intervals from two requested categories jointly cover a unit. Union coverage, not the longest individual span, decides full coverage.",
+      "document": {
+        "doc_id": "scope-07-cross-category-union",
+        "text": "Liability is limited. Competition is restricted.\n\nOther terms remain visible.",
+        "text_sha256": "00131b18f4024fd91dfef5bca8d8f5d5babda767a3fa3a117a7749f5acf7f56c"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          },
+          {
+            "category_id": "cuad.non_compete",
+            "support_state": "supported"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability",
+        "cuad.non_compete"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "p1",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 0,
+            "end": 48
+          },
+          {
+            "id": "p2",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 50,
+            "end": 77
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "completed",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-07-cross-category-union",
+        "text_sha256": "00131b18f4024fd91dfef5bca8d8f5d5babda767a3fa3a117a7749f5acf7f56c",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "cap-part",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-07-cross-category-union",
+                  "text_sha256": "00131b18f4024fd91dfef5bca8d8f5d5babda767a3fa3a117a7749f5acf7f56c",
+                  "start": 0,
+                  "end": 22,
+                  "text": "Liability is limited. "
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          },
+          {
+            "category_id": "cuad.non_compete",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "competition-part",
+                "category_id": "cuad.non_compete",
+                "span": {
+                  "doc_id": "scope-07-cross-category-union",
+                  "text_sha256": "00131b18f4024fd91dfef5bca8d8f5d5babda767a3fa3a117a7749f5acf7f56c",
+                  "start": 22,
+                  "end": 48,
+                  "text": "Competition is restricted."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found",
+          "cuad.non_compete": "found"
+        },
+        "navigation": {
+          "status": "ready",
+          "processing_label": null,
+          "unit_source": "parser_leaves_with_gaps",
+          "display_units": [
+            {
+              "id": "p1",
+              "start": 0,
+              "end": 48,
+              "text": "Liability is limited. Competition is restricted.",
+              "accepted_finding_ids": [
+                "cap-part",
+                "competition-part"
+              ],
+              "coverage": "full"
+            },
+            {
+              "id": "p2",
+              "start": 50,
+              "end": 77,
+              "text": "Other terms remain visible.",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            }
+          ],
+          "manual_review_items": [
+            {
+              "unit_id": "p2",
+              "label": "Text without accepted findings"
+            }
+          ],
+          "manual_review_count": 1,
+          "accepted_finding_ids": [
+            "cap-part",
+            "competition-part"
+          ],
+          "review_candidate_ids": [],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability",
+            "cuad.non_compete"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported",
+            "cuad.non_compete": "supported"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": false,
+            "manual_review_count": 1,
+            "unavailable_regions": []
+          }
+        }
+      }
+    }
+  ]
+}

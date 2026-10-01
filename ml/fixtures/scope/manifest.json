@@ -1,0 +1,14 @@
+{
+  "fixture_format_version": "1.0",
+  "files": {
+    "01_supported_and_outside.json": "ca0ec07c016bbfb4118fee8304a3223a4a272f721a52522bee807834903bb8c5",
+    "02_outside_only.json": "72eacd1e58b44995d8678d7176fcbf7a5a17eef3a96e73d6a7e28e003f6573d1",
+    "03_mixed_paragraph.json": "8a6fa8ef154041ce97696feceeb3cc87b4fd7f02ab6e58262b167040045dd51c",
+    "04_broad_span.json": "8cb8daef66671019e7f28fb87429332d3d94e3e466d7733b5a3055f06c28abeb",
+    "05_distant_clauses.json": "36198f6702129d1013a82ee6aba3459b1367467e1b362e8106dd32adb03cd1a5",
+    "06_incomplete.json": "2f65084393fd8b670f3815250adf2c0125ed301e48a602e0658a26c709c216d2",
+    "07_positions.json": "a45be02cd0411da76a1a3d22d90cfa0f1da64272ddaf5eb22ec1530b12aac7f5",
+    "08_proposed_category.json": "57f063ab2675969708e053788165cb833e5bc82d5506a0baa46f8525b1edba19",
+    "artifact.json": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6"
+  }
+}

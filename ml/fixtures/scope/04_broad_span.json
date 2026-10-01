@@ -1,0 +1,162 @@
+{
+  "fixture_format_version": "1.0",
+  "family": 4,
+  "title": "Full highlighting still does not mean full assessment",
+  "cases": [
+    {
+      "id": "scope-04-broad-full-span",
+      "purpose": "A deliberately broad accepted fixture span contains additional outside-catalogue material. Zero manual cards is not clearance.",
+      "document": {
+        "doc_id": "scope-04-broad-full-span",
+        "text": "Liability is limited to the fees paid under this agreement. The supplier may substitute blue packaging with green packaging.",
+        "text_sha256": "0a22f4ad204c72f55206171f454bfecc1aed5d649399de00059a1d81541b378c"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "p1",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 0,
+            "end": 124
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "completed",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-04-broad-full-span",
+        "text_sha256": "0a22f4ad204c72f55206171f454bfecc1aed5d649399de00059a1d81541b378c",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "broad-1",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-04-broad-full-span",
+                  "text_sha256": "0a22f4ad204c72f55206171f454bfecc1aed5d649399de00059a1d81541b378c",
+                  "start": 0,
+                  "end": 124,
+                  "text": "Liability is limited to the fees paid under this agreement. The supplier may substitute blue packaging with green packaging."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [
+        {
+          "id": "outside-inside-highlight",
+          "role": "outside_fixture_catalogue",
+          "span": {
+            "doc_id": "scope-04-broad-full-span",
+            "text_sha256": "0a22f4ad204c72f55206171f454bfecc1aed5d649399de00059a1d81541b378c",
+            "start": 60,
+            "end": 124,
+            "text": "The supplier may substitute blue packaging with green packaging."
+          }
+        }
+      ],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found"
+        },
+        "navigation": {
+          "status": "ready",
+          "processing_label": null,
+          "unit_source": "parser_leaves_with_gaps",
+          "display_units": [
+            {
+              "id": "p1",
+              "start": 0,
+              "end": 124,
+              "text": "Liability is limited to the fees paid under this agreement. The supplier may substitute blue packaging with green packaging.",
+              "accepted_finding_ids": [
+                "broad-1"
+              ],
+              "coverage": "full"
+            }
+          ],
+          "manual_review_items": [],
+          "manual_review_count": 0,
+          "accepted_finding_ids": [
+            "broad-1"
+          ],
+          "review_candidate_ids": [],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": false,
+            "manual_review_count": 0,
+            "unavailable_regions": []
+          }
+        }
+      }
+    }
+  ]
+}

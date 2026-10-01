@@ -1,0 +1,376 @@
+{
+  "fixture_format_version": "1.0",
+  "family": 8,
+  "title": "Proposed categories are not validated support",
+  "cases": [
+    {
+      "id": "scope-08-proposed-catalogue-only",
+      "purpose": "Catalogue membership is not validated decision support. This proposed category has no measured policy or model.",
+      "document": {
+        "doc_id": "scope-08-proposed-catalogue-only",
+        "text": "Liability is limited to the fees paid under this agreement.\n\nA pricing algorithm may adjust the monthly fee.",
+        "text_sha256": "80075c71288ec449351cc4dade2e9f9de4f913d6b9876f885c676dc291b50899"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          },
+          {
+            "category_id": "proposal.algorithmic_price_change",
+            "support_state": "proposed_unvalidated"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "p1",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 0,
+            "end": 59
+          },
+          {
+            "id": "p2",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 61,
+            "end": 108
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "completed",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-08-proposed-catalogue-only",
+        "text_sha256": "80075c71288ec449351cc4dade2e9f9de4f913d6b9876f885c676dc291b50899",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "cap-1",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-08-proposed-catalogue-only",
+                  "text_sha256": "80075c71288ec449351cc4dade2e9f9de4f913d6b9876f885c676dc291b50899",
+                  "start": 0,
+                  "end": 59,
+                  "text": "Liability is limited to the fees paid under this agreement."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [
+        {
+          "id": "proposal-material",
+          "role": "proposed_unvalidated_category",
+          "span": {
+            "doc_id": "scope-08-proposed-catalogue-only",
+            "text_sha256": "80075c71288ec449351cc4dade2e9f9de4f913d6b9876f885c676dc291b50899",
+            "start": 61,
+            "end": 108,
+            "text": "A pricing algorithm may adjust the monthly fee."
+          }
+        }
+      ],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found"
+        },
+        "navigation": {
+          "status": "ready",
+          "processing_label": null,
+          "unit_source": "parser_leaves_with_gaps",
+          "display_units": [
+            {
+              "id": "p1",
+              "start": 0,
+              "end": 59,
+              "text": "Liability is limited to the fees paid under this agreement.",
+              "accepted_finding_ids": [
+                "cap-1"
+              ],
+              "coverage": "full"
+            },
+            {
+              "id": "p2",
+              "start": 61,
+              "end": 108,
+              "text": "A pricing algorithm may adjust the monthly fee.",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            }
+          ],
+          "manual_review_items": [
+            {
+              "unit_id": "p2",
+              "label": "Text without accepted findings"
+            }
+          ],
+          "manual_review_count": 1,
+          "accepted_finding_ids": [
+            "cap-1"
+          ],
+          "review_candidate_ids": [],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported",
+            "proposal.algorithmic_price_change": "proposed_unvalidated"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": false,
+            "manual_review_count": 1,
+            "unavailable_regions": []
+          }
+        }
+      }
+    },
+    {
+      "id": "scope-08-proposed-requested",
+      "purpose": "Catalogue membership is not validated decision support. This proposed category has no measured policy or model.",
+      "document": {
+        "doc_id": "scope-08-proposed-requested",
+        "text": "Liability is limited to the fees paid under this agreement.\n\nA pricing algorithm may adjust the monthly fee.",
+        "text_sha256": "80075c71288ec449351cc4dade2e9f9de4f913d6b9876f885c676dc291b50899"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          },
+          {
+            "category_id": "proposal.algorithmic_price_change",
+            "support_state": "proposed_unvalidated"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability",
+        "proposal.algorithmic_price_change"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "p1",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 0,
+            "end": 59
+          },
+          {
+            "id": "p2",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 61,
+            "end": 108
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "partial",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-08-proposed-requested",
+        "text_sha256": "80075c71288ec449351cc4dade2e9f9de4f913d6b9876f885c676dc291b50899",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "cap-1",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-08-proposed-requested",
+                  "text_sha256": "80075c71288ec449351cc4dade2e9f9de4f913d6b9876f885c676dc291b50899",
+                  "start": 0,
+                  "end": 59,
+                  "text": "Liability is limited to the fees paid under this agreement."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          },
+          {
+            "category_id": "proposal.algorithmic_price_change",
+            "status": "unavailable",
+            "decision_confidence": null,
+            "reason_code": "category_not_validated",
+            "search_complete": false,
+            "windows_done": 0,
+            "windows_total": 0,
+            "unresolved_count": 0,
+            "clauses": []
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [
+        {
+          "id": "proposal-material",
+          "role": "proposed_unvalidated_category",
+          "span": {
+            "doc_id": "scope-08-proposed-requested",
+            "text_sha256": "80075c71288ec449351cc4dade2e9f9de4f913d6b9876f885c676dc291b50899",
+            "start": 61,
+            "end": 108,
+            "text": "A pricing algorithm may adjust the monthly fee."
+          }
+        }
+      ],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found",
+          "proposal.algorithmic_price_change": "unavailable"
+        },
+        "navigation": {
+          "status": "processing_incomplete",
+          "processing_label": "Processing incomplete",
+          "unit_source": "parser_leaves_with_gaps",
+          "display_units": [
+            {
+              "id": "p1",
+              "start": 0,
+              "end": 59,
+              "text": "Liability is limited to the fees paid under this agreement.",
+              "accepted_finding_ids": [
+                "cap-1"
+              ],
+              "coverage": "not_computed"
+            },
+            {
+              "id": "p2",
+              "start": 61,
+              "end": 108,
+              "text": "A pricing algorithm may adjust the monthly fee.",
+              "accepted_finding_ids": [],
+              "coverage": "not_computed"
+            }
+          ],
+          "manual_review_items": null,
+          "manual_review_count": null,
+          "accepted_finding_ids": [
+            "cap-1"
+          ],
+          "review_candidate_ids": [],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability",
+            "proposal.algorithmic_price_change"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported",
+            "proposal.algorithmic_price_change": "proposed_unvalidated"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": true,
+            "manual_review_count": null,
+            "unavailable_regions": []
+          }
+        }
+      }
+    }
+  ]
+}

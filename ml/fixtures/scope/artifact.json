@@ -1,0 +1,18 @@
+{
+  "artifact_kind": "self_authored_scope_development_fixture_recipe",
+  "revision": "scope-dev-1.0",
+  "fixture_format_version": "1.0",
+  "plan_version": "1.1",
+  "plan_sections": [
+    "2.5",
+    "10.7",
+    "11.3"
+  ],
+  "core_contract_version": "2.0",
+  "baseline_commit": "52bb951",
+  "provenance": "Original synthetic text authored for ClauseAnchor development; no customer contracts or evaluation data.",
+  "mode": "stub",
+  "trained_model": false,
+  "support_is_simulated": true,
+  "use": "Disclosure, exact-position and navigation testing only; not legal correctness, model accuracy or universal issue detection."
+}

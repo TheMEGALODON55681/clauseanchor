@@ -1,0 +1,268 @@
+{
+  "fixture_format_version": "1.0",
+  "family": 5,
+  "title": "Two distant passages stay reachable",
+  "cases": [
+    {
+      "id": "scope-05-distant-clauses",
+      "purpose": "A reader must compare the main limit and distant exception. No automated interaction assessment is asserted.",
+      "document": {
+        "doc_id": "scope-05-distant-clauses",
+        "text": "Liability is limited to fees paid during the previous month.\n\nDefinitions: A month means a calendar month.\n\nSchedule A: The supplier maintains the archived records.\n\nDelivery notices must identify the receiving office.\n\nSchedule C: The liability limit does not apply to the obligations listed in Schedule A.",
+        "text_sha256": "9bcc415c30d8528e9772f72f0ebfae9c0576686d4991e1a0995d46c8c15de9f0"
+      },
+      "catalogue": {
+        "version": "scope-demo-1.0",
+        "simulated": true,
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "support_state": "supported"
+          }
+        ]
+      },
+      "requested_category_ids": [
+        "cuad.cap_on_liability"
+      ],
+      "parser": {
+        "complete": true,
+        "nodes": [
+          {
+            "id": "p1",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 0,
+            "end": 60
+          },
+          {
+            "id": "p2",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 62,
+            "end": 106
+          },
+          {
+            "id": "p3",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 108,
+            "end": 164
+          },
+          {
+            "id": "p4",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 166,
+            "end": 218
+          },
+          {
+            "id": "p5",
+            "parent_id": null,
+            "kind": "paragraph",
+            "start": 220,
+            "end": 307
+          }
+        ],
+        "unavailable_regions": []
+      },
+      "job": {
+        "status": "completed",
+        "unfinished_stages": [],
+        "candidate_search_truncated": false,
+        "boundary_coverage_complete": true
+      },
+      "core_result": {
+        "contract_version": "2.0",
+        "doc_id": "scope-05-distant-clauses",
+        "text_sha256": "9bcc415c30d8528e9772f72f0ebfae9c0576686d4991e1a0995d46c8c15de9f0",
+        "artifact_manifest_sha256": "72f0413d3a14c6d0ec7218d45624ca5ca688041d8018ff71d39997913f0676d6",
+        "mode": "stub",
+        "categories": [
+          {
+            "category_id": "cuad.cap_on_liability",
+            "status": "found",
+            "decision_confidence": null,
+            "reason_code": null,
+            "search_complete": true,
+            "windows_done": 1,
+            "windows_total": 1,
+            "unresolved_count": 0,
+            "clauses": [
+              {
+                "id": "main-limit",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-05-distant-clauses",
+                  "text_sha256": "9bcc415c30d8528e9772f72f0ebfae9c0576686d4991e1a0995d46c8c15de9f0",
+                  "start": 0,
+                  "end": 60,
+                  "text": "Liability is limited to fees paid during the previous month."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              },
+              {
+                "id": "distant-exception",
+                "category_id": "cuad.cap_on_liability",
+                "span": {
+                  "doc_id": "scope-05-distant-clauses",
+                  "text_sha256": "9bcc415c30d8528e9772f72f0ebfae9c0576686d4991e1a0995d46c8c15de9f0",
+                  "start": 220,
+                  "end": 307,
+                  "text": "Schedule C: The liability limit does not apply to the obligations listed in Schedule A."
+                },
+                "status": "accepted",
+                "confidence": null,
+                "confidence_band": "unvalidated",
+                "calibration_scope": "unvalidated",
+                "origin": "fixture",
+                "rule_flags": [],
+                "passages": [],
+                "retrieval_status": "not_run"
+              }
+            ]
+          }
+        ],
+        "warnings": []
+      },
+      "anchors": [
+        {
+          "id": "read-together-a",
+          "role": "interaction_context",
+          "span": {
+            "doc_id": "scope-05-distant-clauses",
+            "text_sha256": "9bcc415c30d8528e9772f72f0ebfae9c0576686d4991e1a0995d46c8c15de9f0",
+            "start": 0,
+            "end": 60,
+            "text": "Liability is limited to fees paid during the previous month."
+          }
+        },
+        {
+          "id": "read-together-b",
+          "role": "interaction_context",
+          "span": {
+            "doc_id": "scope-05-distant-clauses",
+            "text_sha256": "9bcc415c30d8528e9772f72f0ebfae9c0576686d4991e1a0995d46c8c15de9f0",
+            "start": 220,
+            "end": 307,
+            "text": "Schedule C: The liability limit does not apply to the obligations listed in Schedule A."
+          }
+        }
+      ],
+      "expected": {
+        "category_states": {
+          "cuad.cap_on_liability": "found"
+        },
+        "navigation": {
+          "status": "ready",
+          "processing_label": null,
+          "unit_source": "parser_leaves_with_gaps",
+          "display_units": [
+            {
+              "id": "p1",
+              "start": 0,
+              "end": 60,
+              "text": "Liability is limited to fees paid during the previous month.",
+              "accepted_finding_ids": [
+                "main-limit"
+              ],
+              "coverage": "full"
+            },
+            {
+              "id": "p2",
+              "start": 62,
+              "end": 106,
+              "text": "Definitions: A month means a calendar month.",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            },
+            {
+              "id": "p3",
+              "start": 108,
+              "end": 164,
+              "text": "Schedule A: The supplier maintains the archived records.",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            },
+            {
+              "id": "p4",
+              "start": 166,
+              "end": 218,
+              "text": "Delivery notices must identify the receiving office.",
+              "accepted_finding_ids": [],
+              "coverage": "none"
+            },
+            {
+              "id": "p5",
+              "start": 220,
+              "end": 307,
+              "text": "Schedule C: The liability limit does not apply to the obligations listed in Schedule A.",
+              "accepted_finding_ids": [
+                "distant-exception"
+              ],
+              "coverage": "full"
+            }
+          ],
+          "manual_review_items": [
+            {
+              "unit_id": "p2",
+              "label": "Text without accepted findings"
+            },
+            {
+              "unit_id": "p3",
+              "label": "Text without accepted findings"
+            },
+            {
+              "unit_id": "p4",
+              "label": "Text without accepted findings"
+            }
+          ],
+          "manual_review_count": 3,
+          "accepted_finding_ids": [
+            "main-limit",
+            "distant-exception"
+          ],
+          "review_candidate_ids": [],
+          "unavailable_regions": []
+        },
+        "presentation": {
+          "scope_notice": "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+          "scope_notice_locations": [
+            "upload",
+            "results",
+            "report"
+          ],
+          "manual_review_explanation": "These passages have no accepted finding, or are only partly highlighted, for the selected categories. This does not establish whether they are harmless or harmful. Read them with the surrounding agreement.",
+          "full_text_required": true,
+          "context_navigation_required": true,
+          "review_candidate_entry_required": true,
+          "catalogue_version": "scope-demo-1.0",
+          "selected_category_ids": [
+            "cuad.cap_on_liability"
+          ],
+          "support_states": {
+            "cuad.cap_on_liability": "supported"
+          },
+          "sample_only": true,
+          "fixture_confidence_label": "Unvalidated fixture",
+          "safety_verdict_allowed": false,
+          "interaction_assessment_claim_allowed": false,
+          "automatic_risk_label_allowed": false,
+          "report": {
+            "scope_notice_required": true,
+            "selected_scope_required": true,
+            "processing_incomplete": false,
+            "manual_review_count": 3,
+            "unavailable_regions": []
+          }
+        }
+      }
+    }
+  ]
+}
