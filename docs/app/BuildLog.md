@@ -34,3 +34,18 @@ Decisions:
 Blockers: none.
 
 Next action: commit 0-A together with these two doc changes, send the Tanishq message, then reply `go` to start 1-A.
+
+## 2026-10-01: Plan revision 1.1 adopted (review scope)
+
+Part: none (planning change, no code).
+
+Files changed:
+- `docs/app/Phases.md`: new "Review scope" section; scope requirements added to 2-A, 2-D, 3-B and 4-C; new part 3-D (manual-review navigation).
+- `docs/app/Architecture.md`: request flow step 8, three key-decision rows, two planned modules (`scope.py`, `review_units.py`).
+
+Decision: adopt the team plan's revision 1.1 in full, including the manual-review navigation (plan section 10.7). 3-D is built last in Phase 3 so it cannot delay the demo path. Phase 1 is unaffected: parser blocks already provide the exact, non-overlapping units 3-D needs.
+
+Dependencies: Tanishq supplies the eight scope fixtures (plan section 11.3) before 3-D starts.
+
+Next action: unchanged. Continue Phase 1 from the current part.
+

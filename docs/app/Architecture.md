@@ -30,6 +30,7 @@ flowchart TD
 5. The analysis job passes `source_text` and an `AnalysisContext` to the core `Analyzer` from `ml/clauseanchor_core` and gets back category decisions with spans.
 6. The backend applies polarity from the user's role and party binding. The core never sees the user's side.
 7. Everything text-bearing lives in RAM with a 60-minute TTL. SQLite holds only metadata (ids, statuses, counts, offsets).
+8. Every capabilities response, analysis response and report carries the fixed scope notice (Phases.md, "Review scope"). After a complete analysis, the manual-review endpoint (planned, Phase 3) labels each display unit by its overlap with accepted findings, so text without findings is easy to reach.
 
 ## 2. Key decisions
 
@@ -45,6 +46,9 @@ flowchart TD
 | Database | SQLite only, `create_all()` | Nothing durable is stored; no migrations tool needed |
 | Worker model | One process, one bounded analysis worker, one executor thread | Fits a laptop and a free host; no Redis or Celery |
 | User content storage | RAM only, 60-minute absolute TTL | Matches the synopsis promise; nothing on disk |
+| Review scope | Fixed category catalogue, a fixed scope notice on every result, no safety score or overall verdict anywhere | The system checks listed categories only. A highlight-free passage is not a safe passage, and the output must never imply it is |
+| Completeness | Processing completion, decision coverage and highlight extent are separate fields | Each answers a different question; merging them would read as "share of risk found", which nothing measures |
+| Manual-review navigation | Derived in the backend from parser blocks and accepted spans; no new core field | Parser blocks are already exact, non-overlapping units, so the core interface (v2.0) stays unchanged |
 
 ## 3. Folder structure
 
@@ -82,6 +86,8 @@ backend/
       analysis.py           # core adapter and result validation
       polarity.py           # (Phase 3) party binding and polarity
       report.py             # (Phase 3) ReportLab report
+      review_units.py       # (Phase 3) manual-review display units and overlap labels
+      scope.py              # (Phase 2) scope notice constant and category catalogue with support status
     policies/polarity.yaml  # (planned, Phase 3) 46 category policies
   tests/
     conftest.py             # session-scoped fixture generation into a temp dir

@@ -6,6 +6,18 @@ Legend: `[ ]` not started, `[~]` in progress, `[x]` done and committed.
 
 ---
 
+## Review scope (plan v1.1, applies to Phases 2 to 4)
+
+Adopted on 1 October 2026 from the team plan, revision 1.1 (sections 2.5, 10.7 and 11.3). ClauseAnchor reviews a fixed list of clause categories. It does not detect every risk in a contract, and nothing the backend returns may suggest that it does.
+
+- **Fixed scope notice.** The capabilities response, every analysis response and the PDF report carry this exact text: "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment." It is a constant in one place, not generated.
+- **Banned outputs.** No overall safety verdict, risk score, safety percentage or "risk completeness" figure in any field, endpoint or report. An `absent` decision for one category is never rolled up into a statement about the whole contract.
+- **Three separate measures, never merged:** processing completion (which inputs and windows were processed), decision coverage (how many requested category decisions resolved) and highlight extent (which source ranges have accepted findings). None of them is "how much of the risk was found".
+- **Catalogue.** 41 CUAD categories plus 5 India extensions, with a catalogue version. Being listed in the catalogue is separate from validated support; each category reports its support status.
+- **Full text always available.** Text without an accepted finding stays readable through the API. The backend never filters it out.
+- **Ownership.** Tanishq supplies the scope fixtures (plan section 11.3: exact text, spans, category scope and expected states) and keeps the category backlog (`docs/ml/CategoryBacklog.md`). The app track renders and tests them.
+
+
 ## Phase 0: Docs
 
 - [ ] **0-A** Add backend rules, architecture and phase plan
@@ -102,12 +114,14 @@ Parse jobs run in a child process with a wall-clock kill (Phase 1 amendment A11)
 
 - [ ] **2-A** FastAPI app, config, error envelope, health, readiness, capabilities
   `feat(api): add app with health, readiness and capabilities`
+  Capabilities include the scope notice, the catalogue version and every category's support status (plan v1.1).
 - [ ] **2-B** RAM store with TTL, SQLite metadata, expiring sessions
   `feat(store): add in-memory document store and expiring sessions`
 - [ ] **2-C** Upload validation, parse jobs, document read and delete
   `feat(api): add document upload with validation and parse jobs`
 - [ ] **2-D** Analysis jobs through the core analyzer (stub), progress, cancel, partial results
   `feat(jobs): run analysis jobs through the core analyzer`
+  The analysis response carries the scope notice and reports processing completion and decision coverage as separate fields. Cancelled, timed-out or partially parsed work is reported as incomplete, never as absent. No safety or risk-score field (plan v1.1).
 - [ ] **2-E** OpenAPI export and API.md
   `docs(api): export OpenAPI schema and document endpoints`
 - [ ] **2-R** Phase review
@@ -118,8 +132,12 @@ Parse jobs run in a child process with a wall-clock kill (Phase 1 amendment A11)
   `feat(polarity): add party binding and clause polarity`
 - [ ] **3-B** PDF review report
   `feat(report): generate PDF review reports`
+  The report includes the scope notice, the selected categories with their support status, any parsing or processing limitations, and the manual-review item count once 3-D exists. A count of zero is printed as a count, never as a verdict (plan v1.1).
 - [ ] **3-C** Evaluations and sample-mode endpoints
   `feat(api): add evaluations and sample-mode endpoints`
+- [ ] **3-D** Manual-review navigation (plan v1.1 section 10.7)
+  `feat(api): add manual-review navigation for text without findings`
+  Built last in Phase 3. From the parser blocks and the accepted spans, compute non-overlapping display units (plus gap units for substantive text no block covers) and label each one by its overlap with the union of accepted intervals: none ("Text without accepted findings"), partial ("Partly highlighted") or full. Mechanical labels only, never "cleared" or "assessed". Only enabled when every requested category search finished and nothing was cut short (no parser omission, unfinished stage, truncated candidate search or boundary failure); otherwise the response says "Processing incomplete". Missing pages are listed as unavailable, not as unmatched text. Transient, same TTL and deletion rules as the source text. Needs Tanishq's scope fixtures (plan section 11.3) before it starts.
 - [ ] **3-R** Phase review
 
 ## Phase 4: Integration and run
@@ -132,4 +150,5 @@ Needs: the frontend on the real client, and Tanishq's real analyzer and artifact
   `build(backend): add local run script and Dockerfile`
 - [ ] **4-C** End-to-end check on a public contract, CPU benchmark
   `test(backend): add end-to-end review check and CPU benchmark`
+  Also run all eight scope cases from plan section 11.3 through the full application, first with fixture findings, then with the real model, and record expected against observed behaviour in BuildLog.md.
 - [ ] **4-R** Phase review, then root docs and README merge (coordinated with Tanishq)
