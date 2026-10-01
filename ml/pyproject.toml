@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clauseanchor-core"
+version = "0.1.0"
+description = "ClauseAnchor core interface and validated sample analyzer"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["clauseanchor_core*"]

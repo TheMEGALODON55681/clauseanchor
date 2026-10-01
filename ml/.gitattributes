@@ -1,0 +1,5 @@
+fixtures/sample_contract.txt -text
+*.py text eol=lf
+*.json text eol=lf
+*.ipynb text eol=lf
+*.toml text eol=lf

@@ -1,0 +1,5 @@
+SOFTWARE TEST FIXTURE - NOT A LEGAL AGREEMENT
+Parties: Alpha and Beta. Unicode marker: 📌
+Alpha may pay at most ten units for Task A.
+Alpha may pay at most twenty units for Task B.
+The review process is not specified in this fixture.

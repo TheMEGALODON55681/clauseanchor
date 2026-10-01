@@ -1,0 +1,13 @@
+checkpoints/
+artifacts/
+outputs/
+runs/
+cache/
+*.npy
+*.npz
+*.pth
+*.ckpt
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/

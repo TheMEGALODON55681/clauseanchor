@@ -1,0 +1,348 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/AnalysisResult",
+  "$defs": {
+    "AnalysisResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "doc_id",
+        "text_sha256",
+        "artifact_manifest_sha256",
+        "mode",
+        "categories",
+        "warnings"
+      ],
+      "properties": {
+        "contract_version": {
+          "type": "string"
+        },
+        "doc_id": {
+          "type": "string"
+        },
+        "text_sha256": {
+          "type": "string"
+        },
+        "artifact_manifest_sha256": {
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "stub",
+            "real"
+          ]
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CategoryResult"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CategoryResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category_id",
+        "status",
+        "decision_confidence",
+        "reason_code",
+        "search_complete",
+        "windows_done",
+        "windows_total",
+        "unresolved_count",
+        "clauses"
+      ],
+      "properties": {
+        "category_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "found",
+            "absent",
+            "abstained",
+            "unavailable"
+          ]
+        },
+        "decision_confidence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "search_complete": {
+          "type": "boolean"
+        },
+        "windows_done": {
+          "type": "integer"
+        },
+        "windows_total": {
+          "type": "integer"
+        },
+        "unresolved_count": {
+          "type": "integer"
+        },
+        "clauses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ClauseFinding"
+          }
+        }
+      }
+    },
+    "ClauseFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category_id",
+        "span",
+        "status",
+        "confidence",
+        "confidence_band",
+        "calibration_scope",
+        "origin",
+        "rule_flags",
+        "passages",
+        "retrieval_status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "category_id": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "review_candidate"
+          ]
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence_band": {
+          "enum": [
+            "higher",
+            "review",
+            "unvalidated"
+          ]
+        },
+        "calibration_scope": {
+          "enum": [
+            "per_category",
+            "pooled",
+            "unvalidated"
+          ]
+        },
+        "origin": {
+          "enum": [
+            "model",
+            "fixture"
+          ]
+        },
+        "rule_flags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RuleFlag"
+          }
+        },
+        "passages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Passage"
+          }
+        },
+        "retrieval_status": {
+          "type": "string"
+        }
+      }
+    },
+    "Span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "doc_id",
+        "text_sha256",
+        "start",
+        "end",
+        "text"
+      ],
+      "properties": {
+        "doc_id": {
+          "type": "string"
+        },
+        "text_sha256": {
+          "type": "string"
+        },
+        "start": {
+          "type": "integer"
+        },
+        "end": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "RuleFlag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "version",
+        "label_key",
+        "note",
+        "statute_citations",
+        "authority_ids",
+        "evidence_spans",
+        "scope_status"
+      ],
+      "properties": {
+        "rule_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "label_key": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "statute_citations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "authority_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_spans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Span"
+          }
+        },
+        "scope_status": {
+          "type": "string"
+        }
+      }
+    },
+    "Passage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "judgment_id",
+        "case_name",
+        "court",
+        "year",
+        "citation",
+        "source_url",
+        "start",
+        "end",
+        "text",
+        "judgment_text_sha256",
+        "corpus_version",
+        "authority_status",
+        "provenance_status",
+        "rank"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "judgment_id": {
+          "type": "string"
+        },
+        "case_name": {
+          "type": "string"
+        },
+        "court": {
+          "type": "string"
+        },
+        "year": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "citation": {
+          "type": "string"
+        },
+        "source_url": {
+          "type": "string"
+        },
+        "start": {
+          "type": "integer"
+        },
+        "end": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        },
+        "judgment_text_sha256": {
+          "type": "string"
+        },
+        "corpus_version": {
+          "type": "string"
+        },
+        "authority_status": {
+          "type": "string"
+        },
+        "provenance_status": {
+          "type": "string"
+        },
+        "rank": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

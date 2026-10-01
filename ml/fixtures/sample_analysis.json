@@ -1,0 +1,96 @@
+{
+  "contract_version": "2.0",
+  "doc_id": "fixture-document",
+  "text_sha256": "30322bcb16c66addcdfc77828e9c0c5f8e5eff2a89ecac1615ade3e89b037e4a",
+  "artifact_manifest_sha256": "a2ea8d4cc291e733ff3e7050153d445ba4419229398e259e35dbaef90e0b88df",
+  "mode": "stub",
+  "categories": [
+    {
+      "category_id": "cuad.cap_on_liability",
+      "status": "found",
+      "decision_confidence": null,
+      "reason_code": null,
+      "search_complete": true,
+      "windows_done": 1,
+      "windows_total": 1,
+      "unresolved_count": 0,
+      "clauses": [
+        {
+          "id": "fixture-cap-1",
+          "category_id": "cuad.cap_on_liability",
+          "span": {
+            "doc_id": "fixture-document",
+            "text_sha256": "30322bcb16c66addcdfc77828e9c0c5f8e5eff2a89ecac1615ade3e89b037e4a",
+            "start": 89,
+            "end": 132,
+            "text": "Alpha may pay at most ten units for Task A."
+          },
+          "status": "accepted",
+          "confidence": null,
+          "confidence_band": "unvalidated",
+          "calibration_scope": "unvalidated",
+          "origin": "fixture",
+          "rule_flags": [],
+          "passages": [],
+          "retrieval_status": "not_run"
+        },
+        {
+          "id": "fixture-cap-2",
+          "category_id": "cuad.cap_on_liability",
+          "span": {
+            "doc_id": "fixture-document",
+            "text_sha256": "30322bcb16c66addcdfc77828e9c0c5f8e5eff2a89ecac1615ade3e89b037e4a",
+            "start": 133,
+            "end": 179,
+            "text": "Alpha may pay at most twenty units for Task B."
+          },
+          "status": "accepted",
+          "confidence": null,
+          "confidence_band": "unvalidated",
+          "calibration_scope": "unvalidated",
+          "origin": "fixture",
+          "rule_flags": [],
+          "passages": [],
+          "retrieval_status": "not_run"
+        }
+      ]
+    },
+    {
+      "category_id": "cuad.non_compete",
+      "status": "absent",
+      "decision_confidence": null,
+      "reason_code": "FIXTURE_ONLY",
+      "search_complete": true,
+      "windows_done": 1,
+      "windows_total": 1,
+      "unresolved_count": 0,
+      "clauses": []
+    },
+    {
+      "category_id": "in.arbitration",
+      "status": "abstained",
+      "decision_confidence": null,
+      "reason_code": "UNVALIDATED_CATEGORY",
+      "search_complete": true,
+      "windows_done": 1,
+      "windows_total": 1,
+      "unresolved_count": 0,
+      "clauses": []
+    },
+    {
+      "category_id": "in.seat_venue",
+      "status": "unavailable",
+      "decision_confidence": null,
+      "reason_code": "NOT_IMPLEMENTED",
+      "search_complete": false,
+      "windows_done": 0,
+      "windows_total": 1,
+      "unresolved_count": 0,
+      "clauses": []
+    }
+  ],
+  "warnings": [
+    "FIXTURE_ONLY_NO_MODEL_INFERENCE",
+    "CONFIDENCE_NOT_MEASURED"
+  ]
+}
