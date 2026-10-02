@@ -4,6 +4,8 @@ Aryan's track: `backend/` only. One phase at a time. Every part is committed and
 
 Legend: `[ ]` not started, `[~]` in progress, `[x]` done and committed.
 
+Phase mapping: Plan Phase 3 = app Phase 1, Plan Phase 4 = app Phase 2, Plan Phase 10 backend parts = app Phase 3, Plan Phase 12 = app Phase 4.
+
 ---
 
 ## Review scope (plan v1.1, applies to Phases 2 to 4)
@@ -20,8 +22,10 @@ Adopted on 1 October 2026 from the team plan, revision 1.1 (sections 2.5, 10.7 a
 
 ## Phase 0: Docs
 
-- [ ] **0-A** Add backend rules, architecture and phase plan
+- [x] **0-A** Add backend rules, architecture and phase plan
   `docs(app): add backend rules, architecture and phase plan`
+- [x] **0-B** Sync app docs with parser amendments and v1.1 decisions
+  `docs: sync app docs with parser amendments and v1.1 decisions`
 
 ## Phase 1: Parser
 
@@ -41,7 +45,7 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
   `feat(parser): build clause structure tree and detect definitions`
 - [ ] **1-F** Public entry point, CLI and parser contract
   `feat(parser): add parse entry point, CLI and parser contract`
-- [ ] **1-R** Phase review: `/gstack-cso`, `/coderabbit:review`, `/gstack-review`; fixes as separate commits
+- [ ] **1-R** Phase review: `/gstack-cso`, `/coderabbit:code-review`, `/gstack-review`; fixes as separate commits
 
 **Sync with Tanishq:** send the `[CONTRACT]` items below before 1-B and apply his changes before 1-F. After 1-F, share `docs/app/ParserContract.md` and agree separators, offsets and warnings.
 
@@ -72,6 +76,7 @@ Agreed in the spec review before 1-A. Each item amends the Phase 1 handoff where
 
 - **A9 Decoration [CONTRACT].** Classify margin-zone lines before building blocks and give each candidate its own block. A page-number-shaped line in the margin zone counts as decoration at any page count. Other lines keep the repetition rule. Fixtures: 1-page and 2-page documents, a header on 2 of 3 pages (not decoration), a body line inside the zone.
 - **A10 Scanned and partial [CONTRACT].** Count characters outside the margin zones. An image-dominant page with fewer than 20 of them is scanned. One with fewer than 200 sets `coverage.partial = True`, because a searchable scan (full-page image, large real text layer) must stay usable. Widget and FreeText annotations with content also set `partial = True`. Fixtures: a scanned page with a Bates stamp, an all-blank PDF (NO_TEXT_FOUND) and an owner-only encrypted PDF (parses).
+  Resolution (2 October 2026) `[CONTRACT]`: only `SCANNED_PDF` rejects a file, when every page with content is scanned. If only some pages are scanned, the parser sets `coverage.partial = True`, adds a `PARTIALLY_SCANNED_PDF` warning and parses the rest, so `PARTIALLY_SCANNED_PDF` moves from the error list to the warning list. The under-200 partial rule stays. The `partly_scanned.pdf` fixture now expects a parse with the warning. Reason: executed contracts often end in a scanned signature page.
 - **A11 Content budget [CONTRACT].** Before extracting a page, decode its content streams and any Form XObjects incrementally, with Flate read through `zlib.decompressobj` in `max_length` chunks. Stop as soon as the running total passes `MAX_DECODED_CONTENT_BYTES` (8 MiB, kept with the other limits in `errors.py`) and raise TOO_MUCH_TEXT. Never decode a stream fully and measure afterwards. Count pages with `islice(PDFPage.create_pages(doc), 101)` instead of building every Page object. Fixtures: two 16 KB PDFs that decode past the budget, one in the page content and one in a Form XObject. Known ceiling: only Flate is measured. A 16 KB PDF that decodes to 16 MB took 186 s in `extract_words`, so Phase 2 must also add a child-process wall-clock kill.
 
 #### 1-D
@@ -79,6 +84,7 @@ Agreed in the spec review before 1-A. Each item amends the Phase 1 handoff where
 - **A12 Archive.** Convert backslashes to slashes, then reject any member with an absolute path, a drive letter or a `..` segment (ARCHIVE_UNSAFE). Reject a total uncompressed size over 100 MiB (ARCHIVE_TOO_LARGE). One `build_zip(member_name)` fixture builder covers slash, backslash and drive-letter names. Other fixtures: a 101 MiB sparse archive and a corrupt zip (MALFORMED_FILE).
 - **A13 Tracked changes [CONTRACT].** Match `ins`, `del`, `moveFrom` and `moveTo` by namespace URI in every text part under `word/`: document, headers, footers, footnotes and endnotes.
 - **A14 No silent loss [CONTRACT].** The body walk recurses through `sdt` and `sdtContent`, `smartTag`, `fldSimple`, `customXml` and `hyperlink`. An `altChunk` or any unknown block-level child raises UNSUPPORTED_DOCX_FEATURE and sets `partial = True`. One fixture per wrapper asserts that its text appears.
+  Resolution (2 October 2026): an unknown block-level child, including `altChunk`, is skipped. The parser adds an `UNSUPPORTED_DOCX_FEATURE` warning and sets `coverage.partial = True`; it does not raise. Reason: a raised error leaves no result to mark partial. The code stays in the warning list.
 - **A15 Text boxes [CONTRACT].** Extract every `w:txbxContent` outside `mc:Fallback`. Its paragraphs become `kind="text"` blocks directly after the anchor paragraph, with locator `{"part": "document", "textbox": n, "paragraph": i}`. Headers, footers and footnotes follow the same rule. TEXT_BOX_CONTENT stays as an informational warning and `partial` stays False. Embedded objects keep EMBEDDED_OBJECT with `partial = True`. Two tests: a document with `mc:AlternateContent` and a document with bare VML each yield the text exactly once. The `[CONTRACT]` tag covers the changed warning meaning and the new locator keys; block kinds do not change.
 - **A16 Cells and paragraphs [CONTRACT].** Walk a cell's children in XML order and flush the text before and after a nested table as separate blocks. `"table"` in a locator is the preorder index across all tables. Body paragraphs use `{"part": "document", "paragraph": i}`.
 
@@ -104,7 +110,7 @@ Agreed in the spec review before 1-A. Each item amends the Phase 1 handoff where
 - Commit 0-A before 1-A starts.
 - The Tanishq message lists every `[CONTRACT]` item. Work continues without waiting for a reply, and his changes land before 1-F.
 - One independent second review runs at phase end, next to the other phase-end reviews. No per-part run.
-- Confirm the exact skill name for the correctness review at 1-R: `/coderabbit:review` does not exist as written.
+- The correctness review at 1-R is `/coderabbit:code-review` with `--base-commit <commit before 1-A>`. `/coderabbit:review` does not exist (see BuildLog, 0-B).
 
 ## Phase 2: API skeleton
 
@@ -112,6 +118,14 @@ Depends on: Phase 1. Part 2-D also needs `ml/clauseanchor_core` at contract vers
 
 Parse jobs run in a child process with a wall-clock kill (Phase 1 amendment A11). Plan this into 2-C.
 
+Parts 2-0A and 2-0B hold the annotation work from plan v1.1 Phase 3. Both need only the parser, so they come first. Aryan annotates contracts 001 to 025 of the Indian set, and that set gates Tanishq's evaluation. The 0 ids keep the 2-A to 2-D references stable.
+
+- [ ] **2-0A** Annotation guidelines
+  `docs(docs): add annotation guidelines for the Indian contract set`
+  Writes `docs/app/AnnotationGuidelines.md`. It covers the label set (core v2.0 categories, multi-span), span boundary rules, overlap rules, offsets as code points into the parser's `source_text`, worked examples, and every topic plan v1.1 section 4.3 lists: inclusion and exclusion, complete operative spans, overlapping categories, multiple occurrences, cross-references, schedules, definitions, negation, amended provisions, missing clauses, illegible text and disagreement resolution. It separates `absent` from `unassessable` and never labels stamp payment, enforceability or a case outcome from contract text.
+- [ ] **2-0B** Offline annotation tool
+  `feat(annotator): add offline annotation tool`
+  Builds `backend/tools/annotator/`. It runs locally with no network, loads parser output, lets the annotator select spans and exports JSONL with code-point offsets checked against the parser's `source_text` (plan v1.1 section 4.3). `[CONTRACT]` The export schema must match what Tanishq's `ml/` code consumes; agree it with him before this part starts. Needs Phase 1 complete. Any new dependency needs Aryan's approval at the start of the part.
 - [ ] **2-A** FastAPI app, config, error envelope, health, readiness, capabilities
   `feat(api): add app with health, readiness and capabilities`
   Capabilities include the scope notice, the catalogue version and every category's support status (plan v1.1).
@@ -124,6 +138,7 @@ Parse jobs run in a child process with a wall-clock kill (Phase 1 amendment A11)
   The analysis response carries the scope notice and reports processing completion and decision coverage as separate fields. Cancelled, timed-out or partially parsed work is reported as incomplete, never as absent. No safety or risk-score field (plan v1.1).
 - [ ] **2-E** OpenAPI export and API.md
   `docs(api): export OpenAPI schema and document endpoints`
+  The frontend mock uses names that plan section 9 does not have: `scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage {resolved, requested}`, `ReviewUnit`, `ManualReview` and `getManualReview`. 2-E fixes the final names in API.md. The frontend adapter follows API.md, and plan section 9 copies from API.md, not the other way round.
 - [ ] **2-R** Phase review
 
 ## Phase 3: Polarity, reports, remaining endpoints
@@ -151,4 +166,5 @@ Needs: the frontend on the real client, and Tanishq's real analyzer and artifact
 - [ ] **4-C** End-to-end check on a public contract, CPU benchmark
   `test(backend): add end-to-end review check and CPU benchmark`
   Also run all eight scope cases from plan section 11.3 through the full application, first with fixture findings, then with the real model, and record expected against observed behaviour in BuildLog.md.
+  The UI string for `TOO_MUCH_TEXT` is "This file is too large or complex to process". No backend part maps error codes to UI messages, so this first frontend integration part checks that the UI shows it.
 - [ ] **4-R** Phase review, then root docs and README merge (coordinated with Tanishq)
