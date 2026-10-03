@@ -93,3 +93,56 @@ Blockers: none.
 
 Next action: commit 0-B with `docs: sync app docs with parser amendments and v1.1 decisions`, then start Phase 1 at 1-A.
 
+## 2026-10-03: Part 1-A, package scaffold and parsed-document model
+
+Part: 1-A.
+
+Files changed:
+- New in `backend/`: `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, `.gitignore`, `.env.example`, `app/__init__.py` and `app/parsing/__init__.py` (both empty), `app/parsing/model.py`, `app/parsing/errors.py`, `app/parsing/assemble.py`, `tests/test_assemble.py`.
+- `docs/app/Phases.md`: 1-A ticked; A2, A3 and A5 marked done; the A10 code-list change noted; 1-A deviations recorded.
+- `docs/app/BuildLog.md`: this entry.
+- Root `README.md`: new backend section (prerequisites, install, run, test), at the request of the 1-A prompt.
+- `docs/app/Architecture.md`: unchanged. Its tree lines, key-decision rows and section 4 already match the scaffold.
+
+Commands run, from `backend/` in Git Bash:
+- `python -m venv .venv`, `source .venv/Scripts/activate`, `pip install -r requirements-dev.txt` with unpinned names, then `pip freeze` to copy the resolved versions into both files.
+- `ruff format --check .`, `ruff check .`, `pytest -q`.
+- Clean install check: a fresh venv outside the repo, `pip install --no-cache-dir -r requirements-dev.txt` from the pinned files, then the same three checks and an import smoke run that builds a one-block document.
+- A mutation pass on a copy of `assemble.py` outside the repo (see Tests).
+- The Rules section 1 scrub and a dash check over `backend/` and `docs/app/`.
+- Read-only git: `git status`, `git log`, and one `git branch -a`.
+
+Tests: 24 passed, 0 failed, 0 skipped, with `pytest -q` from `backend/`. Ten one-line mutations of `assemble.py` each failed at least one test: the limit comparison, CR conversion, the page separator, tab stripping, the whitespace check, the decoration kinds, `from None`, the page-break reset, the page count and the empty-block guard.
+
+Pinned versions, Python 3.12.10:
+- Runtime: pdfplumber 0.11.10, python-docx 1.2.0, PyYAML 6.0.3.
+- Dev: pytest 9.1.1, ruff 0.16.10, reportlab 5.0.1, pillow 12.3.0.
+- Transitive, recorded here and left unpinned: pdfminer.six 20260107, lxml 6.1.3, pypdfium2 5.13.0, cryptography 50.0.2, cffi 2.1.1, pycparser 3.0, charset-normalizer 3.5.2, typing_extensions 4.16.0, pluggy 1.6.0, iniconfig 2.3.0, packaging 26.3, Pygments 2.21.0, colorama 0.4.6.
+- Against the pre-phase scratch install, ruff moved from 0.16.9 to 0.16.10 and cryptography from 50.0.1 to 50.0.2.
+- `pip list` shows no scikit-learn and no PyMuPDF. Every compiled package imports on this machine.
+
+Decisions:
+- Applied amendments: A2 (`pythonpath`), A3 (the `graphify-out/` ignore line), A5 (assembler) and the A10 code-list change.
+- The codes are `StrEnum` classes with explicit values. `ParseError` hands only the code to `Exception`, so `str(error)` prints the code and nothing else.
+- `new_page()` sets a flag. Two calls in a row give one page separator, and a call before the first block adds nothing.
+- `add_block` converts CRLF and CR to LF inside each line, then splits and strips trailing spaces and tabs, so a space before a CR goes too. It avoids `str.splitlines`, which also splits on form feed, U+2028 and other characters the canonical text must keep.
+- The 500,000 limit counts separators, and `add_block` checks it before appending.
+- `build()` encodes the text before the whitespace check, so a lone surrogate gives MALFORMED_FILE.
+- Only direct dependencies carry pins, as decided before the phase.
+- The over-engineering review raised six findings, none blocking. Two applied: the block field test compares whole `Block` values, and the invariant helper drops a decoration-bounds loop that repeated the block check. Four kept: the three limits no 1-A code reads and the full code lists, which the 1-A spec asks for; the `warnings` and `partial` parameters of `build()`, which fill required fields; and the `PARSER_VERSION` constant, a contract value.
+
+Deviations: listed under the 1-A amendments in Phases.md (project version, the `build()` signature, `ValueError` for an empty block, the root README section, the A11 limit deferred to 1-C).
+
+Verification:
+- Clean venv install from the pinned files: works.
+- `ruff format --check .`: 6 files already formatted. `ruff check .`: all checks passed. 1-A sets up no type checker.
+- `pytest -q`: 24 passed.
+- Smoke check (1-A has no server or CLI): `python -c "import app.parsing.assemble"` exits 0, and a one-block build returns parser version 1.0.0.
+- Attribution scrub: no output. Dash check: no em or en dash in `backend/` or `docs/app/`.
+
+Core interface: `ml/clauseanchor_core` sits on main at contract version 2.0, with `StubAnalyzer` and the sample fixtures, since d9e4c6a. The scope fixtures arrived in 19f386c. Nothing in `backend/` imports from `ml/`. The 2-D dependency is met.
+
+Blockers: none.
+
+Next action: commit 1-A with `chore(backend): set up package, tooling and parsed document model`, send the updated contract message to Tanishq, then reply `next` to start 1-B.
+

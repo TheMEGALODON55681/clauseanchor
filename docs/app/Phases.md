@@ -31,7 +31,7 @@ Adopted on 1 October 2026 from the team plan, revision 1.1 (sections 2.5, 10.7 a
 
 Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause structure tree and honest warnings. No API yet. Depends on nothing from the ML track.
 
-- [ ] **1-A** Package scaffold and the parsed-document model
+- [x] **1-A** Package scaffold and the parsed-document model
   `chore(backend): set up package, tooling and parsed document model`
 - [ ] **1-B** PDF text extraction in reading order
   `feat(parser): extract ordered text blocks from PDFs`
@@ -58,13 +58,22 @@ Agreed in the spec review before 1-A. Each item amends the Phase 1 handoff where
 #### Every part
 
 - **A1 Errors.** Each parser catches one closed tuple of library exceptions. PDF: the pdfplumber and pdfminer error types, plus TypeError, ValueError, AttributeError, AssertionError, KeyError and IndexError. DOCX: BadZipFile, lxml and python-docx package errors, the encrypted-member RuntimeError and NotImplementedError. Every hit maps to MALFORMED_FILE, except a wrapped PDFPasswordIncorrect, which maps to ENCRYPTED_PDF. Always `raise ParseError(code) from None`, and silence the `pdfminer` logger, because it logs raw document bytes. One test runs a seeded byte-flip sweep over a small PDF with a log handler attached. Each mutant must give a valid parse or a ParseError, never another exception type, and no exception text or log record may contain document text.
-- **A2 pytest.** Set `pythonpath = ["."]` in pyproject. Without it `import app` fails under plain `pytest`.
-- **A3 Attribution scrub.** Run `grep -rniE "<pattern>" backend/ docs/app/ --exclude-dir=.venv --exclude-dir=graphify-out --exclude=Rules.md`. The command as written always matches `Rules.md` and scans `.venv`. Add `graphify-out/` to `backend/.gitignore`.
+- **A2 pytest.** Set `pythonpath = ["."]` in pyproject. Without it `import app` fails under plain `pytest`. Done in 1-A.
+- **A3 Attribution scrub.** Run `grep -rniE "<pattern>" backend/ docs/app/ --exclude-dir=.venv --exclude-dir=graphify-out --exclude=Rules.md`. The command as written always matches `Rules.md` and scans `.venv`. Add `graphify-out/` to `backend/.gitignore`. Done: the scrub command in 0-B, the ignore line in 1-A.
 - **A4 Fixture registry.** `tests/fixtures/build.py` exposes `build_all(dir)`, which returns `{name: (path, expected error code or None)}`. `test_invariants.py` and the 1-F tests read it, so invalid fixtures are expected to raise instead of being skipped. Reportlab fixtures use `invariant=1`. Tests for `detect.py` live in `test_pdf.py`.
 
 #### 1-A
 
-- **A5 Assembler.** Remove `mark_decoration`. `build()` derives `decorations` from the header and footer blocks and sets `coverage.pages_total` from `page_count`. `add_block` refuses a block with no text (callers skip empty paragraphs and cells) and enforces the 500,000 code point limit as it appends. `build()` only computes the hash and raises NO_TEXT_FOUND, and it maps the UnicodeEncodeError from a lone surrogate to MALFORMED_FILE. Extra tests: bare CR, `new_page` twice, exactly 500,000 and 500,001 code points, whitespace-only text.
+- **A5 Assembler.** Remove `mark_decoration`. `build()` derives `decorations` from the header and footer blocks and sets `coverage.pages_total` from `page_count`. `add_block` refuses a block with no text (callers skip empty paragraphs and cells) and enforces the 500,000 code point limit as it appends. `build()` only computes the hash and raises NO_TEXT_FOUND, and it maps the UnicodeEncodeError from a lone surrogate to MALFORMED_FILE. Extra tests: bare CR, `new_page` twice, exactly 500,000 and 500,001 code points, whitespace-only text. Done in 1-A.
+
+1-A also carries the A10 resolution's code-list change: `PARTIALLY_SCANNED_PDF` is a `WarningCode` in `errors.py`. The scanned-page checks land in 1-C.
+
+Deviations from the 1-A spec, with reasons:
+- `pyproject.toml` sets `version = "0.1.0"`. A `[project]` table needs a version, and the handoff names none.
+- `build()` takes `media_type`, `page_count`, `warnings` and `partial`, and returns `nodes=()`. 1-F attaches the structure tree with `dataclasses.replace`, because the tree needs the finished `source_text`. `coverage.pages_with_text` counts the distinct pages that hold a block (`None` for DOCX); 1-C may refine it for scanned pages.
+- `add_block` raises `ValueError` for a block with no text. An empty block is a caller bug, so it gets no file error code. A1 puts `ValueError` in the PDF catch tuple, so 1-B keeps assembler calls outside the try block that wraps pdfplumber. Otherwise a caller bug would surface as `MALFORMED_FILE`.
+- The 1-A prompt asked for a backend setup section in the root `README.md`, which Rules section 1 keeps out of scope. 4-R still owns the full README merge.
+- `MAX_DECODED_CONTENT_BYTES` (A11) waits for 1-C, the first part that reads it.
 
 #### 1-B
 
@@ -76,7 +85,7 @@ Agreed in the spec review before 1-A. Each item amends the Phase 1 handoff where
 
 - **A9 Decoration [CONTRACT].** Classify margin-zone lines before building blocks and give each candidate its own block. A page-number-shaped line in the margin zone counts as decoration at any page count. Other lines keep the repetition rule. Fixtures: 1-page and 2-page documents, a header on 2 of 3 pages (not decoration), a body line inside the zone.
 - **A10 Scanned and partial [CONTRACT].** Count characters outside the margin zones. An image-dominant page with fewer than 20 of them is scanned. One with fewer than 200 sets `coverage.partial = True`, because a searchable scan (full-page image, large real text layer) must stay usable. Widget and FreeText annotations with content also set `partial = True`. Fixtures: a scanned page with a Bates stamp, an all-blank PDF (NO_TEXT_FOUND) and an owner-only encrypted PDF (parses).
-  Resolution (2 October 2026) `[CONTRACT]`: only `SCANNED_PDF` rejects a file, when every page with content is scanned. If only some pages are scanned, the parser sets `coverage.partial = True`, adds a `PARTIALLY_SCANNED_PDF` warning and parses the rest, so `PARTIALLY_SCANNED_PDF` moves from the error list to the warning list. The under-200 partial rule stays. The `partly_scanned.pdf` fixture now expects a parse with the warning. Reason: executed contracts often end in a scanned signature page.
+  Resolution (2 October 2026) `[CONTRACT]`: only `SCANNED_PDF` rejects a file, when every page with content is scanned. If only some pages are scanned, the parser sets `coverage.partial = True`, adds a `PARTIALLY_SCANNED_PDF` warning and parses the rest, so `PARTIALLY_SCANNED_PDF` moves from the error list to the warning list. The under-200 partial rule stays. The `partly_scanned.pdf` fixture now expects a parse with the warning. Reason: executed contracts often end in a scanned signature page. The code lists in `errors.py` follow this from 1-A.
 - **A11 Content budget [CONTRACT].** Before extracting a page, decode its content streams and any Form XObjects incrementally, with Flate read through `zlib.decompressobj` in `max_length` chunks. Stop as soon as the running total passes `MAX_DECODED_CONTENT_BYTES` (8 MiB, kept with the other limits in `errors.py`) and raise TOO_MUCH_TEXT. Never decode a stream fully and measure afterwards. Count pages with `islice(PDFPage.create_pages(doc), 101)` instead of building every Page object. Fixtures: two 16 KB PDFs that decode past the budget, one in the page content and one in a Form XObject. Known ceiling: only Flate is measured. A 16 KB PDF that decodes to 16 MB took 186 s in `extract_words`, so Phase 2 must also add a child-process wall-clock kill.
 
 #### 1-D
