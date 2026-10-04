@@ -191,12 +191,12 @@ Part ids and commit messages are suggestions, like the backend parts. Every part
 - [x] **FE-0** Import the baseline frontend
   `chore(frontend): import baseline frontend`
   The delivered frontend runs inside the repo as received. Only build config, the HTML shell and package metadata changed. No UI change.
-- [ ] **FE-1** Design direction (docs only)
+- [x] **FE-1** Design direction (docs only)
   `docs(frontend): add frontend design direction`
-  Audit of every route at every width and theme, the final information architecture, section-by-section composition, type, spacing and motion tokens, copy plan, trust and conversion map, skills table and dependency requests. Includes the font self-hosting proposal: the fonts load from Google, which contradicts the privacy promise. Stops for review before any UI code changes.
+  Audit of every route at every width and theme, the final information architecture, section-by-section composition, type, spacing and motion tokens, copy plan, trust and conversion map, skills table and dependency requests. Includes the font self-hosting proposal: the fonts load from Google, which contradicts the privacy promise. Written to `FrontendDesign.md`, then reviewed with the plan design review (amendments A to L in its section 17.1). Stops for review before any UI code changes: FE-2 starts after decisions D1 to D6 in section 15 are answered. Deviations from the brief are listed in section 16 of that file.
 - [ ] **FE-2** Foundations
   `feat(frontend): add motion tokens, layout primitives and 404 route`
-  Motion and type tokens, `Container`, `Section` and `MarginGrid`, the reveal hook (tests first), route transitions, a `NotFound` route, and `/gallery` plus the mock settings panel moved behind `import.meta.env.DEV`.
+  Motion and type tokens, the colour changes, layout primitives, the reveal hook (tests first), route transitions and titles, `NotFound` and error pages, the dev-only gallery, the favicon and 44 px hit areas, and self-hosted fonts if approved. Scope and acceptance: `FrontendDesign.md` section 14.
 - [ ] **FE-3** Landing
   `feat(frontend): rebuild landing with live hero demo`
 - [ ] **FE-4** The `/start` stepped flow
@@ -209,10 +209,4 @@ Part ids and commit messages are suggestions, like the backend parts. Every part
 - [ ] **FE-R** Phase-end review
   Design review and QA, `/coderabbit:code-review` over the FE commit range, `/gstack-review`, `/gstack-cso`, one independent second review, the quality-bar measurements and before and after screenshots for every route. Every P1 is fixed and every P2 is listed.
 
-Standing constraints for every FE part:
-- No dependency is added without Aryan's approval.
-- `src/api/client.ts` stays the only data interface, and nothing goes to localStorage, sessionStorage, IndexedDB or cookies.
-- Every slice of contract text goes through `lib/offsets.ts`.
-- The UI never writes legal advice: each string is quoted contract text, quoted judgment text or a short label.
-
-Quality bars, measured at FE-R: Lighthouse mobile on `/` at Performance 95 or more, Accessibility 100 and Best Practices 95 or more; zero serious or critical axe issues on every route in both themes; WCAG 2.2 AA contrast; initial-route JavaScript under 200 KB gzipped (143 KB at FE-0).
+Standing constraints, the checks every FE part runs and the quality bars: `docs/app/FrontendDesign.md`, section 1.

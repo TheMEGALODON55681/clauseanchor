@@ -2,7 +2,7 @@
 
 The source of truth for how ClauseAnchor looks and reads. Every frontend part follows it and extends it. A new token or rule goes in this file in the same part that adds it.
 
-Tokens are CSS custom properties in `frontend/src/index.css`. The token `anchor/600` is `--anchor-600`, `status/review` splits into `--status-review-fg`, `--status-review-bg` and `--status-review-border`, and so on. Light values live under `:root`, dark values under `.dark`.
+Tokens are CSS custom properties in `frontend/src/index.css`. The tokens, type styles and colour changes that `FrontendDesign.md` adds land in FE-2, and this file is updated in that part. Until then it describes the baseline. The token `anchor/600` is `--anchor-600`, `status/review` splits into `--status-review-fg`, `--status-review-bg` and `--status-review-border`, and so on. Light values live under `:root`, dark values under `.dark`.
 
 ---
 
@@ -99,7 +99,7 @@ Highlights are **underlines plus a faint tint**, never solid fills. Text must st
 | **IBM Plex Sans** | All UI: buttons, labels, navigation, body UI copy | Google Fonts, OFL |
 | **IBM Plex Mono** | Character offsets, hashes, citations metadata, keyboard hints | Google Fonts, OFL |
 
-The fonts load from Google Fonts through a CSS import in `index.css`. That sends a request to a third party, which sits badly with the privacy promise. Self-hosting is a proposal in FE-1.
+The fonts load from Google Fonts through a CSS import in `index.css`. That sends a request to a third party, which sits badly with the privacy promise. `FrontendDesign.md` section 11.1 proposes self-hosting (decision D3).
 
 Type scale (sizes in px, line height in px):
 

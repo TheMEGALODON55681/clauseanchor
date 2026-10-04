@@ -158,7 +158,7 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Offsets | `lib/offsets.ts` builds a code point to UTF-16 table once per text. Every slice of contract text goes through `sliceCp` | Backend offsets are code points and JavaScript strings index UTF-16 code units |
 | Routing | `createHashRouter`: `/`, `/review/:documentId`, `/how-it-works`, `/accuracy`, `/expired` and a catch-all that also shows Expired, with `/gallery` outside the shell | Works on any static host with no rewrite rules. The catch-all, `/gallery` and the mock settings panel on Home are reworked in FE-2 |
 | Theming | Tokens are CSS custom properties in `src/index.css`, dark values under `.dark`. The first load follows `prefers-color-scheme` | One set of tokens for every component. DesignSystem.md lists them |
-| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono through a Google Fonts import in `index.css` | Known conflict with the privacy promise. FE-1 proposes self-hosting |
+| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono through a Google Fonts import in `index.css` | Known conflict with the privacy promise. `FrontendDesign.md` section 11.1 proposes self-hosting (decision D3) and FE-2 does it if approved |
 
 ### 7.3 Folder structure
 
@@ -200,4 +200,8 @@ frontend/
                             # organisms (ClauseDetailPanel, CategorySidebar, ReaderToolbar, ...)
 ```
 
-The FE parts change this tree: FE-2 adds layout primitives, the reveal hook and a `NotFound` page, and FE-4 adds a `/start` flow. Each part updates this section.
+The FE parts change this tree. Each part updates this section. `FrontendDesign.md` holds the plan, and these additions are **(planned)**:
+
+- FE-2: `components/layout/` (`Container`, `Section`, `MarginGrid`), `lib/reveal.ts` with its test, `tokens.test.ts`, `pages/NotFound.tsx`, a root error page, `public/fonts/` if self-hosting is approved, and the gallery and preview controls loaded only in development.
+- FE-3: `pages/landing/` with `heroExamples.ts` and its test.
+- FE-4: `pages/Start.tsx` and `lib/startFlow.ts` with its test.

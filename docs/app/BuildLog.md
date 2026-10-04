@@ -213,3 +213,75 @@ Baseline observations for the FE-1 audit, with no change made:
 Blockers: none.
 
 Next action: commit FE-0 with `chore(frontend): import baseline frontend`, then reply `next` to start FE-1 (design direction, docs only).
+
+
+## 2026-10-04: Part FE-1, frontend design direction
+
+Part: FE-1 (frontend track), docs only. Only `docs/app/` changed. No file under `frontend/` changed. Part 1-B stays paused at Aryan's request.
+
+Files changed:
+- New `docs/app/FrontendDesign.md`: the audit, principles, information architecture, layout and tokens, page compositions, motion, copy plan, trust map, skills table, dependency requests, accessibility plan, test plan, part scopes, 13 open decisions, 13 deviations and the design-review amendments (17.1).
+- `docs/app/Phases.md`: FE-1 ticked. The standing constraints and quality bars moved to `FrontendDesign.md` section 1, and the file keeps one pointer line. The FE-1 and FE-2 entries say what moved. Decisions D1 to D6 gate FE-2.
+- `docs/app/Architecture.md`: the fonts row points at the self-hosting proposal, and section 7.3 lists the files the FE parts plan to add, marked planned. The tree itself is unchanged.
+- `docs/app/DesignSystem.md`: a note that the new tokens and colour changes land in FE-2, and the fonts note points at the proposal.
+- `docs/app/BuildLog.md`: this entry.
+
+Method. The audit ran against the production build served by `pnpm preview`, driven through a headless Edge over the DevTools protocol with extensions disabled, at 375 and 1280 px in the light theme (contrast pairs in both themes). The scripts live outside the repo and add no dependency. The 70 FE-0 screenshots and the 16 state screenshots in `frontend/.screens/FE-1/` are the visual record. No new screenshot was taken at the end of FE-1, because no route changed.
+
+Skills that ran: `ui-ux-pro-max` (search only, nothing written), `frontend-design`, `cro`, `marketing-psychology`, `site-architecture`, `signup`, `onboarding`, `impeccable` (detector only, read-only), `copywriting`, `copy-editing`, `stop-slop`, `/ponytail:ponytail-review`. `gstack-design-consultation` and `gstack-plan-design-review` ran as method only. Their start-up routine (update check, telemetry, artifact sync), the design-file output, the generated mockups, the review log and the outside voices were skipped, because they write outside `frontend/`, `docs/app/` and `README.md`. Not run, and listed in `FrontendDesign.md` section 10 for later parts: `design-taste-frontend`, `emil-design-eng`, `animate`, `tailwindcss`.
+
+Plan design review ratings, before and after the amendments (the "after" column assumes Aryan approves them):
+
+| Pass | Before | After | What was missing |
+|---|---|---|---|
+| 1 Information architecture | 8 | 9 | No first-viewport hierarchy or fold budget, no journey diagram, no rule for a Reader URL without a session |
+| 2 Interaction states | 5 | 9 | No states for the root error, a page without JavaScript, the start steps, zero findings or a long filename |
+| 3 Journey and emotional arc | 6 | 9 | No scene-by-scene arc, no reload protection, a landing promise (the report) that nothing confirms |
+| 4 AI slop risk | 7 | 9 | Three jobs in one section, a legal line repeated three times, content hidden behind animation timing, unthemed browser surfaces, an indistinguishable visited link |
+| 5 Design system alignment | 8 | 9 | New patterns without a definition, and the edits owed to `DesignSystem.md` unlisted |
+| 6 Responsive and accessibility | 7 | 9 | A three-column grid that leaves an 80 px aside at 1024, no forced-colours path, no landing layout per viewport |
+| 7 Unresolved decisions | n/a | 13 open, 0 hidden | See `FrontendDesign.md` section 15 |
+
+Overall design completeness: 7 of 10 before, 9 of 10 after. The missing point is visual proof. No mockup was generated, so the composition is specified and not yet seen. FE-3 is the first time it is drawn.
+
+Findings that matter most (the full list is in `FrontendDesign.md` sections 2 and 17):
+- The reader's contract column holds about 47 characters a line at 1280 and 50 at 1024, against a target of 68 to 80. The proposal is a 64 px category rail from 1280 to 1439.
+- The Google Fonts import breaks the privacy promise on every route. Self-hosting is proposed, with option B (vendored files, no dependency) recommended.
+- Seven contrast pairs fail AA, and the form borders fail the 3:1 non-text bar. Every fix keeps its hue and is verified.
+- 13 of 21 controls on the mobile home are under 44 px.
+- Four routes have no `h1`, the page title never changes, and an unknown URL renders the "session expired" page.
+- The landing page has no call to action in the hero, and the mock counts and placeholder judgments must stay off it.
+- Review amendment I: a three-column margin grid at 1024 would leave an aside about 80 px wide, so it starts at 1280.
+
+Correction made during FE-1. The first audit pass reported the reader measure as 35, 54 and 54 characters at 1280, 1440 and 1920. That count divided the text length by the number of wrapped lines, which overstates the line count when inline marks and short last lines are present. A second run measured the real text width and the average glyph width (7.83 px per character for the 17 px serif) and gives a capacity of 47, 67 and 75. A direct count of the full lines over 13 paragraphs gives an average of 44.3, 65.9 and 73.7, so capacity by width runs 1 to 3 characters high and is a fair quick estimate. The 1280 proposal changed with it: the first plan sized the sheet for a 74 character line using the wrong glyph width and would have produced about 88. Section 2.4 states both methods, and FE-5 accepts on the full-line average.
+
+Checked in FE-1: the CUAD facts (510 contracts, 41 categories, more than 13,000 annotations, CC BY 4.0) against the dataset page and the paper abstract; the 46 categories as 41 plus 5; contrast ratios by the WCAG luminance formula (70 pairs, and the new values re-run); the focus ring ratios; and that `node --test` with type stripping runs a `.ts` file that imports `lib/offsets.ts` on this machine (Node 24.16).
+
+Not checked: Lighthouse and axe (FE-R, they need approval to download); how React Router 8.4.0 handles view transitions (the general docs were read, the pinned version was not); the font file names and sizes (read from registry and CDN metadata, nothing downloaded); any screen reader. The 1280 reader layout figures are estimates until FE-5 measures them. The Reader's behaviour on a 500,000 code point document is unmeasured.
+
+Decisions: none were made. `FrontendDesign.md` section 15 lists 13 open decisions with a recommendation each. D1 to D6 gate FE-2: hero data source, play once with Next example, font self-hosting and the download, the test runner, the narrowed margin rule and the colour changes. D7 (a verified judgment quote for the landing page, from a corpus id Tanishq supplies) gates FE-3.
+
+Verification:
+- `pnpm install --frozen-lockfile`: works. `pnpm typecheck`: exit 0. `pnpm build`: 160 modules, JavaScript 491.26 kB (143.37 kB gzipped), CSS 19.34 kB (5.28 kB gzipped), identical to FE-0.
+- Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/`, the tool-name grep over `frontend/`, and the dash check over `frontend/src`, `docs/app` and `README.md`: no output, no match.
+- `git status --short` lists only the four modified docs files and the new `FrontendDesign.md`.
+- The preview server on port 4173 and every headless Edge process were stopped.
+
+ponytail-review: no P1. Eleven P2 and P3 items, all fixed in this part:
+- `FrontendDesign.md` section 0: a table that repeated the headings. Cut to two sentences.
+- Section 2.2: a table that repeated the old ratios in 5.4. Cut to one sentence.
+- `space/24` and `space/32` as CSS tokens: Tailwind derives `py-24` and `py-32` from `--spacing`. The tokens are gone, and the names stay in `DesignSystem.md` only.
+- `--w-form`: one use. Replaced by an inline `max-w-[640px]`.
+- `--dur-step`: a cap and not a token. Now one rule in 7.2.
+- A "Replay" button next to "Next example": removed, and the examples wrap.
+- A new `src/content/` folder for one fixture: the fixture moves to `pages/landing/`.
+- A Manual review button in the reader rail: the drawer already holds the list. The rail has one button.
+- A sentence about fixing the gallery's overflow: removed, because the gallery no longer ships.
+- The ratings table: moved here, because it records the review and is not part of the spec.
+- The FE-2 line in `Phases.md`: shortened, with a pointer to the acceptance table.
+
+Kept on purpose: the skills table and the banned list (the brief requires both), the deviations list (it overlaps the decisions but is the sign-off record), the split of the reveal logic from its hook (the test runner has no DOM), and `control-border` as its own token (`rule/strong` still draws dividers). The spec went from 921 to 891 lines.
+
+Blockers: none for FE-1. D7 blocks the landing Evidence section at FE-3, and the section is omitted until a verified quote exists.
+
+Next action: review `FrontendDesign.md` and answer D1 to D6. Commit with `docs(frontend): add frontend design direction`, then reply `next` to start FE-2.
