@@ -46,7 +46,7 @@ The frontend is a React app that shows a contract, marks findings in the margin 
 
 ### Prerequisites
 
-- Node 22 or later.
+- Node 22.18 or later. The tests use the type stripping that ships on by default from that version.
 - pnpm 10 or later. If it is missing, run `npm install -g pnpm@10`.
 
 ### Install
@@ -64,13 +64,18 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open http://localhost:5173.
+Open http://localhost:5173. In development the app adds a Preview controls drawer (the mock adapter's switches and a component gallery at `#/gallery`). A production build contains neither.
 
 ### Build and check
 
 ```bash
 pnpm typecheck
+pnpm test
 pnpm build
 ```
 
-`pnpm build` writes the production files to `frontend/dist/`.
+`pnpm test` runs the unit tests with Node's built-in runner. `pnpm build` writes the production files to `frontend/dist/`.
+
+### Routes
+
+The app uses hash routes, so it runs on any static host: `#/` (landing and upload), `#/review/:documentId`, `#/how-it-works`, `#/accuracy`, `#/expired`. Any other address shows a page-not-found screen. Fonts are served from `frontend/public/fonts/`, so no page requests a third-party host.

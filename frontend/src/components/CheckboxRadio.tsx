@@ -36,7 +36,7 @@ export default function CheckboxRadio({ kind, state = "unchecked", label }: Cont
           width: 20,
           height: 20,
           borderRadius: radio ? 999 : "var(--radius-sm)",
-          border: `1px solid ${active ? "var(--anchor-600)" : "var(--rule-strong)"}`,
+          border: `1px solid ${active ? "var(--anchor-600)" : "var(--control-border)"}`,
           background: active && !radio ? "var(--anchor-600)" : "var(--paper-sheet)",
           color: "var(--paper-sheet)",
           ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {}),

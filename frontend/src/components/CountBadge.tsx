@@ -13,7 +13,7 @@ export default function CountBadge({ count = 1, tone = "neutral" }: { count?: nu
         paddingInline: 5,
         borderRadius: 999,
         fontFamily: "var(--font-mono)",
-        fontSize: 11,
+        fontSize: 12,
         lineHeight: 1,
         color: anchor ? "var(--paper-sheet)" : "var(--ink-secondary)",
         background: anchor ? "var(--anchor-600)" : "var(--paper-sunken)",

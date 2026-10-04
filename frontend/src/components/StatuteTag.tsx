@@ -20,7 +20,6 @@ export default function StatuteTag({
       type="button"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="focus:outline-none focus-visible:outline-none"
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -33,13 +32,6 @@ export default function StatuteTag({
         padding: "3px 8px",
         cursor: "pointer",
         ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {}),
-      }}
-      onFocus={(e) => {
-        e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-        e.currentTarget.style.outlineOffset = "2px";
-      }}
-      onBlur={(e) => {
-        if (state !== "focus") e.currentTarget.style.outline = "none";
       }}
     >
       <SectionIcon size={16} />

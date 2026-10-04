@@ -75,7 +75,6 @@ export default function MarginRuler({
         role="group"
         aria-label="Where findings appear in the document"
         tabIndex={0}
-        className="focus:outline-none focus-visible:outline-none"
         style={{
           position: "relative",
           width: 28,
@@ -84,14 +83,6 @@ export default function MarginRuler({
           ...(variant === "focus"
             ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 }
             : {}),
-        }}
-        onFocus={(e) => {
-          if (variant !== "focus")
-            e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-          e.currentTarget.style.outlineOffset = "2px";
-        }}
-        onBlur={(e) => {
-          if (variant !== "focus") e.currentTarget.style.outline = "none";
         }}
       >
         {/* Ledger rule */}
@@ -158,7 +149,6 @@ export default function MarginRuler({
               }
               onFocus={() => setHovered(i)}
               onBlur={() => setHovered(null)}
-              className={onSelect ? "focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]" : undefined}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => variant !== "hover" && setHovered(null)}
               style={{
@@ -183,7 +173,7 @@ export default function MarginRuler({
                     left: 14,
                     top: -8,
                     fontFamily: "var(--font-mono)",
-                    fontSize: 10,
+                    fontSize: 12,
                     color: "var(--ink-tertiary)",
                   }}
                 >
@@ -216,7 +206,7 @@ export default function MarginRuler({
       <p
         style={{
           maxWidth: 140,
-          fontSize: 11,
+          fontSize: 12,
           lineHeight: "15px",
           color: "var(--ink-tertiary)",
           textAlign: "center",

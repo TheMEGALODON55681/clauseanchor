@@ -90,13 +90,14 @@ function Mark({
         </span>
       )}
       <span
+        className="ca-mark"
         tabIndex={kind === "keyboard" || kind === "hover" ? 0 : undefined}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
           ...markStyle(kind, hovered),
           paddingBottom: 3,
-          transition: "background 120ms ease-out",
+          transition: "background var(--dur-press) var(--ease-out)",
         }}
       >
         {children}
@@ -114,7 +115,7 @@ function Mark({
           aria-hidden
           style={{
             fontFamily: "var(--font-mono)",
-            fontSize: 11,
+            fontSize: 12,
             color: "var(--ink-tertiary)",
             verticalAlign: "super",
             marginLeft: 2,

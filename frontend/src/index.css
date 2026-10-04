@@ -1,6 +1,88 @@
-@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
-
 @import 'tailwindcss';
+
+/* Fonts are served from our own origin (public/fonts, SIL OFL 1.1). The three
+   fallback faces match the metrics of the web fonts, so the swap does not move
+   the layout. The ranges are the Latin subset the files were cut for. */
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('/fonts/source-serif-4-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('/fonts/source-serif-4-latin-wght-italic.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-sans-latin-500-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Source Serif 4 Fallback';
+  src: local('Georgia');
+  size-adjust: 107.3%;
+  ascent-override: 96.55%;
+  descent-override: 31.22%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'IBM Plex Sans Fallback';
+  src: local('Arial');
+  size-adjust: 100.85%;
+  ascent-override: 101.64%;
+  descent-override: 27.27%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'IBM Plex Mono Fallback';
+  src: local('Courier New');
+  size-adjust: 99.98%;
+  ascent-override: 102.52%;
+  descent-override: 27.5%;
+  line-gap-override: 0%;
+}
 
 /* ClauseAnchor: "Marginalia" design tokens.
    Every component references these variables, never raw hex. */
@@ -13,9 +95,10 @@
   --paper-sunken: #efebe2;
   --ink-primary: #1b1f24;
   --ink-secondary: #4e545b;
-  --ink-tertiary: #7a7f85;
+  --ink-tertiary: #646970;
   --rule-default: #e2dcd0;
   --rule-strong: #c9c1b2;
+  --control-border: #85817a;
   --anchor-600: #0f4c5c;
   --anchor-700: #0a3945;
   --anchor-100: #e1edef;
@@ -29,8 +112,8 @@
   --status-review-bg: #fbf1dc;
   --status-review-border: #e6c98a;
   --status-unvalidated-fg: #5d636a;
-  --status-unvalidated-border: #9aa0a6;
-  --status-absent-fg: #6e7278;
+  --status-unvalidated-border: #8a9096;
+  --status-absent-fg: #666a70;
   --status-absent-bg: #efede8;
   --status-absent-border: #d6d1c6;
   --status-unavailable-fg: #8c3b2e;
@@ -44,9 +127,9 @@
   --polarity-protection-bg: #e5f0e7;
   --polarity-mixed-fg: #5b4e8c;
   --polarity-mixed-bg: #ece9f5;
-  --polarity-neutral-fg: #6e7278;
+  --polarity-neutral-fg: #666a70;
   --polarity-neutral-bg: #efede8;
-  --polarity-unresolved-fg: #6e7278;
+  --polarity-unresolved-fg: #666a70;
 
   /* Semantic: statute + evidence */
   --statute-fg: #43397a;
@@ -62,6 +145,7 @@
   --mark-review-line: #b07a18;
   --mark-review-tint: rgba(176, 122, 24, 0.1);
   --mark-focused-tint: rgba(15, 76, 92, 0.18);
+  --selection: rgba(15, 76, 92, 0.22);
 
   /* Elevation */
   --elevation-1: 0 1px 0 var(--rule-default);
@@ -75,9 +159,10 @@
   --paper-sunken: #0f1214;
   --ink-primary: #ece7dd;
   --ink-secondary: #b4aea3;
-  --ink-tertiary: #858079;
+  --ink-tertiary: #8b867f;
   --rule-default: #2c3137;
   --rule-strong: #3e444b;
+  --control-border: #6a6e72;
   --anchor-600: #6fb8c8;
   --anchor-700: #8fcbd8;
   --anchor-100: #15313a;
@@ -90,7 +175,7 @@
   --status-review-bg: #33280f;
   --status-review-border: #6b5320;
   --status-unvalidated-fg: #a8a29a;
-  --status-unvalidated-border: #5a6068;
+  --status-unvalidated-border: #7f858c;
   --status-absent-fg: #9a958d;
   --status-absent-bg: #1f2327;
   --status-absent-border: #353a40;
@@ -120,10 +205,26 @@
   --mark-review-line: #e8c27a;
   --mark-review-tint: rgba(232, 194, 122, 0.14);
   --mark-focused-tint: rgba(111, 184, 200, 0.18);
+  --selection: rgba(111, 184, 200, 0.32);
 
   --elevation-1: 0 1px 0 var(--rule-default);
   --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.3);
   --elevation-3: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* Not themed: motion and layout widths. */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-press: 120ms;
+  --dur-state: 200ms;
+  --dur-panel: 320ms;
+  --dur-ink: 400ms;
+  --stagger: 50ms;
+
+  --w-page: 1200px;
+  --w-main: 42rem;
+  --w-margin: 9rem;
 }
 
 @theme inline {
@@ -139,11 +240,11 @@
   --color-anchor-700: var(--anchor-700);
   --color-anchor-100: var(--anchor-100);
 
-  --font-serif: 'Source Serif 4', Georgia, serif;
-  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-serif: 'Source Serif 4', 'Source Serif 4 Fallback', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Fallback', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'IBM Plex Mono Fallback', ui-monospace, monospace;
 
-  /* Spacing: 4px base */
+  /* Spacing: 4px base. py-24 (96) and py-32 (128) derive from it. */
   --spacing: 4px;
 
   --radius-sm: 4px;
@@ -156,6 +257,172 @@ html {
   color: var(--ink-primary);
   background: var(--paper-base);
   -webkit-font-smoothing: antialiased;
+  caret-color: var(--anchor-600);
+  accent-color: var(--anchor-600);
+  /* A focused element is never hidden under a sticky bar (WCAG 2.4.11). */
+  scroll-padding-top: 80px;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+/* Scrollbars stay visible: the thumb is the cue that a pane scrolls. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-border) transparent;
+}
+.scroll-pane {
+  scrollbar-gutter: stable;
+}
+
+/* One focus ring for everything. Programmatic focus on a heading or main shows none. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+[tabindex='-1']:focus {
+  outline: none;
+}
+.focus-inset:focus-visible {
+  outline-offset: -2px;
+}
+
+/* A 44 by 44 px hit area around a smaller control, with the visual size unchanged. */
+.hit {
+  position: relative;
+}
+.hit::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+@layer components {
+  .t-display-xl {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: clamp(2.5rem, 1.9rem + 2.2vw, 3.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .t-overline {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .t-section-mark {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 24px;
+    line-height: 32px;
+    font-variant-numeric: tabular-nums;
+    color: var(--anchor-600);
+  }
+  .t-marginal-note {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--ink-secondary);
+    max-width: 28ch;
+  }
+  .t-prose-lg {
+    font-family: var(--font-serif);
+    font-size: 19px;
+    line-height: 32px;
+    color: var(--ink-secondary);
+  }
+
+  /* Layout primitives (components/Layout.tsx). The side gutter sits outside the
+     page width. */
+  .container-page {
+    --gutter: 16px;
+    width: min(100% - 2 * var(--gutter), var(--w-page));
+    margin-inline: auto;
+  }
+  @media (min-width: 768px) {
+    .container-page { --gutter: 24px; }
+  }
+  @media (min-width: 1024px) {
+    .container-page { --gutter: 32px; }
+  }
+
+  /* One column below 1024. Margin and main from 1024, with the aside under the
+     main column. Margin, main and aside from 1280, where the aside is 320 px. */
+  .margin-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 16px;
+  }
+  @media (min-width: 1024px) {
+    .margin-grid {
+      grid-template-columns: var(--w-margin) minmax(0, 1fr);
+      column-gap: 2rem;
+    }
+    .margin-grid > .margin-grid-margin { grid-column: 1; grid-row: 1; }
+    .margin-grid > .margin-grid-main { grid-column: 2; grid-row: 1; }
+    .margin-grid > .margin-grid-aside { grid-column: 2; grid-row: 2; }
+  }
+  @media (min-width: 1280px) {
+    .margin-grid {
+      grid-template-columns: var(--w-margin) minmax(0, var(--w-main)) minmax(0, 1fr);
+    }
+    .margin-grid > .margin-grid-aside { grid-column: 3; grid-row: 1; }
+  }
+
+  /* Long-form flow: a heading sits closer to what it introduces than to
+     what comes before it. */
+  .flow > * + * { margin-top: 16px; }
+  .flow > h2 { margin-top: 48px; margin-bottom: 16px; }
+  .flow > h3 { margin-top: 32px; margin-bottom: 12px; }
+  .flow > h2:first-child,
+  .flow > h3:first-child { margin-top: 0; }
+  .flow > h2 + *,
+  .flow > h3 + * { margin-top: 0; }
+
+  /* A link inside a sentence. A visited one turns tertiary, which the
+     teal and its darker hover shade could not do. */
+  .link-prose {
+    color: var(--anchor-600);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+  .link-prose:visited {
+    color: var(--ink-tertiary);
+  }
+  .link-prose:hover {
+    color: var(--anchor-700);
+  }
+
+  /* Disclosure: a native details element. */
+  .disclosure > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    cursor: pointer;
+    list-style: none;
+    border-bottom: 1px solid var(--rule-default);
+    color: var(--ink-primary);
+  }
+  .disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+  .disclosure[open] > summary svg {
+    transform: rotate(180deg);
+  }
+  .disclosure > summary svg {
+    transition: transform var(--dur-state) var(--ease-out);
+  }
 }
 
 /* Faint ruled lines for the judgment / index card. */
@@ -169,7 +436,19 @@ html {
   );
 }
 
-/* Slow shimmer for skeletons; static under reduced motion. */
+/* Scroll reveal. No attribute means visible, so the page reads without
+   script and under reduced motion (see lib/reveal.ts). */
+[data-reveal='pending'] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+[data-reveal='shown'] {
+  transition:
+    opacity var(--dur-panel) var(--ease-out),
+    transform var(--dur-panel) var(--ease-out);
+}
+
+/* Slow fade for skeletons and the spinner. */
 @keyframes ca-shimmer {
   0% { opacity: 0.55; }
   50% { opacity: 0.85; }
@@ -178,16 +457,53 @@ html {
 .shimmer {
   animation: ca-shimmer 1.8s ease-in-out infinite;
 }
-@media (prefers-reduced-motion: reduce) {
-  .shimmer { animation: none; }
-  .reduce-motion-safe { transition: none !important; }
+
+/* The bottom sheet mounts when a finding is picked, so it slides up from the edge.
+   The side drawer stays mounted and slides on its transform instead. */
+@keyframes ca-drawer-up {
+  from { transform: translateY(100%); }
 }
 
-/* Hide scrollbars until scrolling. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+/* Route change: a short cross-fade. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-state);
+  animation-timing-function: var(--ease-exit);
 }
-*:hover {
-  scrollbar-color: var(--rule-strong) transparent;
+
+/* One reduced-motion rule for every animation and transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .shimmer {
+    animation: none !important;
+  }
+  .animate-spin {
+    animation: ca-shimmer 1.8s ease-in-out infinite !important;
+  }
+}
+
+/* Windows high contrast removes backgrounds, which would erase every mark.
+   Marks fall back to an underline in the link colour. */
+@media (forced-colors: active) {
+  .ca-mark {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-decoration-color: LinkText;
+  }
+  .ca-mark[aria-pressed='true'],
+  .ca-mark[data-selected='true'] {
+    outline: 2px solid Highlight;
+  }
 }

@@ -42,7 +42,7 @@ export default function TextInput({
           gap: 8,
           minHeight: 44,
           background: "var(--paper-sunken)",
-          border: `1px solid ${error ? "var(--status-unavailable-border)" : "var(--rule-strong)"}`,
+          border: `1px solid ${error ? "var(--status-unavailable-border)" : "var(--control-border)"}`,
           borderRadius: "var(--radius-sm)",
           padding: "0 12px",
           opacity: disabled ? 0.5 : 1,

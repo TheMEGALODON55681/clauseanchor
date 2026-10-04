@@ -105,10 +105,11 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
 export default function HowItWorks() {
   return (
     <div className="mx-auto w-full max-w-[1120px] px-5 py-12 md:px-8 md:py-16">
+      <title>How it works | ClauseAnchor</title>
       <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
         <nav aria-label="On this page" className="lg:sticky lg:top-8 lg:self-start">
           <p className="font-mono text-[12px] tracking-[0.08em] uppercase" style={{ color: "var(--ink-tertiary)" }}>On this page</p>
-          <ol className="mt-3 flex flex-col gap-1.5">
+          <ol className="mt-3 flex flex-col">
             {SECTIONS.map((s, i) => (
               <li key={s.id} className="text-[14px]">
                 <a
@@ -118,8 +119,8 @@ export default function HowItWorks() {
                     document.getElementById(s.id)?.scrollIntoView({ block: "start" });
                     document.getElementById(`${s.id}-h`)?.focus({ preventScroll: true });
                   }}
-                  className="hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
-                  style={{ color: "var(--ink-secondary)", outlineColor: "var(--focus-ring)" }}
+                  className="inline-block py-[13px] hover:underline"
+                  style={{ color: "var(--ink-secondary)" }}
                 >
                   <span className="font-mono text-[12px]" style={{ color: "var(--ink-tertiary)" }}>{i + 1}.</span> {s.title}
                 </a>
@@ -137,8 +138,8 @@ export default function HowItWorks() {
             <NoticeBanner variant="legal-scope" />
           </div>
           {SECTIONS.map((s) => (
-            <section key={s.id} id={s.id} className="mt-12 scroll-mt-8" aria-labelledby={`${s.id}-h`}>
-              <h2 id={`${s.id}-h`} tabIndex={-1} className="flex items-baseline gap-3 text-[24px] leading-[32px] focus:outline-none" style={{ fontWeight: 600 }}>
+            <section key={s.id} id={s.id} className="mt-12" aria-labelledby={`${s.id}-h`}>
+              <h2 id={`${s.id}-h`} tabIndex={-1} className="flex items-baseline gap-3 text-[24px] leading-[32px]" style={{ fontWeight: 600 }}>
                 <span aria-hidden style={{ color: "var(--anchor-600)" }}>§</span>
                 {s.title}
               </h2>

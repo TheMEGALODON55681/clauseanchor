@@ -35,7 +35,7 @@ export default function RadioCard({
       onClick={onSelect}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="text-left focus:outline-none focus-visible:outline-none"
+      className="text-left"
       style={{
         display: "flex",
         alignItems: "flex-start",
@@ -43,22 +43,15 @@ export default function RadioCard({
         width: "100%",
         minHeight: 44,
         background: "var(--paper-sheet)",
-        border: `${selected ? 2 : 1}px solid ${selected ? "var(--anchor-600)" : "var(--rule-strong)"}`,
+        border: `${selected ? 2 : 1}px solid ${selected ? "var(--anchor-600)" : "var(--control-border)"}`,
         borderLeftWidth: selected ? 4 : 1,
-        borderLeftColor: selected ? "var(--anchor-600)" : "var(--rule-strong)",
+        borderLeftColor: selected ? "var(--anchor-600)" : "var(--control-border)",
         borderRadius: "var(--radius-md)",
         padding: selected ? "11px 13px" : "12px 14px",
         opacity: disabled ? 0.5 : 1,
         cursor: disabled ? "not-allowed" : "pointer",
         boxShadow: resolved === "hover" ? "var(--elevation-2)" : "none",
         ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {}),
-      }}
-      onFocus={(e) => {
-        e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-        e.currentTarget.style.outlineOffset = "2px";
-      }}
-      onBlur={(e) => {
-        if (state !== "focus") e.currentTarget.style.outline = "none";
       }}
     >
       {icon && (

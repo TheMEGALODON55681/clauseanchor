@@ -106,7 +106,7 @@ export default function Reader() {
   const scroller = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  const goExpired = useCallback(() => navigate("/expired?reason=expired", { replace: true }), [navigate]);
+  const goExpired = useCallback(() => navigate("/expired?reason=expired", { replace: true, viewTransition: true }), [navigate]);
 
   const handleError = useCallback(
     (e: unknown) => {
@@ -394,7 +394,7 @@ export default function Reader() {
     try {
       await client.deleteDocument(token, documentId);
       forgetDoc(documentId);
-      navigate("/expired?reason=deleted", { replace: true });
+      navigate("/expired?reason=deleted", { replace: true, viewTransition: true });
     } catch {
       setConfirmDelete(false);
       toast("error", "The contract could not be deleted. Try again.");
@@ -576,7 +576,7 @@ export default function Reader() {
             setSidebarOpen(false);
           }}
           aria-pressed={selection?.type === "manual"}
-          className="flex w-full items-center gap-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="flex w-full items-center gap-2 text-left"
           style={{
             minHeight: 44,
             padding: "8px 12px",
@@ -586,12 +586,11 @@ export default function Reader() {
             color: "var(--ink-primary)",
             fontSize: 14,
             fontWeight: 500,
-            outlineColor: "var(--focus-ring)",
           }}
         >
           <PilcrowIcon size={16} />
           <span className="flex-1">Manual review</span>
-          {manual ? <CountBadge count={manualItems.length} /> : <span className="font-mono text-[11px]" style={{ color: "var(--ink-tertiary)" }}>after review</span>}
+          {manual ? <CountBadge count={manualItems.length} /> : <span className="font-mono text-[12px]" style={{ color: "var(--ink-tertiary)" }}>after review</span>}
         </button>
       }
     />
@@ -636,6 +635,8 @@ export default function Reader() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <title>Review | ClauseAnchor</title>
+      <h1 className="sr-only">Contract review</h1>
       <ReaderToolbar
         variant={variant}
         filename={doc?.filename ?? "Loading"}
@@ -686,7 +687,7 @@ export default function Reader() {
         <div
           ref={scroller}
           onScroll={measure}
-          className="min-w-0 flex-1 overflow-y-auto"
+          className="scroll-pane min-w-0 flex-1 overflow-y-auto"
           style={{ background: "var(--paper-sunken)", paddingBottom: !lg && sheet !== "closed" ? 160 : 0 }}
         >
           <div className="mx-auto flex w-full max-w-[820px] gap-3 px-3 py-6 md:px-6 md:py-10">
@@ -740,7 +741,7 @@ export default function Reader() {
         </div>
 
         {lg && (
-          <div className="w-[400px] shrink-0 overflow-y-auto" style={{ borderLeft: "1px solid var(--rule-default)", background: "var(--paper-base)" }}>
+          <div className="scroll-pane w-[400px] shrink-0 overflow-y-auto" style={{ borderLeft: "1px solid var(--rule-default)", background: "var(--paper-base)" }}>
             {panel}
           </div>
         )}
@@ -769,7 +770,7 @@ export default function Reader() {
             side="bottom"
             state={sheet}
             title={selection.type === "manual" ? "Manual review" : labelOf(selection.id)}
-            size={sheet === "peek" ? 168 : "78dvh"}
+            size="78dvh"
             actions={
               <div className="flex gap-1">
                 <Button variant="tertiary" size="s" onClick={() => setSheet(sheet === "peek" ? "open" : "peek")}>
@@ -896,8 +897,8 @@ function DocumentText({
                 }}
                 onMouseEnter={() => onHover(owner.clause.id)}
                 onMouseLeave={() => onHover(null)}
-                className="cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2"
-                style={{ ...markStyle(kind, hovered && !sel), outlineColor: "var(--focus-ring)", borderRadius: 1 }}
+                className="ca-mark cursor-pointer"
+                style={{ ...markStyle(kind, hovered && !sel), borderRadius: 1 }}
               >
                 {piece}
               </span>
@@ -911,7 +912,6 @@ function DocumentText({
             key={blk.id}
             id={`unit-${blk.id}`}
             tabIndex={-1}
-            className="focus:outline-none"
             style={{
               whiteSpace: "pre-wrap",
               overflowWrap: "anywhere",

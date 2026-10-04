@@ -26,7 +26,10 @@ type ButtonProps = {
   iconNode?: ReactNode;
   children?: ReactNode;
   onClick?: () => void;
+  id?: string;
   "aria-label"?: string;
+  "aria-expanded"?: boolean;
+  "aria-controls"?: string;
 };
 
 const SIZES: Record<ButtonSize, { h: number; px: number; font: number; icon: number }> = {
@@ -42,7 +45,7 @@ function Spinner({ size = 14 }: { size?: number }) {
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      className="animate-spin reduce-motion-safe"
+      className="animate-spin"
       aria-hidden
     >
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.25" />
@@ -60,7 +63,7 @@ function styleFor(variant: ButtonVariant, state: ButtonState): CSSProperties {
   const base: CSSProperties = {
     borderRadius: "var(--radius-md)",
     fontWeight: 500,
-    transition: "transform 120ms ease-out, background 120ms ease-out",
+    transition: "transform var(--dur-press) var(--ease-out), background var(--dur-press) var(--ease-out)",
     transform: pressed ? "translateY(1px)" : "translateY(0)",
     opacity: disabled ? 0.45 : 1,
     cursor: disabled ? "not-allowed" : "pointer",
@@ -149,7 +152,7 @@ export default function Button({
       onMouseDown={() => setActive(true)}
       onMouseUp={() => setActive(false)}
       aria-busy={loading || undefined}
-      className="inline-flex items-center justify-center gap-2 font-sans select-none focus:outline-none focus-visible:outline-none"
+      className="hit inline-flex items-center justify-center gap-2 font-sans select-none"
       style={{
         ...css,
         minHeight: s.h,
@@ -161,15 +164,6 @@ export default function Button({
         ...(state === "focus"
           ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 }
           : {}),
-      }}
-      onFocus={(e) => {
-        e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-        e.currentTarget.style.outlineOffset = "2px";
-      }}
-      onBlur={(e) => {
-        if (state !== "focus") {
-          e.currentTarget.style.outline = "none";
-        }
       }}
       {...rest}
     >

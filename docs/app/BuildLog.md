@@ -285,3 +285,63 @@ Kept on purpose: the skills table and the banned list (the brief requires both),
 Blockers: none for FE-1. D7 blocks the landing Evidence section at FE-3, and the section is omitted until a verified quote exists.
 
 Next action: review `FrontendDesign.md` and answer D1 to D6. Commit with `docs(frontend): add frontend design direction`, then reply `next` to start FE-2.
+
+
+## 2026-10-04: Part FE-2, foundations
+
+Part: FE-2 (frontend track). Files changed under `frontend/`, `docs/app/` and `README.md`. Part 1-B stays paused at Aryan's request. No dependency was added.
+
+Files changed:
+- New under `frontend/`: `public/favicon.svg`, `public/fonts/` (seven woff2 files and three OFL licence texts), `src/lib/reveal.ts`, `src/lib/reveal.test.ts`, `src/lib/useReveal.ts`, `src/tokens.test.ts`, `src/components/Layout.tsx`, `src/components/Disclosure.tsx`, `src/components/PreviewControls.tsx`, `src/pages/NotFound.tsx`, `src/app/RootError.tsx`.
+- `frontend/index.html`, `package.json` (a `test` script and an `engines` field), `src/index.css` (rewritten: own-origin fonts with metric-matched fallbacks, the colour changes, motion and width tokens, one global focus rule, `.hit`, layout and type classes, reveal CSS, one reduced-motion block, forced-colours marks, themed selection and scrollbars), `src/app/routes.tsx` (lazy pages, error boundaries, `/gallery` in development only), `src/app/Root.tsx` (focus to the heading on a path change, menu id and Escape, dev-only preview controls).
+- Components, mechanical: per-component focus code removed from 14 components in favour of the global rule, `.hit` added where a visual size is under 44 px, `control-border` swapped in on eight form controls, and 11 and 10 px text raised to 12 px.
+- Components, specific: `Link` (router link for `#/` addresses), `AppHeader`, `Button`, `MobileDrawer` (rewritten, stays mounted, slides on `transform`), `CategoryRow` (tint and bracket mark instead of the side stripe), `CategoryGroupHeader` (44 px), `ClauseDetailPanel` (two 4 px stripes replaced by a 1 px box), `ConfidenceBand`, `DropdownMenu`, `EmptyState` (`headingAs`), `SearchField` (the label wraps the field, so the whole box focuses the input), `SpanHighlight` (`ca-mark`), `Switch` (the knob moves on `transform`), `Spinner`, `icons`.
+- Pages: `Home` (mock panel removed, view transitions on navigation), `Reader` (title, a visually hidden `h1`, scroll panes, `ca-mark`), `Accuracy` and `HowItWorks` (titles), `Expired` (title, `h1`), `Gallery` (colour swatches corrected, a new "Layout and motion" section, a working contents bar).
+- Docs: `DesignSystem.md` (3.1, 3.2, 3.4, 3.5 and 5 updated, new section 6), `FrontendDesign.md` (5.2 and 5.4 marked, section 15 pointer, new 17.2 with D1 to D13, amendments N to T and the deferred list), `Phases.md` (FE-2 ticked, deviations), `Architecture.md` (tree, routing, fonts, motion and test rows), `README.md` (Node 22.18, `pnpm test`, routes, fonts).
+
+Method. Browser checks ran against the production build from `pnpm preview` (port 4173) and the dev server (port 5173), driven through a headless Edge over the DevTools protocol with extensions disabled. The scripts live outside the repo and add no dependency.
+
+Skills that ran: `superpowers:test-driven-development` (the reveal core, red then green), `tailwindcss` and `animate` (run late, as a check of the finished tokens and motion against their rules, so they changed nothing), `superpowers:verification-before-completion`, `copywriting`, `copy-editing` and `stop-slop` (in that order, over the docs and the few user-facing strings: the error page, the not-found page and the noscript line), `/ponytail:ponytail-review`. Not run, and left to the parts that need them: `design-taste-frontend` and `emil-design-eng`. The gstack design review and QA, `coderabbit`, `gstack-review`, `gstack-cso` and one independent second review run at FE-R, as the plan says.
+
+Decisions: D1 to D13 are answered in `FrontendDesign.md` 17.2. D8 to D13 follow their recommendations, because none adds a dependency, changes a fixed phrase or moves a route:
+- D8 follows the mock for the sample id. D9 uses CUAD facts only. D10 picks hero heading A. D11 picks the 64 px Reader rail. D12 keeps the report out of the landing copy. D13 shows both landing buttons.
+- D2 is signed off with its WCAG 2.2.2 reasoning (17.2). D7 holds the Evidence section back until Aryan sends a verified passage from Tanishq.
+
+Deviations from the plan, each recorded in 17.2:
+- N: the three layout primitives are one file, `components/Layout.tsx`, not a `layout/` folder.
+- O: a baseline bug. The `Link` atom called `preventDefault` on every click, so no internal link in the header, footer or page body navigated. It now goes through the router with a view transition.
+- P: the fixed `MobileDrawer` stays mounted. Focus does not move into a drawer or back out (FE-5). The bottom sheet has no exit animation, because the Reader unmounts it (FE-5).
+- Q, R: hit areas fixed beyond the plan's list, and the bracket mark moved out of the row's flow, after the first screenshot pass showed it squeezing every category name by about 16 px, and the row keeps the baseline's 16 px left edge so it lines up with the in-progress rows.
+- S: the fonts are the Latin subset. The rupee sign U+20B9, the bracket marks and non-Latin scripts fall back to a system font. Contracts in India contain the rupee sign, so a Latin-extended subset is worth adding. The three OFL licence texts were fetched with the seven files, a small step beyond the seven files D3 named.
+- T: the How it works contents links grew block padding to reach 44 px, a visible spacing change that FE-6 redoes.
+
+Deferred, with owners (the full table is in 17.2): the ink-in keyframes (FE-3), the header restructure (FE-4), the footer Credits link (FE-6), the 4 px rule on seven more components (FE-4 to FE-6), the squeezed category names and the 12 by 3 px ruler ticks (FE-5), drawer focus management (FE-5) and tabular numerals on counts (FE-4, FE-6).
+
+Versions on this machine: Node v24.16.0, pnpm 11.20.0. The README still says pnpm 10 or later, which holds. `engines` is `^22.18.0 || >=23.6.0`. 22.18.0 is the version where type stripping is on by default, checked in the Node docs. 23.6.0 is from memory and unchecked, and `engines` is only a hint.
+
+Verification (all run on the final build, fresh):
+- `pnpm install --frozen-lockfile`: up to date. `pnpm typecheck`: exit 0. `pnpm test`: 15 of 15 pass (7 reveal, 8 colour tokens), 0 failed, 0 skipped. `pnpm build`: 154 modules, no warnings.
+- Bundle: the index chunk is 215.68 kB (67.57 kB gzipped). The landing route loads six script files, 118.4 kB gzipped in all, and 7.1 kB of CSS. FE-1 measured one 491.26 kB file (143.37 kB gzipped) for every route, so the landing route is 25 kB lighter and Reader code no longer loads with it. The five fonts the landing page uses add 138 kB.
+- `dist` holds no "Preview controls" string, no Gallery chunk and no `googleapis` or `gstatic` reference.
+- Six routes at 375 and 1280 px (home, how it works, accuracy, expired, expired with `reason=deleted`, not found): zero console output, zero third-party hosts, one `h1` each, a title of the form "How it works | ClauseAnchor" (Home keeps "ClauseAnchor"), no horizontal overflow.
+- After a header link click focus lands on the `h1`. The mobile menu sets `aria-expanded`, closes on Escape and returns focus to its button. A blocked lazy chunk shows "This page could not load." inside the shell. Every focus ring computes to 2 px solid with a 2 px offset. Reduced motion leaves 0 running animations. A click on a header link calls `document.startViewTransition` once.
+- Hit areas, counting the 44 px `::after`: every interactive element on the six routes passes. In the Reader at 375, 1280 and 1440 px, and with each drawer and the sheet open at 1024, 768 and 375 px, every control passes except the ruler's 12 by 3 px ticks at 768 px and wider (deferred to FE-5). The first Reader pass found the menu trigger (40 px), the group headers (36 px), the filter field (an input 21 px high inside a 44 px box) and the confidence button (20 px). All four are fixed, and the filter's 14 px reset button was fixed with the field. The one overlap the audit reported at 375 px, the header's theme button against the open drawer's Close, is a false positive: the audit ignores stacking, and a click on Close reaches Close.
+- Reader drawers: the categories drawer moves from `translateX(-320px)` to 0 and back, and is hidden and `aria-hidden` when closed. The bottom sheet peeks 168 px at 375 and 768, opens to its full 78 percent height and closes. No console output at any width.
+- Performance, indicative only, headless Edge on localhost with no throttling: LCP 112 to 332 ms and CLS 0 on `/` at 375 px over four runs. The quality-bar measurements (Lighthouse and axe) run at FE-R.
+- Dev server: Preview controls appear and Home has no mock panel. The margin grid is 144, 672 and 320 px at 1280 and 1440, 144 and 784 px at 1024 with the aside stacked, and one 343 px column at 375. The long-form flow gives an `h2` 48 px above and 16 below, an `h3` 32 above and 12 below. A reveal goes from `opacity 0` and 12 px down to shown on scroll. A disclosure summary is 44 px. The Reader sets its title and `h1` and moves focus there, with no console output. The Gallery contents bar scrolls to its sections.
+- Small items checked by hand: the Switch knob moves on `transform`; clicking the edge of the filter field focuses the input and the box takes a 2 px ring; jumping to a contents link on How it works leaves the heading 80 px from the top.
+- The tool-name grep over `frontend/`, the Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/`, and a scan of `frontend/src`, `frontend/index.html`, `frontend/public`, `docs/app` and `README.md` for en and em dashes: no output, no match. No `console.log`, `debugger`, `TODO` or `FIXME` in `frontend/src`.
+- `git status --short` lists no path under `frontend/node_modules`, `frontend/dist` or `frontend/.screens`.
+- No git write command was run.
+
+Screenshots: 98 files in `frontend/.screens/FE-2/`, gitignored. Naming is `<route>-<width>-<theme>.png` for `home`, `how-it-works`, `accuracy`, `expired` and `not-found`, full page, at 375, 768, 1024, 1280 and 1440 in light and dark. The Reader has `reader-`, `reader-selected-` (a finding open) at every width and theme, `reader-drawer-` at 375, 768 and 1024, and `reader-sheet-peek-` and `reader-sheet-open-` at 375 and 768, all light. `gallery-layout-` and `gallery-layout-b-` show the new Gallery section, from the dev server. `search-focus-1440-light.png` shows the filter field's ring. The before set is in `frontend/.screens/FE-0/` and `FE-1/`.
+
+ponytail-review: no P1. Two P2 fixed, five P2 kept:
+- Fixed: the `ca-drawer-left` keyframe and its ternary in `MobileDrawer` (the side drawer is always mounted, so the mount animation could not play). Fixed: an unused `className` prop on `Container`.
+- Kept: `Disclosure`, `useReveal` and the Gallery's layout section have no production consumer until FE-3, and the part's scope names them. `--stagger` and `--dur-ink` are unused until FE-3. `Container` and `MarginGrid` are exported and used only inside `Layout.tsx` until FE-3. `NotFound` and `RootError` repeat a three-line `h1` style, two callers, and FE-6 recomposes both. `HydrateFallback: () => null` appears on two routes, which a shared constant would save one line on.
+
+Found along the way, not fixed, and added to the deferred table in `FrontendDesign.md` 17.2: the confidence popover in `ConfidenceBand` states "Calibrated on 214 examples from 48 contracts", a number with no cited source, in a component the Reader shows. FE-5 should replace it with a figure from the evaluation or remove the line.
+
+Blockers: none.
+
+Next action: commit FE-2 with `feat(frontend): add motion tokens, layout primitives and 404 route`, then reply `next` to start FE-3 (landing, with the live hero demo).

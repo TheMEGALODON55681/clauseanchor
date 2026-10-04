@@ -67,7 +67,7 @@ export default function ConfidenceBand({ variant, size = "compact" }: Confidence
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="text-left focus:outline-none focus-visible:outline-none"
+          className="text-left hit"
           style={{
             fontSize: size === "compact" ? 12 : 13,
             fontWeight: 500,
@@ -76,11 +76,6 @@ export default function ConfidenceBand({ variant, size = "compact" }: Confidence
             textUnderlineOffset: 3,
             textDecorationStyle: variant === "unvalidated" ? "dashed" : "solid",
           }}
-          onFocus={(e) => {
-            e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-            e.currentTarget.style.outlineOffset = "2px";
-          }}
-          onBlur={(e) => (e.currentTarget.style.outline = "none")}
           aria-expanded={open}
         >
           {cfg.label}

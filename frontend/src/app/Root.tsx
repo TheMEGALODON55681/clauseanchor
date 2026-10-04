@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useMatch } from "react-router";
 import AppHeader from "../components/AppHeader";
 import AppFooter from "../components/AppFooter";
@@ -9,6 +9,9 @@ import { MoonIcon, SunIcon } from "../components/icons";
 import { useTheme } from "./theme";
 import { useSession } from "./session";
 import { useMedia } from "../lib/useMedia";
+
+/* Development only. In a production build this is null and the import is removed. */
+const PreviewControls = import.meta.env.DEV ? lazy(() => import("../components/PreviewControls")) : null;
 
 const LINKS = [
   { label: "Review", href: "#/", path: "/" },
@@ -24,10 +27,33 @@ export default function Root() {
   const wide = useMedia("(min-width: 768px)");
   const [menuOpen, setMenuOpen] = useState(false);
 
+  /* On a new pathname, focus moves to the page heading (or main) so assistive technology
+     announces the page, and the view scrolls to the top except in the reader. The ref
+     keeps the first load, and a repeat effect run, from stealing focus. */
+  const shown = useRef(location.pathname);
   useEffect(() => {
+    if (shown.current === location.pathname) return;
+    shown.current = location.pathname;
     setMenuOpen(false);
+    const main = document.getElementById("main");
+    const target = main?.querySelector<HTMLElement>("h1") ?? main;
+    if (target) {
+      target.tabIndex = -1;
+      target.focus({ preventScroll: true });
+    }
     if (!inReader) window.scrollTo(0, 0);
   }, [location.pathname, inReader]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMenuOpen(false);
+      document.getElementById("menu-button")?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   const themeButton = (
     <Button
@@ -67,11 +93,15 @@ export default function Root() {
           homeHref="#/"
           trailing={themeButton}
           onMenu={() => setMenuOpen((v) => !v)}
+          menuOpen={menuOpen}
+          menuId="mobile-menu"
         />
-        {!wide && menuOpen && (
+        {!wide && (
           <nav
+            id="mobile-menu"
             aria-label="Main"
             style={{
+              display: menuOpen ? "flex" : "none",
               position: "absolute",
               left: 0,
               right: 0,
@@ -80,7 +110,6 @@ export default function Root() {
               borderBottom: "1px solid var(--rule-default)",
               boxShadow: "var(--elevation-2)",
               padding: "8px 20px 14px",
-              display: "flex",
               flexDirection: "column",
               gap: 10,
             }}
@@ -95,11 +124,17 @@ export default function Root() {
         )}
       </div>
 
-      <main id="main" tabIndex={-1} className={inReader ? "flex min-h-0 flex-1 flex-col focus:outline-none" : "flex-1 focus:outline-none"}>
+      <main id="main" tabIndex={-1} className={inReader ? "flex min-h-0 flex-1 flex-col" : "flex-1"}>
         <Outlet />
       </main>
 
       {!inReader && <AppFooter sampleMode={sample} creditsHref="#/how-it-works" />}
+
+      {PreviewControls && (
+        <Suspense fallback={null}>
+          <PreviewControls />
+        </Suspense>
+      )}
 
       <div
         aria-live="polite"

@@ -13,14 +13,6 @@ type CategoryRowProps = {
   onClick?: () => void;
 };
 
-const RULE_COLOR: Record<StatusKind, string> = {
-  found: "var(--status-found-fg)",
-  review: "var(--status-review-fg)",
-  unvalidated: "var(--status-unvalidated-fg)",
-  absent: "var(--status-absent-fg)",
-  unavailable: "var(--status-unavailable-fg)",
-};
-
 export default function CategoryRow({ name, status, count, state, onClick }: CategoryRowProps) {
   const [hovered, setHovered] = useState(false);
   const resolved = state ?? (hovered ? "hover" : "default");
@@ -33,28 +25,25 @@ export default function CategoryRow({ name, status, count, state, onClick }: Cat
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       aria-current={selected || undefined}
-      className="text-left focus:outline-none focus-visible:outline-none"
+      className="text-left focus-inset"
       style={{
+        position: "relative",
         display: "flex",
         alignItems: "center",
         gap: 10,
         width: "100%",
         minHeight: 44,
-        padding: "8px 12px",
-        background: selected ? "var(--paper-sheet)" : resolved === "hover" ? "var(--paper-sheet)" : "transparent",
+        padding: "8px 12px 8px 16px",
+        background: selected ? "var(--anchor-100)" : resolved === "hover" ? "var(--paper-sheet)" : "transparent",
         border: "none",
-        borderLeft: `4px solid ${selected ? RULE_COLOR[status] : "transparent"}`,
         cursor: "pointer",
         ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: -2 } : {}),
       }}
-      onFocus={(e) => {
-        e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-        e.currentTarget.style.outlineOffset = "-2px";
-      }}
-      onBlur={(e) => {
-        if (state !== "focus") e.currentTarget.style.outline = "none";
-      }}
     >
+      {/* Out of flow, so an unselected row keeps all of its width for the name. */}
+      <span aria-hidden style={{ position: "absolute", left: 4, top: "50%", transform: "translateY(-50%)", fontFamily: "var(--font-serif)", color: "var(--anchor-600)", visibility: selected ? "visible" : "hidden" }}>
+        &#10214;
+      </span>
       <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "var(--ink-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {name}
       </span>

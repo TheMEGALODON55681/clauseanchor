@@ -12,7 +12,7 @@ export default function MetricCell({ variant = "value", value = "0.71", support 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 88 }}>
       {label && (
-        <span style={{ fontSize: 11, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+        <span style={{ fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
           {label}
         </span>
       )}

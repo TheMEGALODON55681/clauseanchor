@@ -37,7 +37,6 @@ export default function Select({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className="focus:outline-none focus-visible:outline-none"
         style={{
           display: "flex",
           alignItems: "center",
@@ -45,7 +44,7 @@ export default function Select({
           gap: 8,
           minHeight: 44,
           background: "var(--paper-sunken)",
-          border: "1px solid var(--rule-strong)",
+          border: "1px solid var(--control-border)",
           borderRadius: "var(--radius-sm)",
           padding: "0 12px",
           fontSize: 15,
@@ -53,13 +52,6 @@ export default function Select({
           opacity: disabled ? 0.5 : 1,
           cursor: disabled ? "not-allowed" : "pointer",
           ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {}),
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-          e.currentTarget.style.outlineOffset = "2px";
-        }}
-        onBlur={(e) => {
-          if (state !== "focus") e.currentTarget.style.outline = "none";
         }}
       >
         {selected}

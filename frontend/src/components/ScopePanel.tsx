@@ -51,7 +51,7 @@ export default function ScopePanel({
       <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--anchor-600)" }}>
         <InfoIcon size={16} />
         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-primary)" }}>Review scope</span>
-        <span style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-tertiary)" }}>
+        <span style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-tertiary)" }}>
           {catalogueVersion}
         </span>
       </div>

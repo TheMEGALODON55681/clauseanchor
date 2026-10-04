@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link as RouterLink } from "react-router";
 import { HorizontalLockup } from "./BrandMark";
 import Link from "./Link";
 import Button from "./Button";
@@ -20,6 +21,8 @@ export default function AppHeader({
   homeHref,
   trailing,
   onMenu,
+  menuOpen = false,
+  menuId,
 }: {
   variant?: HeaderVariant;
   links?: NavLink[];
@@ -27,6 +30,9 @@ export default function AppHeader({
   /** Extra controls, such as the theme toggle. */
   trailing?: ReactNode;
   onMenu?: () => void;
+  /** Mobile menu state, for the expanded state of its button. */
+  menuOpen?: boolean;
+  menuId?: string;
 }) {
   const mobile = variant === "mobile";
   return (
@@ -43,9 +49,9 @@ export default function AppHeader({
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {homeHref ? (
-          <a href={homeHref} aria-label="ClauseAnchor home" className="rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]" style={{ display: "inline-flex" }}>
+          <RouterLink to={homeHref.slice(1)} viewTransition aria-label="ClauseAnchor home" className="hit rounded" style={{ display: "inline-flex" }}>
             <HorizontalLockup size={26} />
-          </a>
+          </RouterLink>
         ) : (
           <HorizontalLockup size={26} />
         )}
@@ -67,9 +73,9 @@ export default function AppHeader({
       </div>
 
       {mobile ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           {trailing}
-          <Button variant="secondary" size="s" icon="icon-only" aria-label="Open menu" onClick={onMenu} iconNode={<DotsIcon size={18} />} />
+          <Button id="menu-button" variant="secondary" size="s" icon="icon-only" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls={menuId} onClick={onMenu} iconNode={<DotsIcon size={18} />} />
         </div>
       ) : (
         <nav aria-label="Main" style={{ display: "flex", alignItems: "center", gap: 18 }}>

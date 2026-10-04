@@ -92,7 +92,7 @@ function Shell({ tone, children }: { tone: "idle" | "drag" | "error"; children: 
       ? "2px solid var(--anchor-600)"
       : tone === "error"
       ? "2px dashed var(--status-unavailable-border)"
-      : "2px dashed var(--rule-strong)";
+      : "2px dashed var(--control-border)";
   const bg = tone === "drag" ? "var(--anchor-100)" : "var(--paper-sheet)";
   return (
     <div

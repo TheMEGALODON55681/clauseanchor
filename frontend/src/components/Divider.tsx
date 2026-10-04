@@ -18,7 +18,7 @@ export default function Divider({ orientation = "horizontal", label }: DividerPr
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ flex: 1, height: 1, background: "var(--rule-default)" }} />
-        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-tertiary)" }}>
+        <span className="t-overline" style={{ color: "var(--ink-tertiary)" }}>
           {label}
         </span>
         <span style={{ flex: 1, height: 1, background: "var(--rule-default)" }} />

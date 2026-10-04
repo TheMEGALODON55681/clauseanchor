@@ -32,6 +32,7 @@ export default function Toast({ variant = "success", message, onDismiss }: { var
       <span style={{ flex: 1, fontSize: 14, color: "var(--ink-primary)" }}>{message ?? c.message}</span>
       <button
         type="button"
+        className="hit"
         aria-label="Dismiss"
         onClick={onDismiss}
         style={{ display: "inline-flex", color: "var(--ink-tertiary)", background: "none", border: "none", cursor: "pointer" }}

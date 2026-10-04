@@ -35,7 +35,7 @@ export default function SegmentedFilter({
               setInternal(it);
               onChange?.(it);
             }}
-            className="focus:outline-none focus-visible:outline-none"
+            className="hit"
             style={{
               minHeight: 32,
               padding: "0 10px",
@@ -48,11 +48,6 @@ export default function SegmentedFilter({
               color: isActive ? "var(--ink-primary)" : "var(--ink-secondary)",
               cursor: "pointer",
             }}
-            onFocus={(e) => {
-              e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-              e.currentTarget.style.outlineOffset = "2px";
-            }}
-            onBlur={(e) => (e.currentTarget.style.outline = "none")}
           >
             {it}
           </button>

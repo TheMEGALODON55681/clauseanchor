@@ -194,9 +194,10 @@ Part ids and commit messages are suggestions, like the backend parts. Every part
 - [x] **FE-1** Design direction (docs only)
   `docs(frontend): add frontend design direction`
   Audit of every route at every width and theme, the final information architecture, section-by-section composition, type, spacing and motion tokens, copy plan, trust and conversion map, skills table and dependency requests. Includes the font self-hosting proposal: the fonts load from Google, which contradicts the privacy promise. Written to `FrontendDesign.md`, then reviewed with the plan design review (amendments A to L in its section 17.1). Stops for review before any UI code changes: FE-2 starts after decisions D1 to D6 in section 15 are answered. Deviations from the brief are listed in section 16 of that file.
-- [ ] **FE-2** Foundations
+- [x] **FE-2** Foundations
   `feat(frontend): add motion tokens, layout primitives and 404 route`
-  Motion and type tokens, the colour changes, layout primitives, the reveal hook (tests first), route transitions and titles, `NotFound` and error pages, the dev-only gallery, the favicon and 44 px hit areas, and self-hosted fonts if approved. Scope and acceptance: `FrontendDesign.md` section 14.
+  Motion and type tokens, the colour changes, layout primitives, the reveal hook (tests first), route transitions and titles, `NotFound` and error pages, the dev-only gallery and preview controls, the favicon and 44 px hit areas, and self-hosted fonts. Scope and acceptance: `FrontendDesign.md` section 14. Decisions D1 to D13 and the amendments are in section 17.2 of that file.
+  Deviations: the layout primitives are one file, `components/Layout.tsx`, not a `layout/` folder. The baseline `Link` never navigated and was fixed. The fonts are the Latin subset. The ink-in keyframes wait for FE-3, the header restructure for FE-4, the footer Credits link for FE-6, and the Reader items (squeezed category names, the ruler, drawer focus) for FE-5. The full list with owners is in `FrontendDesign.md` 17.2.
 - [ ] **FE-3** Landing
   `feat(frontend): rebuild landing with live hero demo`
 - [ ] **FE-4** The `/start` stepped flow

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { AnchorIcon } from "../components/icons";
 import Button from "../components/Button";
@@ -53,6 +54,9 @@ import PerformanceTableRow from "../components/PerformanceTableRow";
 import AppHeader from "../components/AppHeader";
 import AppFooter from "../components/AppFooter";
 import MobileDrawer from "../components/MobileDrawer";
+import Disclosure from "../components/Disclosure";
+import { Section } from "../components/Layout";
+import { useReveal } from "../lib/useReveal";
 import { AnchorLogomark, Wordmark, HorizontalLockup, Favicon } from "../components/BrandMark";
 
 type Mode = "light" | "dark";
@@ -79,7 +83,8 @@ const CORE: { token: string; light: string; dark: string; on: [string, string] }
   { token: "paper/sunken", light: "#EFEBE2", dark: "#0F1214", on: ["#1B1F24", "#ECE7DD"] },
   { token: "ink/primary", light: "#1B1F24", dark: "#ECE7DD", on: ["#F6F3EC", "#131619"] },
   { token: "ink/secondary", light: "#4E545B", dark: "#B4AEA3", on: ["#F6F3EC", "#131619"] },
-  { token: "ink/tertiary", light: "#7A7F85", dark: "#858079", on: ["#F6F3EC", "#131619"] },
+  { token: "ink/tertiary", light: "#646970", dark: "#8B867F", on: ["#F6F3EC", "#131619"] },
+  { token: "control/border", light: "#85817A", dark: "#6A6E72", on: ["#F6F3EC", "#131619"] },
   { token: "anchor/600", light: "#0F4C5C", dark: "#6FB8C8", on: ["#FFFDF8", "#131619"] },
   { token: "anchor/700", light: "#0A3945", dark: "#8FCBD8", on: ["#FFFDF8", "#131619"] },
 ];
@@ -840,7 +845,7 @@ function Library({ mode }: { mode: Mode }) {
                 fontSize: 15,
                 lineHeight: "24px",
                 color: "var(--ink-secondary)",
-                borderLeft: "4px solid var(--rule-strong)",
+                borderLeft: "1px solid var(--rule-strong)",
                 paddingLeft: 12,
               }}
             >
@@ -936,10 +941,15 @@ export default function Gallery() {
           ["Organisms", "organisms"],
           ["Status gallery", "status-gallery"],
           ["Voice", "voice"],
+          ["Layout and motion", "layout"],
         ].map(([label, id]) => (
           <a
             key={id}
             href={`#${id}`}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(id)?.scrollIntoView();
+            }}
             style={{
               fontSize: 13,
               fontWeight: 500,
@@ -972,9 +982,103 @@ export default function Gallery() {
         <ModeColumn mode="dark" />
       </main>
 
+      <LayoutAndMotion />
+
       <footer style={{ padding: "24px 32px", borderTop: "1px solid var(--rule-default)", color: "var(--ink-tertiary)", fontSize: 13 }}>
         Not legal advice. ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires.
       </footer>
+    </div>
+  );
+}
+
+/* The layout primitives, type tokens, motion tokens, reveal hook and disclosure at full
+   page width. The margin grid follows the viewport, so it cannot sit in a half-width column. */
+function LayoutAndMotion() {
+  const [on, setOn] = useState(false);
+  const reveal = useReveal<HTMLDivElement>();
+  const durations = [
+    ["--dur-press", "120 ms, hover and press"],
+    ["--dur-state", "200 ms, a state change"],
+    ["--dur-panel", "320 ms, panels, drawers, reveals"],
+    ["--dur-ink", "400 ms, the ink-in sweep"],
+  ] as const;
+  return (
+    <div id="layout" style={{ borderTop: "1px solid var(--rule-default)" }}>
+      <Section
+        labelledBy="layout-type"
+        mark="§ 1"
+        aside={
+          <div style={{ border: "1px dashed var(--control-border)", borderRadius: "var(--radius-md)", padding: 16, background: "var(--paper-sheet)" }}>
+            <p className="t-marginal-note">The aside column holds the component that a section explains.</p>
+          </div>
+        }
+      >
+        <div className="flow">
+          <h2 id="layout-type" style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 30, lineHeight: "38px" }}>Layout and type</h2>
+          <p className="t-prose-lg">
+            Margin, main and aside from 1280 px. Margin and main from 1024 px, with the aside under the main column. One column below.
+          </p>
+          <p className="t-display-xl" data-specimen="display-xl">Display, one idea per heading</p>
+          <p className="t-overline" data-specimen="overline" style={{ color: "var(--ink-secondary)" }}>Overline, 12 px</p>
+          <p className="t-marginal-note" data-specimen="marginal-note">A short note that sits in the margin.</p>
+        </div>
+      </Section>
+
+      <Section labelledBy="layout-flow" mark="§ 2">
+        <div className="flow" data-specimen="flow">
+          <h2 id="layout-flow" style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 24, lineHeight: "32px" }}>Heading spacing</h2>
+          <p className="t-prose-lg">A heading is closer to what it introduces than to what precedes it.</p>
+          <h2 style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 24, lineHeight: "32px" }}>A second heading</h2>
+          <p className="t-prose-lg">Forty-eight pixels above, sixteen below.</p>
+          <h3 style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 19, lineHeight: "28px" }}>A third-level heading</h3>
+          <p className="t-prose-lg">Thirty-two above, twelve below.</p>
+        </div>
+      </Section>
+
+      <Section labelledBy="layout-motion" mark="§ 3">
+        <div className="flow">
+          <h2 id="layout-motion" style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 24, lineHeight: "32px" }}>Motion tokens</h2>
+          <div>
+            <Button variant="secondary" size="s" onClick={() => setOn((v) => !v)}>{on ? "Reset" : "Play"}</Button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {durations.map(([token, note]) => (
+              <div key={token} style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, width: 240, color: "var(--ink-secondary)" }}>{token}: {note}</span>
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 2,
+                    background: "var(--anchor-600)",
+                    transform: on ? "translateX(160px)" : "none",
+                    transition: `transform var(${token}) var(--ease-out)`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <div style={{ height: 480 }} aria-hidden />
+
+      <Section labelledBy="layout-reveal" mark="§ 4">
+        <div className="flow">
+          <h2 id="layout-reveal" style={{ fontFamily: "var(--font-serif)", fontWeight: 600, fontSize: 24, lineHeight: "32px" }}>Scroll reveal and disclosure</h2>
+          <div ref={reveal} data-specimen="reveal" style={{ border: "1px solid var(--rule-default)", borderRadius: "var(--radius-md)", background: "var(--paper-sheet)", padding: 16 }}>
+            <p className="t-marginal-note">This block rose into view once. It rises at most 12 px, and it never hides under reduced motion.</p>
+          </div>
+          <div>
+            <Disclosure summary="Is this legal advice?" open>
+              No. ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires.
+            </Disclosure>
+            <Disclosure summary="What happens to my file?">
+              Your contract is processed in memory and deleted within 60 minutes.
+            </Disclosure>
+          </div>
+        </div>
+      </Section>
     </div>
   );
 }

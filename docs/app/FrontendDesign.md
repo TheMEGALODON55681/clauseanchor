@@ -233,7 +233,7 @@ On a pathname change, the app sets focus on the page's `h1` (made programmatical
 | `Section` | Vertical padding 64 px below 768, 96 px from 768, 128 px from 1024. Takes an `id` and an `aria-labelledby`. Takes an optional `mark` rendered in the margin column |
 | `MarginGrid` | From **1280 px**: `grid-template-columns: 9rem minmax(0, 42rem) minmax(0, 1fr)` with a 2 rem column gap. The three children are the margin, the main column and the aside. From 1024 to 1279 px: two columns, the margin and the main column, with the aside content stacked under the main content. Below 1024 it is one column and the margin content renders inline above the main column |
 
-At 1280 px and wider the aside is 320 px (1200 minus 144, 672 and two 32 px gaps). The three-column grid starts at 1280 and not at 1024 because at 1024 the aside would be about 80 px, too narrow for a clause panel (amendment I). The § mark is decorative and `aria-hidden`. The main column's 42 rem measure gives about 75 characters of 19 px serif.
+The three live in one file, `components/Layout.tsx`, and not in a `layout/` folder (amendment N). At 1280 px and wider the aside is 320 px (1200 minus 144, 672 and two 32 px gaps). The three-column grid starts at 1280 and not at 1024 because at 1024 the aside would be about 80 px, too narrow for a clause panel (amendment I). The § mark is decorative and `aria-hidden`. The main column's 42 rem measure gives about 75 characters of 19 px serif.
 
 The `/start` flow uses `MarginGrid` too: a 640 px form column in the main slot and the summary rail in the aside slot.
 
@@ -253,7 +253,7 @@ The mono kicker is retired. `mono/sm` stays at 12 px. Nothing in the app renders
 
 The document text keeps `document/body` at 17 / 30.
 
-### 5.4 Colour changes (needs Aryan's approval)
+### 5.4 Colour changes (approved at FE-2, decision D6)
 
 Every change keeps the hue, so the identity stays. Ratios are WCAG relative luminance against the surfaces named. Light surfaces are base `#F6F3EC`, sheet `#FFFDF8`, sunken `#EFEBE2`. Dark surfaces are base `#131619`, sheet `#1A1E22`, sunken `#0F1214`.
 
@@ -269,7 +269,7 @@ Every change keeps the hue, so the identity stays. Ratios are WCAG relative lumi
 
 `rule/strong` stays for dividers. `control-border` is used only on interactive controls. The focus ring (`#2F7FA0` light, 3.78 to 4.43 on the three surfaces, and `#8FCBD8` dark, 9.3 to 10.5) already passes and stays. The review mark line `#B07A18` on the sheet is 3.66 and passes as a non-text mark.
 
-`DesignSystem.md` 3.1 and 3.2 are updated in FE-2 when the tokens land. A test (section 13) reads `index.css` and asserts every pair in this table, so a later edit cannot drop below the bar unnoticed.
+`DesignSystem.md` 3.1 and 3.2 now hold the new values, and `src/tokens.test.ts` reads `index.css` and asserts every pair in this table, so a later edit cannot drop below the bar unnoticed.
 
 ### 5.5 Spacing, rhythm and widths
 
@@ -780,7 +780,7 @@ Each part also updates `Phases.md`, `Architecture.md`, this file, `DesignSystem.
 
 ## 15. Open decisions
 
-Each has a recommendation. FE-2 does not start until D1 to D6 are answered. D7 to D13 block only the part named.
+Each has a recommendation. FE-2 did not start until D1 to D6 were answered. D7 to D13 block only the part named. Section 17.2 records the answers to D1 to D13 as of FE-2.
 
 | ID | Decision | Recommendation | Blocks |
 |---|---|---|---|
@@ -889,3 +889,51 @@ Amendments are lettered. Each says what changed in the sections above. Later par
 - Mockups. None were generated in FE-1.
 
 **What already exists, and is reused.** The 50 components and the icon set (`NoticeBanner`, `StatusChip`, `PolarityBadge`, `ConfidenceBand`, `StatuteTag`, `OffsetTag`, `SpanHighlight`, `MarginRuler`, `JudgmentCard`, `ClauseDetailPanel`, `UploadDropzone`, `PartyBindingField`, `RoleSelector`, `StageProgress`, `ErrorCard`, `EmptyState`, `Tabs`, `MetricCell`, `KeyboardHint`, `DropdownMenu`, `MobileDrawer`, `CategorySidebar`, `ReaderToolbar`), the token file, `lib/offsets.ts`, `api/catalogue.ts`, the mock adapter's job timeline, and the gallery as a record of component states. From the platform: React 19 `<title>` hoisting, React Router's `lazy` and `viewTransition`, native `<details>`, native radio inputs, CSS animations, and `node --test`.
+
+### 17.2 FE-2: foundations
+
+**Decisions.** Aryan answered D1 to D7 and left D8 to D13 to the recommendations in section 15. None of D8 to D13 adds a dependency, changes a fixed phrase or moves a route, so each recommendation stands.
+
+| ID | Answer |
+|---|---|
+| D1 | A static typed fixture. A test slices it through `lib/offsets.ts`. Built in FE-3 |
+| D2 | The hero plays once, pauses on hover and focus while it runs, then offers "Next example". The reason is below |
+| D3 | Option B. Seven font files are vendored in `frontend/public/fonts/`. Done in FE-2 |
+| D4 | `node --test` with type stripping. Done in FE-2 (`pnpm test`) |
+| D5 | The 4 px margin rule stays on notices, judgment cards and rule-flag cards only. Removed from `CategoryRow`, `ClauseDetailPanel` and the Gallery in FE-2 |
+| D6 | All seven colour changes and the new `control-border` token. Landed in FE-2 |
+| D7 | The Evidence section stays unrendered until Aryan sends a verified passage from Tanishq. FE-3 |
+| D8 | Follow the mock for the sample id |
+| D9 | CUAD facts only in the problem section |
+| D10 | Hero heading A, "Know which clauses to ask a lawyer about." |
+| D11 | A 64 px Reader rail from 1280 to 1439 |
+| D12 | The landing copy does not mention the report |
+| D13 | Both landing buttons are shown, and `/start` handles sample mode |
+
+**D2 and WCAG 2.2.2.** Success criterion 2.2.2 (Pause, Stop, Hide, level A) asks for a way to pause, stop or hide content that moves on its own, lasts more than five seconds and sits beside other content. A looping hero meets all three conditions. A hero that plays one example, stops and offers "Next example" has nothing moving after the run, so the criterion never applies, and a visitor on a touch screen, who has no hover, still has a stopped end state. The run keeps the brief's pause on hover and focus, and it renders static under reduced motion. FE-3 keeps each run under five seconds. This is deviation 1 in section 16, now signed off.
+
+**Amendments**
+
+| ID | Change | Sections touched |
+|---|---|---|
+| N | `Container`, `Section` and `MarginGrid` live in one file, `components/Layout.tsx`, not in a `layout/` folder. The three are 44 lines in all, and a folder with an index would add a file to every import | 5.2, Architecture.md 7.3 |
+| O | A baseline bug, found and fixed: the `Link` atom called `preventDefault` on every click, so no internal link in the header, footer or page body navigated. A `#/` address now goes through the router, with a view transition. Other addresses behave as links | 5.8 |
+| P | `MobileDrawer` in fixed mode stays mounted and slides on `transform`, hidden and `aria-hidden` when closed, so it can animate out. The Reader still mounts the bottom sheet only while a finding is selected, so the sheet slides in and leaves with no exit animation. Focus does not move into a drawer on open or back on close. Both belong to FE-5 | 6.3, 7.3 |
+| Q | Hit areas fixed beyond the plan's list: the menu trigger in `DropdownMenu`, the group header in the Reader sidebar (36 to 44 px), the filter field (the whole 44 px box now focuses the input, and its reset button has a 44 px area) and the confidence button | 5.6 |
+| R | The `CategoryRow` bracket mark takes no space in the row. An in-flow placeholder cost every name about 16 px | 5.4 |
+| S | The font files carry the Latin range only. The rupee sign U+20B9, the bracket marks `⟦ ⟧` and every non-Latin script fall back to a system font. A Latin-extended subset is worth adding, because contracts in India contain the rupee sign. The three licence texts were fetched with the seven files, one step beyond the seven files that D3 named | 11.1 |
+| T | The contents links on How it works are inline blocks with 13 px of block padding, a visible spacing change that FE-6 redoes. `scroll-mt-8` is gone, because the page's `scroll-padding-top` of 80 px is the one offset | 6.4 |
+
+**Deferred, with the owner**
+
+| Item | Owner |
+|---|---|
+| The ink-in keyframes. `--dur-ink` and `--stagger` exist and nothing uses them yet, because the sweep depends on `SpanHighlight` changes | FE-3 |
+| The header restructure: the primary "Review a contract" button, hidden on `/start` and `/review`. `/start` does not exist, so "Review a contract" on the not-found page links to `/` until then | FE-4 |
+| The footer Credits link target (A10 in the plan) | FE-6 |
+| The 4 px rule on `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList`, `PartyBindingField`, `PerformanceTableRow` and `RadioCard` | FE-4, FE-5, FE-6, whichever recomposes the component |
+| Category names squeezed to one letter by the chip and the count (B3 in the audit). The unvalidated row shows about 8 px of its name at 1440 | FE-5 |
+| The ruler's ticks are 12 by 3 px and cluster at the top of a short document. Their hit boxes overlap, so they cannot be enlarged. The marks in the text and the category rows reach every finding from the keyboard | FE-5, which replaces the ruler with a strip |
+| Tabular numerals on counts and metric cells | FE-4, FE-6 |
+| The confidence popover in `ConfidenceBand` states "Calibrated on 214 examples from 48 contracts", a figure with no cited source in a component the Reader shows. Replace it with a number from the evaluation, or remove the line | FE-5 |
+| A Latin-extended font subset (S) | The next part that touches fonts |

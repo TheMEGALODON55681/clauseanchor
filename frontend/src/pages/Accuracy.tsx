@@ -60,6 +60,7 @@ export default function Accuracy() {
 
   return (
     <div className="mx-auto w-full max-w-[1120px] px-5 py-12 md:px-8 md:py-16">
+      <title>Accuracy | ClauseAnchor</title>
       <p className="font-mono text-[12px] tracking-[0.08em] uppercase" style={{ color: "var(--ink-tertiary)" }}>§ Accuracy</p>
       <h1 className="mt-3 text-[32px] leading-[40px]" style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--ink-primary)" }}>
         How well each category is found

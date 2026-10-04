@@ -38,7 +38,7 @@ export default function DropdownMenu({ items = DEFAULT_ITEMS, open, focusIndex, 
         aria-expanded={show}
         aria-label={label}
         onClick={() => setIsOpen((v) => !v)}
-        className="focus:outline-none focus-visible:outline-none"
+        className="hit"
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -51,11 +51,6 @@ export default function DropdownMenu({ items = DEFAULT_ITEMS, open, focusIndex, 
           color: "var(--ink-secondary)",
           cursor: "pointer",
         }}
-        onFocus={(e) => {
-          e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-          e.currentTarget.style.outlineOffset = "2px";
-        }}
-        onBlur={(e) => (e.currentTarget.style.outline = "none")}
       >
         <DotsIcon size={18} />
       </button>

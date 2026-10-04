@@ -26,7 +26,7 @@ export default function Tabs({ items, value, onChange, disabledItems = [] }: Tab
               setInternal(it);
               onChange?.(it);
             }}
-            className="focus:outline-none focus-visible:outline-none"
+            className="focus-inset"
             style={{
               minHeight: 44,
               padding: "0 12px",
@@ -40,11 +40,6 @@ export default function Tabs({ items, value, onChange, disabledItems = [] }: Tab
               cursor: disabled ? "not-allowed" : "pointer",
               opacity: disabled ? 0.5 : 1,
             }}
-            onFocus={(e) => {
-              e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-              e.currentTarget.style.outlineOffset = "-2px";
-            }}
-            onBlur={(e) => (e.currentTarget.style.outline = "none")}
           >
             {it}
           </button>

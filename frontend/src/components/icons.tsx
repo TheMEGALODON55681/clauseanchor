@@ -232,7 +232,7 @@ export function UnresolvedIcon({ size = 20, className, strokeWidth = 1.5, title 
 
 export function ChevronIcon({ open = false, ...props }: IconProps & { open?: boolean }) {
   return (
-    <Svg {...props} className={`${props.className ?? ""} transition-transform reduce-motion-safe ${open ? "rotate-90" : ""}`}>
+    <Svg {...props} className={`${props.className ?? ""} transition-transform ${open ? "rotate-90" : ""}`}>
       <path d="M8 5l5 5-5 5" />
     </Svg>
   );

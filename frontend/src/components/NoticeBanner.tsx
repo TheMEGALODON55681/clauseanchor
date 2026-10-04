@@ -104,9 +104,9 @@ export default function NoticeBanner({ variant, onDismiss, text, onAction }: Not
       {c.dismissible && (
         <button
           type="button"
+          className="hit"
           aria-label="Dismiss notice"
           onClick={onDismiss}
-          className="focus:outline-none focus-visible:outline-none"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -119,11 +119,6 @@ export default function NoticeBanner({ variant, onDismiss, text, onAction }: Not
             cursor: "pointer",
             borderRadius: "var(--radius-sm)",
           }}
-          onFocus={(e) => {
-            e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-            e.currentTarget.style.outlineOffset = "2px";
-          }}
-          onBlur={(e) => (e.currentTarget.style.outline = "none")}
         >
           <CloseIcon size={16} />
         </button>

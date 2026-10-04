@@ -8,7 +8,7 @@ export default function Spinner({ size = 20 }: { size?: SpinnerSize }) {
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      className="animate-spin reduce-motion-safe"
+      className="animate-spin"
       role="status"
       aria-label="Loading"
     >

@@ -25,28 +25,23 @@ export default function CategoryGroupHeader({
         onToggle?.();
       }}
       aria-expanded={isOpen}
-      className="text-left focus:outline-none focus-visible:outline-none"
+      className="text-left focus-inset"
       style={{
         display: "flex",
         alignItems: "center",
         gap: 8,
         width: "100%",
-        minHeight: 36,
+        minHeight: 44,
         padding: "6px 12px",
         background: "transparent",
         border: "none",
         cursor: "pointer",
       }}
-      onFocus={(e) => {
-        e.currentTarget.style.outline = "2px solid var(--focus-ring)";
-        e.currentTarget.style.outlineOffset = "-2px";
-      }}
-      onBlur={(e) => (e.currentTarget.style.outline = "none")}
     >
       <span style={{ color: "var(--ink-tertiary)" }}>
         <ChevronIcon size={14} open={isOpen} />
       </span>
-      <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-secondary)" }}>
+      <span className="t-overline" style={{ color: "var(--ink-secondary)" }}>
         {label}
       </span>
       {summary && (

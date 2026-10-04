@@ -139,7 +139,7 @@ Python 3.12, pdfplumber, python-docx, FastAPI, Pydantic v2, SQLAlchemy 2 on SQLi
 
 A single-page app in `frontend/` that shows the contract as paper, marks findings in the margin and quotes judgments. It writes no legal text: every string on screen is quoted contract text, quoted judgment text or a short label (DesignSystem.md section 1).
 
-Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), pnpm. Node 22 or later and pnpm 10 or later.
+Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), pnpm. Node 22.18 or later (the tests rely on type stripping, which is on by default from 22.18) and pnpm 10 or later.
 
 ### 7.1 Data flow
 
@@ -156,24 +156,30 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Type names | Kept as the mock defines them (`scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage`, `ReviewUnit`, `ManualReview`, `getManualReview`) | 2-E fixes the final names in API.md and the adapter follows it |
 | Client state | React memory only: session token, contract text and job ids in `session.tsx`, theme in `theme.tsx`. Nothing in localStorage, sessionStorage, IndexedDB or cookies | Matches the promise that nothing is stored after the session |
 | Offsets | `lib/offsets.ts` builds a code point to UTF-16 table once per text. Every slice of contract text goes through `sliceCp` | Backend offsets are code points and JavaScript strings index UTF-16 code units |
-| Routing | `createHashRouter`: `/`, `/review/:documentId`, `/how-it-works`, `/accuracy`, `/expired` and a catch-all that also shows Expired, with `/gallery` outside the shell | Works on any static host with no rewrite rules. The catch-all, `/gallery` and the mock settings panel on Home are reworked in FE-2 |
+| Routing | `createHashRouter`: `/`, `/review/:documentId`, `/how-it-works`, `/accuracy`, `/expired` and a catch-all that shows `NotFound`. Every page except `/` loads on demand. A failing page shows `RootError` inside the shell. `/gallery` is registered only in development, outside the shell | Works on any static host with no rewrite rules. The landing page does not carry the reader, and a bad address is not an expired session. A production build holds no gallery and no preview controls |
 | Theming | Tokens are CSS custom properties in `src/index.css`, dark values under `.dark`. The first load follows `prefers-color-scheme` | One set of tokens for every component. DesignSystem.md lists them |
-| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono through a Google Fonts import in `index.css` | Known conflict with the privacy promise. `FrontendDesign.md` section 11.1 proposes self-hosting (decision D3) and FE-2 does it if approved |
+| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono, seven Latin-subset files in `public/fonts/`, with `@font-face` rules and metric-matched fallbacks in `index.css` | No request leaves for a third party, which keeps the privacy promise. The rupee sign and non-Latin scripts fall back to a system font (`FrontendDesign.md` 17.2, S) |
+| Motion and widths | Tokens in `index.css` (`--ease-out`, `--dur-*`, `--w-*`), one reduced-motion block, route changes through the View Transitions API | One set of values for every part. `DesignSystem.md` 3.5 lists them |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency | The pure logic (`lib/reveal.ts`, `lib/offsets.ts` from FE-3) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
 ```text
 frontend/
-  package.json              # scripts: dev, build, preview, typecheck, format
+  package.json              # scripts: dev, build, preview, typecheck, test, format
   pnpm-lock.yaml
   tsconfig.json             # strict; the @ alias points to src
   vite.config.ts            # react(), tailwindcss(), the @ alias; Vite defaults (port 5173)
-  index.html                # shell: lang, title, meta description
+  index.html                # shell: lang, title, meta description, favicon, font preloads, noscript line
   .gitignore                # node_modules, dist, .vite, .screens
+  public/
+    favicon.svg             # the logomark, with a dark-mode variant
+    fonts/                  # seven woff2 files and the three OFL licence texts
   src/
     main.tsx                # mounts App
     App.tsx                 # ThemeProvider, SessionProvider, RouterProvider
-    index.css               # design tokens (light and dark), Tailwind import, font import
+    index.css               # fonts, design tokens (light, dark, motion, widths), global focus rule, layout and type classes, reveal and reduced-motion CSS
+    tokens.test.ts          # asserts the contrast pairs of DesignSystem.md 3.1 against index.css
     api/
       client.ts             # ApiClient interface and the exported client (mock adapter today)
       types.ts              # API types; offsets are code points
@@ -181,27 +187,34 @@ frontend/
       contract.ts           # fictional sample agreement text for the mock
       catalogue.ts          # 46 categories with group, support status and catalogue version
     app/
-      routes.tsx            # route table
-      Root.tsx              # shell: header, footer, toasts, skip link
+      routes.tsx            # route table: lazy pages, error boundaries, dev-only /gallery
+      Root.tsx              # shell: header, footer, toasts, skip link, focus on route change, dev-only preview controls
+      RootError.tsx         # the page shown when a page fails to load or render
       session.tsx           # token, document metadata, toasts, mock settings (memory only)
       theme.tsx             # light and dark
     lib/
       offsets.ts            # code point to UTF-16 table and sliceCp
       useMedia.ts           # media query hook, reduced-motion hook
+      reveal.ts             # scroll reveal core: pure, takes the observer as an argument
+      reveal.test.ts
+      useReveal.ts          # the hook around reveal.ts
     pages/
       Home.tsx              # upload, role, party, start
       Reader.tsx            # three-pane reader: categories, document, clause detail
       HowItWorks.tsx
       Accuracy.tsx          # measured performance, labelled as an example until real numbers exist
       Expired.tsx
-      Gallery.tsx           # component gallery
+      NotFound.tsx          # the catch-all route
+      Gallery.tsx           # component gallery, development only
     components/             # 50 components and icons.tsx: atoms (Button, StatusChip, ...),
                             # molecules (UploadDropzone, ConfidenceBand, JudgmentCard, ...),
                             # organisms (ClauseDetailPanel, CategorySidebar, ReaderToolbar, ...)
+      Layout.tsx            # Container, Section, MarginGrid
+      Disclosure.tsx        # native details with a 44 px summary
+      PreviewControls.tsx   # development only: mock switches and the gallery link
 ```
 
-The FE parts change this tree. Each part updates this section. `FrontendDesign.md` holds the plan, and these additions are **(planned)**:
+The FE parts change this tree. Each part updates this section. FE-2 is built and is in the tree above. `FrontendDesign.md` holds the plan, and these additions are **(planned)**:
 
-- FE-2: `components/layout/` (`Container`, `Section`, `MarginGrid`), `lib/reveal.ts` with its test, `tokens.test.ts`, `pages/NotFound.tsx`, a root error page, `public/fonts/` if self-hosting is approved, and the gallery and preview controls loaded only in development.
 - FE-3: `pages/landing/` with `heroExamples.ts` and its test.
 - FE-4: `pages/Start.tsx` and `lib/startFlow.ts` with its test.

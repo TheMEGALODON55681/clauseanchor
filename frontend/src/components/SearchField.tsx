@@ -25,14 +25,16 @@ export default function SearchField({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-      <div
+      <label
+        className="focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--focus-ring)]"
         style={{
+          cursor: "text",
           display: "flex",
           alignItems: "center",
           gap: 8,
-          minHeight: 40,
+          minHeight: 44,
           background: "var(--paper-sunken)",
-          border: "1px solid var(--rule-strong)",
+          border: "1px solid var(--control-border)",
           borderRadius: "var(--radius-sm)",
           padding: "0 10px",
         }}
@@ -42,7 +44,6 @@ export default function SearchField({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
-          className="focus:outline-none"
           aria-label="Filter categories"
           style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 14, color: "var(--ink-primary)", minWidth: 0 }}
         />
@@ -51,12 +52,13 @@ export default function SearchField({
             type="button"
             aria-label="Reset filter"
             onClick={() => setValue("")}
-            style={{ display: "inline-flex", color: "var(--ink-tertiary)", background: "none", border: "none", cursor: "pointer" }}
+            className="hit"
+            style={{ display: "inline-flex", padding: 4, color: "var(--ink-tertiary)", background: "none", border: "none", cursor: "pointer" }}
           >
             <CloseIcon size={14} />
           </button>
         )}
-      </div>
+      </label>
       {state === "no-results" && (
         <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>No categories match "{value}".</span>
       )}

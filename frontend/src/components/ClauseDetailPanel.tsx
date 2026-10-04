@@ -106,7 +106,6 @@ function PanelHeader({ title, chip, onClose }: { title: string; chip?: ReactNode
         <h2
           id="detail-panel-title"
           tabIndex={-1}
-          className="focus:outline-none"
           style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: 22, lineHeight: "30px", color: "var(--ink-primary)" }}
         >
           {title}
@@ -177,7 +176,7 @@ export default function ClauseDetailPanel({ variant = "found", data, onClose, fi
         {variant === "review" && (
           <div
             style={{
-              borderLeft: "4px solid var(--status-review-fg)",
+              border: "1px solid var(--status-review-border)",
               background: "var(--status-review-bg)",
               borderRadius: "var(--radius-md)",
               padding: "10px 12px",
@@ -220,7 +219,7 @@ export default function ClauseDetailPanel({ variant = "found", data, onClose, fi
             <div>
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
@@ -348,7 +347,7 @@ export default function ClauseDetailPanel({ variant = "found", data, onClose, fi
 }
 
 const eyebrow = {
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   letterSpacing: "0.08em",
   textTransform: "uppercase" as const,
@@ -365,7 +364,7 @@ function LivePanel({ data, onClose, fill }: { data: PanelData; onClose?: () => v
         {data.reviewNote && (
           <div
             style={{
-              borderLeft: "4px solid var(--status-review-fg)",
+              border: "1px solid var(--status-review-border)",
               background: "var(--status-review-bg)",
               borderRadius: "var(--radius-md)",
               padding: "10px 12px",

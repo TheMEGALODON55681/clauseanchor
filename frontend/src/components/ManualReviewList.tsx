@@ -76,7 +76,7 @@ export function ManualReviewItem({ item, onGo }: { item: ManualItem; onGo?: (id:
         {item.variant === "partial" && (
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 500,
               color: "var(--ink-secondary)",
               background: "var(--paper-sunken)",

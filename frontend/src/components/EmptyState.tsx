@@ -28,11 +28,13 @@ export default function EmptyState({
   heading,
   line,
   onAction,
+  headingAs: Heading = "div",
 }: {
   variant: EmptyVariant;
   heading?: string;
   line?: string;
   onAction?: () => void;
+  headingAs?: "h1" | "h2" | "div";
 }) {
   const c = { ...CONFIG[variant], ...(heading ? { heading } : {}), ...(line ? { line } : {}) };
   return (
@@ -50,7 +52,7 @@ export default function EmptyState({
       }}
     >
       <span style={{ color: "var(--ink-tertiary)" }}>{c.icon}</span>
-      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--ink-primary)" }}>{c.heading}</div>
+      <Heading style={{ fontSize: 16, fontWeight: 600, color: "var(--ink-primary)" }}>{c.heading}</Heading>
       <p style={{ fontSize: 14, color: "var(--ink-secondary)", maxWidth: 360 }}>{c.line}</p>
       {c.action && (
         <div style={{ marginTop: 8 }}>

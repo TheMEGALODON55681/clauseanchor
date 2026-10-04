@@ -13,8 +13,6 @@ import Switch from "../components/Switch";
 import PartyBindingField, { type PartyChoice } from "../components/PartyBindingField";
 import RadioCard from "../components/RadioCard";
 import ErrorCard from "../components/ErrorCard";
-import Link from "../components/Link";
-import Divider from "../components/Divider";
 import { BracketPairIcon, CheckIcon, CloseIcon, FileIcon, PilcrowIcon, SectionIcon } from "../components/icons";
 
 const ROLE_FROM_KEY: Record<RoleKey, Role> = {
@@ -60,7 +58,7 @@ function formatSize(bytes: number) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { ensureToken, setDoc, mock, setMock } = useSession();
+  const { ensureToken, setDoc, mock } = useSession();
   const sample = !!mock?.sampleMode;
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -158,7 +156,7 @@ export default function Home() {
       await client.setParty(token, docId, { role, party_node_id: chosen });
       const job = await client.startAnalysis(token, docId, { jurisdiction_scope: india ? "india_review" : "unspecified" });
       setDoc(docId, { analysisJobId: job.id, role, partyNodeId: chosen });
-      navigate(`/review/${docId}`);
+      navigate(`/review/${docId}`, { viewTransition: true });
     } catch {
       setStarting(false);
       setNetworkError(() => start);
@@ -335,27 +333,6 @@ export default function Home() {
         </div>
       </section>
 
-      {mock && (
-        <section className="mx-auto w-full max-w-[640px] px-5 py-10" aria-labelledby="mock-title">
-          <Divider label="Preview controls" />
-          <h2 id="mock-title" className="mt-4 text-[15px] font-semibold" style={{ color: "var(--ink-primary)" }}>
-            Mock adapter settings
-          </h2>
-          <p className="mt-1 text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
-            These switches only exist while the app runs on mock data. They disappear when the real backend is connected.
-          </p>
-          <div className="mt-4 grid gap-1 sm:grid-cols-2">
-            <Switch checked={mock.sampleMode} onChange={(v) => setMock({ sampleMode: v })} label="Sample mode" description="Uploads off, prepared example only." />
-            <Switch checked={mock.partialRun} onChange={(v) => setMock({ partialRun: v })} label="Partial run" description="Some categories finish as Unavailable." />
-            <Switch checked={mock.failAnalysis} onChange={(v) => setMock({ failAnalysis: v })} label="Failed analysis" description="The review stops partway." />
-            <Switch checked={mock.shortSession} onChange={(v) => setMock({ shortSession: v })} label="Short session" description="Expires in 9 minutes, shows the notice." />
-            <Switch checked={mock.failNextRequest} onChange={(v) => setMock({ failNextRequest: v })} label="Fail next request" description="One network error, then normal." />
-          </div>
-          <p className="mt-4 text-[13px]" style={{ color: "var(--ink-secondary)" }}>
-            Name a file with "scanned" or "protected" to see those upload errors. <Link href="#/gallery">Open the component gallery</Link>
-          </p>
-        </section>
-      )}
     </div>
   );
 }

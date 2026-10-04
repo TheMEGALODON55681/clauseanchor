@@ -96,7 +96,7 @@ export default function DocumentBlock({ variant, number, children }: DocumentBlo
       return (
         <div style={{ fontFamily: "var(--font-serif)", fontSize: 13, fontStyle: "italic", color: "var(--ink-tertiary)" }}>
           {children ?? "Sample Traders Pvt. Ltd. and Example Industries Ltd., Confidential"}
-          <span style={{ fontFamily: "var(--font-mono)", fontStyle: "normal", fontSize: 11, marginLeft: 8 }}>Repeated page header</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontStyle: "normal", fontSize: 12, marginLeft: 8 }}>Repeated page header</span>
         </div>
       );
   }
