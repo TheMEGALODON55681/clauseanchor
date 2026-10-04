@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@import 'tailwindcss';
+
+/* ClauseAnchor: "Marginalia" design tokens.
+   Every component references these variables, never raw hex. */
+
+:root,
+.light {
+  /* Color: core (light) */
+  --paper-base: #f6f3ec;
+  --paper-sheet: #fffdf8;
+  --paper-sunken: #efebe2;
+  --ink-primary: #1b1f24;
+  --ink-secondary: #4e545b;
+  --ink-tertiary: #7a7f85;
+  --rule-default: #e2dcd0;
+  --rule-strong: #c9c1b2;
+  --anchor-600: #0f4c5c;
+  --anchor-700: #0a3945;
+  --anchor-100: #e1edef;
+  --focus-ring: #2f7fa0;
+
+  /* Semantic: status (fg / bg / border) */
+  --status-found-fg: #0f4c5c;
+  --status-found-bg: #e1edef;
+  --status-found-border: #9cc3cc;
+  --status-review-fg: #8a5a0b;
+  --status-review-bg: #fbf1dc;
+  --status-review-border: #e6c98a;
+  --status-unvalidated-fg: #5d636a;
+  --status-unvalidated-border: #9aa0a6;
+  --status-absent-fg: #6e7278;
+  --status-absent-bg: #efede8;
+  --status-absent-border: #d6d1c6;
+  --status-unavailable-fg: #8c3b2e;
+  --status-unavailable-bg: #f6e6e2;
+  --status-unavailable-border: #e2b8af;
+
+  /* Semantic: polarity (fg / bg) */
+  --polarity-exposure-fg: #9a4a1f;
+  --polarity-exposure-bg: #f8e9df;
+  --polarity-protection-fg: #3c6b48;
+  --polarity-protection-bg: #e5f0e7;
+  --polarity-mixed-fg: #5b4e8c;
+  --polarity-mixed-bg: #ece9f5;
+  --polarity-neutral-fg: #6e7278;
+  --polarity-neutral-bg: #efede8;
+  --polarity-unresolved-fg: #6e7278;
+
+  /* Semantic: statute + evidence */
+  --statute-fg: #43397a;
+  --statute-bg: #eceaf6;
+  --statute-border: #c4bee3;
+  --evidence-fg: #6b4e2e;
+  --evidence-bg: #f5eee3;
+  --evidence-border: #d9c7ac;
+
+  /* Highlight tints */
+  --mark-found-line: #0f4c5c;
+  --mark-found-tint: rgba(15, 76, 92, 0.08);
+  --mark-review-line: #b07a18;
+  --mark-review-tint: rgba(176, 122, 24, 0.1);
+  --mark-focused-tint: rgba(15, 76, 92, 0.18);
+
+  /* Elevation */
+  --elevation-1: 0 1px 0 var(--rule-default);
+  --elevation-2: 0 2px 8px rgba(27, 31, 36, 0.06);
+  --elevation-3: 0 12px 32px rgba(27, 31, 36, 0.12);
+}
+
+.dark {
+  --paper-base: #131619;
+  --paper-sheet: #1a1e22;
+  --paper-sunken: #0f1214;
+  --ink-primary: #ece7dd;
+  --ink-secondary: #b4aea3;
+  --ink-tertiary: #858079;
+  --rule-default: #2c3137;
+  --rule-strong: #3e444b;
+  --anchor-600: #6fb8c8;
+  --anchor-700: #8fcbd8;
+  --anchor-100: #15313a;
+  --focus-ring: #8fcbd8;
+
+  --status-found-fg: #8fcbd8;
+  --status-found-bg: #15313a;
+  --status-found-border: #2e5a66;
+  --status-review-fg: #e8c27a;
+  --status-review-bg: #33280f;
+  --status-review-border: #6b5320;
+  --status-unvalidated-fg: #a8a29a;
+  --status-unvalidated-border: #5a6068;
+  --status-absent-fg: #9a958d;
+  --status-absent-bg: #1f2327;
+  --status-absent-border: #353a40;
+  --status-unavailable-fg: #e3a195;
+  --status-unavailable-bg: #34201c;
+  --status-unavailable-border: #6a3a31;
+
+  --polarity-exposure-fg: #e7a77f;
+  --polarity-exposure-bg: #34231a;
+  --polarity-protection-fg: #9bc9a6;
+  --polarity-protection-bg: #1c2d21;
+  --polarity-mixed-fg: #b6aae0;
+  --polarity-mixed-bg: #25213a;
+  --polarity-neutral-fg: #9a958d;
+  --polarity-neutral-bg: #1f2327;
+  --polarity-unresolved-fg: #9a958d;
+
+  --statute-fg: #b9b0ea;
+  --statute-bg: #221e3a;
+  --statute-border: #4a4275;
+  --evidence-fg: #d7bd99;
+  --evidence-bg: #2a2219;
+  --evidence-border: #56462f;
+
+  --mark-found-line: #6fb8c8;
+  --mark-found-tint: rgba(111, 184, 200, 0.12);
+  --mark-review-line: #e8c27a;
+  --mark-review-tint: rgba(232, 194, 122, 0.14);
+  --mark-focused-tint: rgba(111, 184, 200, 0.18);
+
+  --elevation-1: 0 1px 0 var(--rule-default);
+  --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --elevation-3: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+@theme inline {
+  --color-paper-base: var(--paper-base);
+  --color-paper-sheet: var(--paper-sheet);
+  --color-paper-sunken: var(--paper-sunken);
+  --color-ink-primary: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-rule-default: var(--rule-default);
+  --color-rule-strong: var(--rule-strong);
+  --color-anchor-600: var(--anchor-600);
+  --color-anchor-700: var(--anchor-700);
+  --color-anchor-100: var(--anchor-100);
+
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Spacing: 4px base */
+  --spacing: 4px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}
+
+html {
+  font-family: var(--font-sans);
+  color: var(--ink-primary);
+  background: var(--paper-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Faint ruled lines for the judgment / index card. */
+.ruled-lines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 25px,
+    color-mix(in srgb, var(--ink-tertiary) 22%, transparent) 25px,
+    color-mix(in srgb, var(--ink-tertiary) 22%, transparent) 26px
+  );
+}
+
+/* Slow shimmer for skeletons; static under reduced motion. */
+@keyframes ca-shimmer {
+  0% { opacity: 0.55; }
+  50% { opacity: 0.85; }
+  100% { opacity: 0.55; }
+}
+.shimmer {
+  animation: ca-shimmer 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer { animation: none; }
+  .reduce-motion-safe { transition: none !important; }
+}
+
+/* Hide scrollbars until scrolling. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: var(--rule-strong) transparent;
+}

@@ -39,3 +39,38 @@ ruff format --check .
 ruff check .
 pytest
 ```
+
+## Frontend
+
+The frontend is a React app that shows a contract, marks findings in the margin and quotes the passages behind them. Its code lives in `frontend/`. It runs on mock data until the backend API is connected.
+
+### Prerequisites
+
+- Node 22 or later.
+- pnpm 10 or later. If it is missing, run `npm install -g pnpm@10`.
+
+### Install
+
+From the repository root:
+
+```bash
+cd frontend
+pnpm install --frozen-lockfile
+```
+
+### Develop
+
+```bash
+pnpm dev
+```
+
+Open http://localhost:5173.
+
+### Build and check
+
+```bash
+pnpm typecheck
+pnpm build
+```
+
+`pnpm build` writes the production files to `frontend/dist/`.

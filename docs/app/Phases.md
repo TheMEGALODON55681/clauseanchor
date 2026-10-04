@@ -1,6 +1,6 @@
 # Backend Phases
 
-Aryan's track: `backend/` only. One phase at a time. Every part is committed and pushed on its own, using the suggested message (adjust wording if you like).
+Aryan's tracks: the backend (`backend/`) and the frontend (`frontend/`), each with its own phases. One part at a time. Every part is committed and pushed on its own, using the suggested message (adjust wording if you like). The frontend track is the last section of this file.
 
 Legend: `[ ]` not started, `[~]` in progress, `[x]` done and committed.
 
@@ -35,6 +35,7 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
   `chore(backend): set up package, tooling and parsed document model`
 - [ ] **1-B** PDF text extraction in reading order
   `feat(parser): extract ordered text blocks from PDFs`
+  Paused at Aryan's request while the frontend track runs. It resumes when he says so.
 - [ ] **1-C** PDF safety: decoration, scanned, encrypted, malformed, limits
   `feat(parser): mark repeated page furniture and reject unreadable PDFs`
 - [ ] **1-D** DOCX archive safety, body, tables and text boxes
@@ -72,7 +73,6 @@ Deviations from the 1-A spec, with reasons:
 - `pyproject.toml` sets `version = "0.1.0"`. A `[project]` table needs a version, and the handoff names none.
 - `build()` takes `media_type`, `page_count`, `warnings` and `partial`, and returns `nodes=()`. 1-F attaches the structure tree with `dataclasses.replace`, because the tree needs the finished `source_text`. `coverage.pages_with_text` counts the distinct pages that hold a block (`None` for DOCX); 1-C may refine it for scanned pages.
 - `add_block` raises `ValueError` for a block with no text. An empty block is a caller bug, so it gets no file error code. A1 puts `ValueError` in the PDF catch tuple, so 1-B keeps assembler calls outside the try block that wraps pdfplumber. Otherwise a caller bug would surface as `MALFORMED_FILE`.
-- The 1-A prompt asked for a backend setup section in the root `README.md`, which Rules section 1 keeps out of scope. 4-R still owns the full README merge.
 - `MAX_DECODED_CONTENT_BYTES` (A11) waits for 1-C, the first part that reads it.
 
 #### 1-B
@@ -177,3 +177,42 @@ Needs: the frontend on the real client, and Tanishq's real analyzer and artifact
   Also run all eight scope cases from plan section 11.3 through the full application, first with fixture findings, then with the real model, and record expected against observed behaviour in BuildLog.md.
   The UI string for `TOO_MUCH_TEXT` is "This file is too large or complex to process". No backend part maps error codes to UI messages, so this first frontend integration part checks that the UI shows it.
 - [ ] **4-R** Phase review, then root docs and README merge (coordinated with Tanishq)
+
+---
+
+## Frontend track
+
+The frontend track edits `frontend/`, `docs/app/` and `README.md`, never `backend/`, so it runs beside the backend without collisions. The app runs on the mock adapter in `src/api/client.ts` until the backend API exists. The one-line swap to an HTTP adapter happens at 4-C, and the adapter follows API.md (2-E fixes the final type names).
+
+Phase 4 has no frontend parts of its own, so no FE part maps onto it. 4-C is the first run of the real client, and it checks the `TOO_MUCH_TEXT` message in the UI.
+
+Part ids and commit messages are suggestions, like the backend parts. Every part ends with `/ponytail:ponytail-review` and stops for review.
+
+- [x] **FE-0** Import the baseline frontend
+  `chore(frontend): import baseline frontend`
+  The delivered frontend runs inside the repo as received. Only build config, the HTML shell and package metadata changed. No UI change.
+- [ ] **FE-1** Design direction (docs only)
+  `docs(frontend): add frontend design direction`
+  Audit of every route at every width and theme, the final information architecture, section-by-section composition, type, spacing and motion tokens, copy plan, trust and conversion map, skills table and dependency requests. Includes the font self-hosting proposal: the fonts load from Google, which contradicts the privacy promise. Stops for review before any UI code changes.
+- [ ] **FE-2** Foundations
+  `feat(frontend): add motion tokens, layout primitives and 404 route`
+  Motion and type tokens, `Container`, `Section` and `MarginGrid`, the reveal hook (tests first), route transitions, a `NotFound` route, and `/gallery` plus the mock settings panel moved behind `import.meta.env.DEV`.
+- [ ] **FE-3** Landing
+  `feat(frontend): rebuild landing with live hero demo`
+- [ ] **FE-4** The `/start` stepped flow
+  `feat(frontend): add stepped review start flow`
+  The flow state is written test-first.
+- [ ] **FE-5** Reader composition and motion
+  `refactor(frontend): recompose reader with motion`
+- [ ] **FE-6** How it works, Accuracy, Expired, NotFound
+  `refactor(frontend): rebuild secondary pages`
+- [ ] **FE-R** Phase-end review
+  Design review and QA, `/coderabbit:code-review` over the FE commit range, `/gstack-review`, `/gstack-cso`, one independent second review, the quality-bar measurements and before and after screenshots for every route. Every P1 is fixed and every P2 is listed.
+
+Standing constraints for every FE part:
+- No dependency is added without Aryan's approval.
+- `src/api/client.ts` stays the only data interface, and nothing goes to localStorage, sessionStorage, IndexedDB or cookies.
+- Every slice of contract text goes through `lib/offsets.ts`.
+- The UI never writes legal advice: each string is quoted contract text, quoted judgment text or a short label.
+
+Quality bars, measured at FE-R: Lighthouse mobile on `/` at Performance 95 or more, Accessibility 100 and Best Practices 95 or more; zero serious or critical axe issues on every route in both themes; WCAG 2.2 AA contrast; initial-route JavaScript under 200 KB gzipped (143 KB at FE-0).

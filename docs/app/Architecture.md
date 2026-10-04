@@ -131,6 +131,73 @@ Separators: lines inside a block join with `"\n"`, blocks join with `"\n"`, page
 
 The backend imports only public names from `clauseanchor_core`: `CONTRACT_VERSION`, the result dataclasses, `Analyzer` and `StubAnalyzer`. It never imports training, extraction or retrieval internals. Contract version **2.0** (multi-span findings) must be present before the analysis part of Phase 2 starts. The switch is `CLAUSEANCHOR_ANALYZER=stub|real`; a real run with missing artifacts fails readiness instead of falling back to the stub.
 
-## 6. Tech stack
+## 6. Backend tech stack
 
 Python 3.12, pdfplumber, python-docx, FastAPI, Pydantic v2, SQLAlchemy 2 on SQLite, ReportLab, PyYAML, pytest, httpx, ruff.
+
+## 7. Frontend
+
+A single-page app in `frontend/` that shows the contract as paper, marks findings in the margin and quotes judgments. It writes no legal text: every string on screen is quoted contract text, quoted judgment text or a short label (DesignSystem.md section 1).
+
+Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), pnpm. Node 22 or later and pnpm 10 or later.
+
+### 7.1 Data flow
+
+1. `Home` creates a session, uploads a file (or a sample id in sample mode) and polls the parse job until the document is ready.
+2. The user picks a role and a party. `Home` sets the party binding, starts the analysis job and navigates to `/review/:documentId`.
+3. `Reader` polls the job and fetches the analysis as categories resolve, then the manual-review list. It also handles re-binding the party, cancel, retry, report download and delete.
+4. Every call goes through `client` in `src/api/client.ts`. Nothing else imports the mock. Today `client` is the in-memory mock adapter. The swap to an HTTP adapter is one line, planned for 4-C, and the adapter follows API.md.
+
+### 7.2 Key decisions
+
+| Decision | Choice | Reason |
+|---|---|---|
+| Data interface | `ApiClient` in `src/api/client.ts`, one exported `client` | The UI is built and reviewed before the API exists, and the swap touches one file |
+| Type names | Kept as the mock defines them (`scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage`, `ReviewUnit`, `ManualReview`, `getManualReview`) | 2-E fixes the final names in API.md and the adapter follows it |
+| Client state | React memory only: session token, contract text and job ids in `session.tsx`, theme in `theme.tsx`. Nothing in localStorage, sessionStorage, IndexedDB or cookies | Matches the promise that nothing is stored after the session |
+| Offsets | `lib/offsets.ts` builds a code point to UTF-16 table once per text. Every slice of contract text goes through `sliceCp` | Backend offsets are code points and JavaScript strings index UTF-16 code units |
+| Routing | `createHashRouter`: `/`, `/review/:documentId`, `/how-it-works`, `/accuracy`, `/expired` and a catch-all that also shows Expired, with `/gallery` outside the shell | Works on any static host with no rewrite rules. The catch-all, `/gallery` and the mock settings panel on Home are reworked in FE-2 |
+| Theming | Tokens are CSS custom properties in `src/index.css`, dark values under `.dark`. The first load follows `prefers-color-scheme` | One set of tokens for every component. DesignSystem.md lists them |
+| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono through a Google Fonts import in `index.css` | Known conflict with the privacy promise. FE-1 proposes self-hosting |
+
+### 7.3 Folder structure
+
+```text
+frontend/
+  package.json              # scripts: dev, build, preview, typecheck, format
+  pnpm-lock.yaml
+  tsconfig.json             # strict; the @ alias points to src
+  vite.config.ts            # react(), tailwindcss(), the @ alias; Vite defaults (port 5173)
+  index.html                # shell: lang, title, meta description
+  .gitignore                # node_modules, dist, .vite, .screens
+  src/
+    main.tsx                # mounts App
+    App.tsx                 # ThemeProvider, SessionProvider, RouterProvider
+    index.css               # design tokens (light and dark), Tailwind import, font import
+    api/
+      client.ts             # ApiClient interface and the exported client (mock adapter today)
+      types.ts              # API types; offsets are code points
+      mock.ts               # in-memory adapter: sessions, job timeline, analysis
+      contract.ts           # fictional sample agreement text for the mock
+      catalogue.ts          # 46 categories with group, support status and catalogue version
+    app/
+      routes.tsx            # route table
+      Root.tsx              # shell: header, footer, toasts, skip link
+      session.tsx           # token, document metadata, toasts, mock settings (memory only)
+      theme.tsx             # light and dark
+    lib/
+      offsets.ts            # code point to UTF-16 table and sliceCp
+      useMedia.ts           # media query hook, reduced-motion hook
+    pages/
+      Home.tsx              # upload, role, party, start
+      Reader.tsx            # three-pane reader: categories, document, clause detail
+      HowItWorks.tsx
+      Accuracy.tsx          # measured performance, labelled as an example until real numbers exist
+      Expired.tsx
+      Gallery.tsx           # component gallery
+    components/             # 50 components and icons.tsx: atoms (Button, StatusChip, ...),
+                            # molecules (UploadDropzone, ConfidenceBand, JudgmentCard, ...),
+                            # organisms (ClauseDetailPanel, CategorySidebar, ReaderToolbar, ...)
+```
+
+The FE parts change this tree: FE-2 adds layout primitives, the reveal hook and a `NotFound` page, and FE-4 adds a `/start` flow. Each part updates this section.
