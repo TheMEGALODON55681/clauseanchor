@@ -33,6 +33,7 @@ export const settings: MockSettings = {
   sampleMode: false,
   partialRun: false,
   failAnalysis: false,
+  failParse: false,
   failNextRequest: false,
   shortSession: false,
 };
@@ -452,7 +453,7 @@ function buildNodes(): DocNode[] {
 
 type StoredDoc = {
   doc: Document;
-  parseJob: Job & { startedAt: number };
+  parseJob: Job & { startedAt: number; fail: boolean };
   role: Role;
   party: "party_company" | "party_provider" | null;
   analysisJob: (Job & { startedAt: number; frozenAt: number | null; partial: boolean; fail: boolean }) | null;
@@ -629,7 +630,7 @@ function exampleRows(seed: number) {
 function newDocument(filename: string): StoredDoc {
   const docId = id("doc");
   const ttl = settings.shortSession ? 9 * 60_000 : 60 * 60_000;
-  const parseJob = { id: id("job"), kind: "parse" as const, status: "running" as JobStatus, stage: "reading", completed_units: 0, total_units: 5, startedAt: Date.now() };
+  const parseJob = { id: id("job"), kind: "parse" as const, status: "running" as JobStatus, stage: "reading", completed_units: 0, total_units: 5, startedAt: Date.now(), fail: settings.failParse };
   const stored: StoredDoc = {
     doc: {
       id: docId,
@@ -656,6 +657,12 @@ function newDocument(filename: string): StoredDoc {
 function refreshParse(s: StoredDoc) {
   const j = s.parseJob;
   const elapsed = Date.now() - j.startedAt;
+  if (j.fail && elapsed >= PARSE_MS / 2) {
+    j.status = "failed";
+    j.stage = null;
+    s.doc.status = "failed";
+    return;
+  }
   if (elapsed >= PARSE_MS) {
     j.status = "succeeded";
     j.stage = null;

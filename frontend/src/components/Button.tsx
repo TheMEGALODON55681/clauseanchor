@@ -185,7 +185,7 @@ export default function Button({
     );
   }
   return (
-    <button type="button" disabled={disabled} onClick={onClick} aria-busy={loading || undefined} {...shared} {...rest}>
+    <button type="button" disabled={disabled} onClick={loading ? undefined : onClick} aria-busy={loading || undefined} {...shared} {...rest}>
       {content}
     </button>
   );

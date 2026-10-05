@@ -26,6 +26,7 @@ export type MockSettings = {
   sampleMode: boolean;
   partialRun: boolean;
   failAnalysis: boolean;
+  failParse: boolean;
   failNextRequest: boolean;
   shortSession: boolean;
 };

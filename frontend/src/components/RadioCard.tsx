@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useId } from "react";
 import type { ReactNode } from "react";
+import { CheckIcon } from "./icons";
 
 export type RadioCardState = "unselected" | "hover" | "selected" | "focus" | "disabled";
 
@@ -7,64 +8,52 @@ type RadioCardProps = {
   title: string;
   description?: string;
   icon?: ReactNode;
+  /** A short label after the title. */
+  tag?: string;
+  /** Extra content under the description, such as a quote. */
+  children?: ReactNode;
+  /** Force a visual state, used by the gallery and the landing specimens. Interactive by default. */
   state?: RadioCardState;
+  /** The group. Cards with the same name are one group, so give each group its own. A lone card gets its own. */
   name?: string;
+  value?: string;
+  checked?: boolean;
   onSelect?: () => void;
 };
 
-export default function RadioCard({
-  title,
-  description,
-  icon,
-  state,
-  name = "radio-card",
-  onSelect,
-}: RadioCardProps) {
-  const [hovered, setHovered] = useState(false);
-  const resolved = state ?? (hovered ? "hover" : "unselected");
-  const selected = resolved === "selected";
-  const disabled = resolved === "disabled";
-
+/* A choice card on a native radio input, so the arrow keys and the single tab stop of a
+   group come from the browser. The look is in index.css (.radio-card). */
+export default function RadioCard({ title, description, icon, tag, children, state, name, value, checked = false, onSelect }: RadioCardProps) {
+  const id = useId();
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      name={name}
-      disabled={disabled}
-      onClick={onSelect}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="text-left"
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 12,
-        width: "100%",
-        minHeight: 44,
-        background: "var(--paper-sheet)",
-        border: `${selected ? 2 : 1}px solid ${selected ? "var(--anchor-600)" : "var(--control-border)"}`,
-        borderLeftWidth: selected ? 4 : 1,
-        borderLeftColor: selected ? "var(--anchor-600)" : "var(--control-border)",
-        borderRadius: "var(--radius-md)",
-        padding: selected ? "11px 13px" : "12px 14px",
-        opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-        boxShadow: resolved === "hover" ? "var(--elevation-2)" : "none",
-        ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {}),
-      }}
-    >
-      {icon && (
-        <span style={{ color: selected ? "var(--anchor-600)" : "var(--ink-tertiary)", marginTop: 1, display: "inline-flex" }}>
-          {icon}
+    <label className="radio-card" data-state={state}>
+      <input
+        type="radio"
+        className="sr-only"
+        name={name ?? id}
+        value={value}
+        checked={state ? state === "selected" : checked}
+        disabled={state === "disabled"}
+        onChange={() => onSelect?.()}
+        aria-labelledby={`${id}-title`}
+        aria-describedby={description || children ? `${id}-body` : undefined}
+      />
+      {icon && <span className="radio-card-icon">{icon}</span>}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="flex flex-wrap items-center gap-2">
+          <span id={`${id}-title`} className="text-[15px] font-medium" style={{ color: "var(--ink-primary)" }}>{title}</span>
+          {tag && <span className="radio-card-tag">{tag}</span>}
         </span>
-      )}
-      <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{ fontSize: 15, fontWeight: 500, color: "var(--ink-primary)" }}>{title}</span>
-        {description && (
-          <span style={{ fontSize: 13, lineHeight: "18px", color: "var(--ink-secondary)" }}>{description}</span>
+        {(description || children) && (
+          <span id={`${id}-body`} className="flex flex-col gap-1">
+            {description && <span className="text-[13px] leading-[18px]" style={{ color: "var(--ink-secondary)" }}>{description}</span>}
+            {children}
+          </span>
         )}
       </span>
-    </button>
+      <span aria-hidden className="radio-card-check">
+        <CheckIcon size={18} />
+      </span>
+    </label>
   );
 }

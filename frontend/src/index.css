@@ -427,6 +427,68 @@ html {
     .margin-grid > .margin-grid-aside { grid-column: 3; grid-row: 1; }
   }
 
+  /* A choice card on a native radio input (components/RadioCard.tsx). The chosen card
+     takes a 2 px border, a tint and a check, so the state does not rest on colour. */
+  .radio-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 12px 14px;
+    background: var(--paper-sheet);
+    border: 1px solid var(--control-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+  }
+  .radio-card:hover,
+  .radio-card[data-state='hover'] {
+    box-shadow: var(--elevation-2);
+  }
+  .radio-card:has(input:checked) {
+    border-color: var(--anchor-600);
+    box-shadow: inset 0 0 0 1px var(--anchor-600);
+    background: var(--anchor-100);
+  }
+  .radio-card:has(input:focus-visible),
+  .radio-card[data-state='focus'] {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  .radio-card:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .radio-card-icon,
+  .radio-card-check {
+    display: inline-flex;
+    margin-top: 1px;
+  }
+  .radio-card-icon {
+    color: var(--ink-tertiary);
+  }
+  .radio-card:has(input:checked) .radio-card-icon {
+    color: var(--anchor-600);
+  }
+  .radio-card-check {
+    color: var(--anchor-600);
+    opacity: 0;
+  }
+  .radio-card:has(input:checked) .radio-card-check {
+    opacity: 1;
+  }
+  .radio-card-tag {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--anchor-600);
+    border: 1px solid var(--anchor-600);
+    border-radius: var(--radius-sm);
+    padding: 0 6px;
+  }
+
   /* Long-form flow: a heading sits closer to what it introduces than to
      what comes before it. */
   .flow > * + * { margin-top: 16px; }
@@ -531,7 +593,7 @@ html {
    outside both, so pressing it never freezes the run it starts. */
 .hero-demo { --ink-delay: 600ms; }
 .hero-demo [data-ruler-mark] { animation: ca-fade var(--dur-state) var(--ease-out) 1000ms backwards; }
-.hero-demo .hero-panel { animation: ca-rise var(--dur-panel) var(--ease-out) 1200ms backwards; }
+.hero-demo .hero-panel { --panel-w: 100%; animation: ca-rise var(--dur-panel) var(--ease-out) 1200ms backwards; }
 .hero-demo:has(.hero-sheet:focus-within, .hero-panel:focus-within) :is(.ca-ink, [data-ruler-mark], .hero-panel) {
   animation-play-state: paused;
 }

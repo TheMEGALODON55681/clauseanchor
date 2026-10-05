@@ -117,7 +117,7 @@ export default function Landing() {
             <h1 id="hero-title" className="t-display-xl" style={{ color: "var(--ink-primary)" }}>
               Know which clauses to ask a lawyer about.
             </h1>
-            <p className="mt-4 font-serif text-[17px] leading-[28px] md:text-[19px] md:leading-[32px]" style={{ color: "var(--ink-secondary)" }}>
+            <p className="mt-4 max-w-[66ch] font-serif text-[17px] leading-[28px] md:text-[19px] md:leading-[32px]" style={{ color: "var(--ink-secondary)" }}>
               ClauseAnchor checks your contract against 46 listed clause categories and marks each match in the margin. Every finding quotes your text, and some add a passage from a published Indian judgment. Where it is unsure, it says Needs a lawyer.
             </p>
             <div className="mt-6">
@@ -209,7 +209,7 @@ export default function Landing() {
       </Section>
 
       <Section id="privacy" labelledBy="privacy-title" mark={mark()}>
-        <h2 id="privacy-title" className="t-display-md">Nothing is kept after your session.</h2>
+        <h2 id="privacy-title" className="t-display-md">Your contract is deleted within 60 minutes.</h2>
         <p className="t-prose-lg mt-4">
           {PRIVACY_LINE} Reloading the page ends your session, and nothing is written to your browser's storage. The Accuracy page lists the measured figures for each category once the evaluation is complete. Until then it shows labelled example numbers.
         </p>

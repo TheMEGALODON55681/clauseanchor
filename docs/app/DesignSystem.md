@@ -145,6 +145,8 @@ Type scale (sizes in px, line height in px):
 
 Contract reading measure: **68 to 80 characters per line**. Never justify contract text; left-align it.
 
+Hero subline measure: capped at `66ch` (`max-w-[66ch]`), which gives a longest line of 71 characters from 768 to 1440 px. A cap of 68ch left a 75 character line. The hero heading needs none, and the sample sheet and quote in the hero are not capped (FrontendDesign.md 17.4, AM).
+
 **12 px is the floor.** Nothing in the app renders below it. The classes are `t-display-xl`, `t-display-md`, `t-overline`, `t-section-mark`, `t-marginal-note` and `t-prose-lg` in `index.css`. The mono kicker is retired. `section-mark` sets tabular figures. Counts and metric cells do not yet, and FE-4 and FE-6 add `font-variant-numeric: tabular-nums` where numbers must align in a column.
 
 **Heading rhythm in long-form text.** A heading sits closer to what it introduces than to what precedes it. Inside a `.flow` container an `h2` has 48 px above and 16 px below, an `h3` has 32 px above and 12 px below, and the first child has no top margin.
@@ -154,7 +156,7 @@ Contract reading measure: **68 to 80 characters per line**. Never justify contra
 - **Spacing:** 4px base. Tokens `space/1` = 4 through `space/12` = 48, plus `space/16` = 64, `space/24` = 96 and `space/32` = 128. The last two have no CSS token, because Tailwind derives `py-24` and `py-32` from `--spacing`.
 - **Radius:** `radius/sm` 4px (chips, inputs), `radius/md` 6px (buttons, cards), `radius/lg` 10px (panels, modals). **No full pill shapes** except the tiny count badge.
 - **Elevation:** paper-like, almost flat. `elevation/1`: 0 1px 0 `rule/default` (a printed edge). `elevation/2`: 0 2px 8px rgba(27,31,36,0.06). `elevation/3` (modals only): 0 12px 32px rgba(27,31,36,0.12). No glows.
-- **Borders:** 1px `rule/default` by default. Emphasis via a **4px left rule** in a semantic color (the "margin rule"), used on notices (`NoticeBanner`), rule-flag cards (`RuleFlagCard`) and judgment cards (`JudgmentCard`), where it marks a different voice. Controls take `control-border`. `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList`, `PartyBindingField`, `PerformanceTableRow` and `RadioCard` still carry the baseline 4px rule. FE-4, FE-5 and FE-6 remove it from the ones they recompose.
+- **Borders:** 1px `rule/default` by default. Emphasis via a **4px left rule** in a semantic color (the "margin rule"), used on notices (`NoticeBanner`), rule-flag cards (`RuleFlagCard`) and judgment cards (`JudgmentCard`), where it marks a different voice. Controls take `control-border`. `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList` and `PerformanceTableRow` still carry the baseline 4px rule. FE-5 and FE-6 remove it from the ones they recompose. `RadioCard` and `PartyBindingField` lost it in FE-4. A chosen choice card takes a 2px `anchor/600` border and a tint instead.
 - **Grid:** the marketing grid is the margin grid in section 6: a 9rem margin column, a 42rem main column and an aside, in a page 1200px wide. The Reader keeps its three panes: left sidebar 280px, document column max 760px, right detail panel 400px. FE-5 sets the Reader widths below 1440. Mobile is one column with 16px side gutters.
 - **Touch targets:** a hit area of at least 44 x 44 px on every interactive element, reached with padding or the `.hit` class (a 44px `::after` centred on the control). The button sizes S 32, M 40 and L 48 are visual sizes. Neighbouring hit areas do not overlap.
 - **Focus:** one rule in `index.css`: `:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px }`. Components carry no focus code of their own. `.focus-inset` pulls the ring inside for full-width rows. Programmatic focus on a heading or on `main` (`tabindex="-1"`) shows no ring.
@@ -221,7 +223,7 @@ Buttons use verb-first sentence case: "Upload contract", "Start review", "Downlo
 
 ---
 
-## 6. Patterns added in FE-2 and FE-3
+## 6. Patterns added in FE-2 to FE-4
 
 | Pattern | Spec |
 |---|---|
@@ -238,5 +240,10 @@ Buttons use verb-first sentence case: "Upload contract", "Start review", "Downlo
 | Section frame | `SectionFrame` in `components/Layout.tsx`: the rule above, the vertical rhythm and the page width. `Section` is a `SectionFrame` holding one `MarginGrid`. A section that needs several grid rows, such as How it works, builds them inside a `SectionFrame` |
 | Button as a link | `Button` takes `to`, a router address, and then renders a router link with the same look and the 44px hit area. Without `to` it is a `button` |
 | Labels, not controls | A component that shows a fact and has no action is not a button. `StatuteTag` is a label. `RuleFlagCard` has no "Read the section" button until the data holds the statute text. `ConfidenceBand` is plain text until the data gives a calibration scope, and then its label opens a popover. `ClauseDetailPanel` shows Close only with `onClose` and Case law only when case law data is given |
+| Choice card | `RadioCard` in `components/RadioCard.tsx`, styled by `.radio-card` in `index.css`. A label around a native radio input, so the group has one tab stop and the arrow keys move inside it. The card is at least 44px high. The chosen card has a 2px `anchor/600` border (the 1px border and a 1px inset line), the `anchor/100` tint and a check icon, so the state does not rest on colour. It can carry a tag such as "Suggested" after its title and extra content under its description. Each group has its own name, made with `useId`, so two groups on one page never un-check each other |
+| Stepper | The text "Step 2 of 3" and, from 1024px in the margin column, an ordered list of the three step names with `aria-current="step"` on the current one. The step number uses tabular numerals. No percentage bar. The step heading takes focus on a change of step |
+| Summary | `pages/start/Summary.tsx`. A list of File, Role, Party and Scope, each reading "Not chosen yet" until decided. It shows in the aside from 1280px and in step 3 below that. On steps 1 and 2 below 1280px it is one line of the chosen values joined by a middle dot. It has no Change link |
+| Header action | The primary "Review a contract" button sits at the far right of the header from 768px and inside the menu below it. It is absent on `/start` and in the Reader, which have their own primary action |
+| Loading button | `Button` in the `loading` state shows a spinner, sets `aria-busy` and ignores clicks. It is not `disabled`, so keyboard focus stays on it |
 
-The stepper, the summary rail and the Reader rail are defined here when FE-4 and FE-5 build them.
+The Reader rail is defined here when FE-5 builds it.

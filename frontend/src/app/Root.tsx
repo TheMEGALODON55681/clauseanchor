@@ -14,7 +14,6 @@ import { useMedia } from "../lib/useMedia";
 const PreviewControls = import.meta.env.DEV ? lazy(() => import("../components/PreviewControls")) : null;
 
 const LINKS = [
-  { label: "Review", href: "#/start", path: "/start" },
   { label: "How it works", href: "#/how-it-works", path: "/how-it-works" },
   { label: "Accuracy", href: "#/accuracy", path: "/accuracy" },
 ];
@@ -70,8 +69,10 @@ export default function Root() {
   const links = LINKS.map((l) => ({
     label: l.label,
     href: l.href,
-    current: l.path === "/start" ? location.pathname === l.path || inReader : location.pathname === l.path,
+    current: location.pathname === l.path,
   }));
+  // The primary action. /start and the reader have their own, so the header does not repeat it there.
+  const reviewButton = location.pathname === "/start" || inReader ? null : <Button to="/start" size="s">Review a contract</Button>;
 
   return (
     <div className={inReader ? "flex h-dvh flex-col overflow-hidden" : "flex min-h-dvh flex-col"} style={{ background: "var(--paper-base)" }}>
@@ -91,7 +92,12 @@ export default function Root() {
           variant={!wide ? "mobile" : sample ? "sample-mode" : "default"}
           links={links}
           homeHref="#/"
-          trailing={themeButton}
+          trailing={
+            <>
+              {themeButton}
+              {wide && reviewButton}
+            </>
+          }
           onMenu={() => setMenuOpen((v) => !v)}
           menuOpen={menuOpen}
           menuId="mobile-menu"
@@ -120,6 +126,7 @@ export default function Root() {
               </span>
             ))}
             <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>Not legal advice</span>
+            {reviewButton}
           </nav>
         )}
       </div>

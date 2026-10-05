@@ -101,7 +101,7 @@ export default function NoticeBanner({ variant, onDismiss, text, onAction }: Not
         {text ?? FIXED[variant]}
       </p>
       {c.action}
-      {c.dismissible && (
+      {c.dismissible && onDismiss && (
         <button
           type="button"
           className="hit"

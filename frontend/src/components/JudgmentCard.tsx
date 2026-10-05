@@ -19,7 +19,7 @@ const AUTHORITY: Record<Authority, { label: string; fg: string; bg: string; bord
     border: "var(--rule-default)",
   },
   reviewed: {
-    label: "Reviewed as of Sep 2026",
+    label: "Reviewed",
     fg: "var(--status-found-fg)",
     bg: "var(--status-found-bg)",
     border: "var(--status-found-border)",
@@ -37,7 +37,7 @@ const PASSAGE =
 const EXTRA =
   " The burden of showing that the restriction is reasonable rests on the party seeking to enforce it, and any doubt is resolved in favour of the freedom to trade.";
 
-export default function JudgmentCard({ state = "collapsed", authority = "reviewed", passage }: JudgmentCardProps) {
+export default function JudgmentCard({ state = "collapsed", authority = "not-reviewed", passage }: JudgmentCardProps) {
   const [expanded, setExpanded] = useState(state === "expanded");
   const isExpanded = state === "expanded" || expanded;
   const auth = AUTHORITY[authority];

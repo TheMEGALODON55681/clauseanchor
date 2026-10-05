@@ -27,7 +27,7 @@ export default function AppHeader({
   variant?: HeaderVariant;
   links?: NavLink[];
   homeHref?: string;
-  /** Extra controls, such as the theme toggle. */
+  /** Extra controls at the far right, such as the theme toggle and the primary action. */
   trailing?: ReactNode;
   onMenu?: () => void;
   /** Mobile menu state, for the expanded state of its button. */

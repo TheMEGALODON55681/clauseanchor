@@ -403,3 +403,78 @@ Found along the way, not fixed: the heading "Nothing is kept after your session"
 Blockers: none. The LCP gap and the capture rerun need Aryan's call (17.3).
 
 Next action: commit FE-3 with `feat(frontend): rebuild landing with live hero demo`, then reply `next` to start FE-4 (the `/start` stepped flow, reducer test first).
+
+
+## 2026-10-05: Part FE-4, the stepped start flow
+
+Part: FE-4 (frontend track). Files changed under `frontend/`, `docs/app/` and `README.md`. Part 1-B stays paused at Aryan's request. No dependency was added. The part began with the six carry-over items from FE-3, then built the flow.
+
+Files changed:
+- New under `frontend/`: `src/lib/startFlow.ts` (the reducer, `maxReachableStep`, `clampStep`, `nextBlocker`, `parseStep`, `suggestedParty`), `src/lib/startFlow.test.ts` (17 tests), `src/pages/start/useStartFlow.ts` (upload, parse polling and the client calls), `src/pages/start/Summary.tsx` (the rail list and the one-line form).
+- Rewritten: `src/pages/Start.tsx`, the three-step flow.
+- Components: `RadioCard` (a label around a native radio, `tag`, `children`, `value`, `checked`, a generated group name, no 4 px rule), `RoleSelector` (controlled, `null` for no role, `hideLegend`, its own group name), `PartyBindingField` (a radio group by party id, `none`, `suggested`, a "Reading your document." status line), `NoticeBanner` (dismiss button only with `onDismiss`), `UploadDropzone` (the refusal line has `role="alert"`), `ClauseDetailPanel` (shell width from `--panel-w`), `JudgmentCard` (authority label and default), `Button` (a loading button ignores clicks), `AppHeader` (a doc comment only).
+- App and pages: `app/Root.tsx` (the header button, the "Review" link removed), `pages/Landing.tsx` (the privacy heading, and at the end of the part the hero subline cap).
+- `src/index.css`: the `.radio-card` rules and `--panel-w` on the hero panel.
+- Added at the end of the part: `index.html` (the meta description), `src/api/client.ts`, `src/api/mock.ts` and `src/components/PreviewControls.tsx` (the `failParse` switch), `src/pages/start/useStartFlow.ts` (retry turns it off) and the parse-failure card and rail heading in `src/pages/Start.tsx`. The ponytail-review fixes touched `RoleSelector.tsx`, `Summary.tsx`, `useStartFlow.ts`, `startFlow.ts` and `startFlow.test.ts`.
+- Docs: `Phases.md` (FE-4 ticked, deviations), `Architecture.md` (data flow, the start flow and tests rows, the tree), `FrontendDesign.md` (5.2, 6.2, 6.7, 6.9, 8.3, the skills rows in section 10, the FE-4 test row in 13, the deferred rows in 17.2, new 17.4 with amendments AA to AO, and at the start of the part 1.2, 6.1, 8.2 and 17.3), `DesignSystem.md` (3.4, 3.5 and section 6), `README.md` (routes).
+
+Method. The reducer was written test first. The flow, the Reader regression pass, the hero measurements and the route sweeps ran earlier in this part in headless Edge over the DevTools protocol, against the dev server, with extensions disabled. The capture scripts live outside the repo and each run used a new browser profile folder and refused to overwrite a file. The final checks of the part ran in the browser pane, whose window is hidden (a viewport of 0 by 0), so those used the DOM and a call counter and no layout. Python is not installed.
+
+Skills that ran: `superpowers:test-driven-development` (the reducer tests were red while `startFlow.ts` did not exist, then green, and six mutations of the reducer each failed at least one test), `stop-slop` (the new strings and the doc prose), `superpowers:verification-before-completion`, `/ponytail:ponytail-review`. At the end of the part, at Aryan's request: `copywriting`, `copy-editing`, then `stop-slop` again over the new strings (17.4, AO), and `/ponytail:ponytail-review` again over the full diff. Not run as separate passes in this part: `signup`, `cro` and `frontend-design`. Not run, and left to FE-R: the gstack design review and QA, `coderabbit`, `gstack-review`, `gstack-cso` and one independent second review.
+
+Decisions: none were needed. D8 (whether the real API accepts a sample id while uploads are on) stays open and belongs to 4-C.
+
+Carry-over items from FE-3:
+- The landing § 6 heading is "Your contract is deleted within 60 minutes." (AA). The meta description now says "your contract is deleted within 60 minutes" (AL).
+- The hero panel spans the sheet's full width from 768 to 1279 px (AB). Side by side needs about 1,180 px. Measured characters on a full line: 72 to 82 at 768 and 78 to 82 at 1024, for the sheet and the quote. At 1279 both run 115 to 120. The hero subline is capped at 66ch (AM), and the sheet and the quote are not.
+- `JudgmentCard` shows "Reviewed", "Later overruled or modified" or "Not yet reviewed", with no date, because the passage data has none (AC). The grep in 1.2 covers `Reviewed as of`.
+- The Reader regression pass found no regression. 24 captures sit in `frontend/.screens/FE-4/reader-clean/` and the pixel differences against FE-2 in `reader-diff/`. The sheet, marks, band and chips match, and the only visual change is that the empty "Nothing selected" panel lost its Close button (17.3, Z). FE-2 has no review-selected baseline and its `reader-selected-1440-dark.png` is a light capture, so that one case was compared by eye.
+- The preview server on port 4173 was stopped. The rupee sign item needed no action.
+
+Deviations from the plan, each recorded in 17.4:
+- AD: the step is not in the reducer state. The address owns it.
+- AE: the rail starts at 1280 px, not 1024, and has no Change link.
+- AF and AG: no role or party is preselected, "None of these" is a radio option, and the cards are native radios with their own group names.
+- AH: the header gets the primary button, absent on `/start` and in the Reader.
+- AI and AJ: `NoticeBanner` has no dead dismiss button, the refusal line is announced, and history and parameters follow the rules in 17.4.
+- AK: a loading `Button` ignores clicks (below).
+- AL to AO: the meta description, the hero subline cap, the Fail parse switch and the copy pass, added at the end of the part at Aryan's request.
+
+Deferred, with owners (the full list is in 17.4): LCP and CLS for `/` (FE-R), the 4 px rule on five more components (FE-5, FE-6), tabular numerals on counts (FE-5, FE-6), the hero sheet and quote at 1100 to 1279 px (93 to 120 characters, not capped, FE-R if Aryan asks) and the `JudgmentCard` label "Reviewed" (Aryan).
+
+Added at the end of the part, at Aryan's request:
+- Copy: copywriting, copy-editing, then stop-slop again over every new FE-4 string. Two strings changed (the parse-failure card and the rail heading). The rest stayed, with the reasons in 17.4 (AO).
+- Meta description: "...and your contract is deleted within 60 minutes." (149 characters), in `index.html` and 8.3 (AL).
+- Hero subline capped at `max-w-[66ch]` (AM). The longest line is 71 characters at 768, 1100, 1200, 1279 and 1280 px, down from 93 at 1100 and 111 at 1279. A cap of 68ch left a 75 character line. The heading needed no cap. The sheet and the quote still run 93 to 96 at 1100 and 117 to 120 at 1279. Captures at 1100 and 1280 px.
+- A "Fail parse" switch in the Preview controls, next to "Failed analysis", wired through `MockSettings` and the mock's parse job (AN).
+- `/ponytail:ponytail-review` over the full diff (below).
+
+Verification. Run fresh on the final code:
+- `pnpm typecheck`: exit 0. `pnpm test`: 37 of 37 pass (7 reveal, 8 colour tokens, 5 hero fixture, 17 flow), 0 failed, 0 skipped. `pnpm build`: 165 modules, exit 0, no warnings. All three ran again on the final code after the last edits.
+- Bundle: the index chunk is 239.45 kB (72.67 kB gzipped) and the `/start` chunk 15.24 kB (5.66 kB gzipped, up from 3.96 at FE-3). The landing route's first load was not measured again, and the index chunk is 0.02 kB smaller than at FE-3. `dist` holds no "Preview controls", "Fail parse" or "Failed analysis" string.
+- The tool-name grep and the Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/` (excluding `.venv`, `node_modules`, `dist`, `.screens`, `graphify-out` and `Rules.md`): no match. The claims grep over `frontend/src` and `frontend/dist`, the "Evidence you can check" grep over `dist` and a grep for `googleapis` and `gstatic` over `dist`, `src` and `index.html`: no match. A node scan for en and em dashes over `frontend/src`, `frontend/public`, `frontend/index.html`, `docs/app` and `README.md` (102 files): no match, and it found both dashes in a control file. No `console.log`, `console.debug`, `debugger`, `TODO` or `FIXME` in `frontend/src`.
+- The parse-failed path through the new Fail parse switch, in headless Edge, with no patched call. With the switch on, the sample link lands on step 2 and the card shows "We could not read your document", "Try again, or go back and choose a different file." and `ERR_PARSE`. Next is disabled, the party group is hidden and the console is empty. "Try again" turns the switch off, step 2 shows three party radios (two parties and None of these) and the card is gone.
+- The double click on "Start review" (AK). A counter around `client.startAnalysis` and three clicks at most 30 ms apart: the original line made three calls, the fixed line made one. A single run that calls `click()` twice back to back is no test, because both clicks land before React commits the loading state.
+- Route sweep in the browser pane, over `/`, `/start`, `/start?step=3` (corrected to step 1), `/how-it-works`, `/accuracy`, `/expired` and an unknown address: no React warning and no error other than the one below. Each navigation logs `InvalidStateError: Transition was aborted because of invalid state`. The pane's document is hidden, and a bare `document.startViewTransition` call on that document, with no app code, rejects with the same error, so it is a hidden-window artefact. The earlier headless sweep at 375 and 1280 px printed nothing. A tab that is hidden during a route change would log it too, and FE-R can decide whether the app should catch the rejection.
+- `git status --short` lists no path under `frontend/node_modules`, `frontend/dist` or `frontend/.screens`. No git write command was run.
+
+Measured earlier in this part, in headless Edge:
+- A keyboard-only run from the landing header button to a started review passes. Each radio group is one tab stop with the arrow keys inside it. Neither role nor party is preselected.
+- The four upload refusals show inline with the exact messages, and a good file after a refusal recovers. A forced `?step=3` is corrected with a replace and Back leaves `/start`. Browser Back from step 2 returns to step 1 with the file kept.
+- The sample link replaces the address, uploads and lands on step 2. Sample mode works. With the mock set to fail the next request, "Try again" works and lands on step 2.
+- The header button is at the far right, absent on `/start` and in the Reader, and inside the menu below 768 px. The Gallery shows every `RadioCard` and `PartyBindingField` state, and the landing role specimens stay inert.
+- A route sweep at 375 and 1280 px printed nothing to the console and showed no overflow, except the development-only `/gallery` at 1280 px. Whether that predates FE-4 was not checked.
+
+Not verified: LCP and CLS for `/`. The `Button` line came after the headless runs and after the ponytail-review, so the captured layouts and the keyboard-only run never saw it. It changes no layout, and the call counter above covers its behaviour. The end-of-part captures of the hero and the failure card ran against the dev server and not against the production build.
+
+Screenshots: `frontend/.screens/FE-4/`, gitignored. `hero-before-` and `hero-after-` at 768, 1024 and 1280, `reader/` (an earlier set that shows the dev Preview controls button), `reader-clean/` (24 captures), `reader-diff/`, `start-all`, `start-final`, `start-checks`, `start-modes` and `misc` sets, and from the end of the part `hero-cap/` (the hero at 1100 and 1280 px after the cap) and `fail-parse-final/` (step 2 with the failure card at 1280 px).
+
+ponytail-review, first pass during the part: no P1. Fixed: an unneeded export is dropped, the `Document` type is reused where a local copy stood, the `action` prop added to `AppHeader` is folded into `trailing`, and a `wait` helper used once is inlined. No kept item was recorded. Retry now keeps the `onAccepted` callback, so a retried sample upload still moves to step 2.
+
+ponytail-review, second pass over the full FE-4 diff at the end of the part (also in 17.4). Three fixed: `RoleSelector` re-exported `RoleKey` and nothing imported it from there, so the re-export is gone. `PartyOption` repeated `PartyChoice` field for field, so it is gone. `maxReachableStep` repeated the gate `nextBlocker` holds and now reads from it, which left the test that compared the two with nothing to compare, so that test is deleted (18 tests became 17). One smaller fix: the one-line summary excluded the Scope row by its label text and now takes the first three rows. Kept, three: the four refusal codes appear in the reducer's type, in `REFUSALS` and in `REFUSAL_ZONE` (one line to save, three files to touch), `RoleSelector` keeps its own state only for the gallery's uncontrolled example, and `upload({ sampleId }, ...)` stands at three call sites in `Start.tsx` (a helper saves no lines). About 22 lines out, 5 of source and 17 of test.
+
+Found along the way. Fixed: "Start review" called `startAnalysis` once per click, and the baseline page did the same (AK). Not fixed: the `/gallery` overflow at 1280 px, the hero sheet and quote measure at 1100 to 1279 px (93 to 120 characters), and the hidden-window console error above.
+
+Blockers: none. Aryan's call: whether the hero sheet and quote should be capped too (one cap on the sheet), and the `JudgmentCard` label "Reviewed", which does not say who reviewed.
+
+Next action: commit FE-4 with `feat(frontend): add stepped review start flow`, then reply `next` to start FE-5 (the Reader recomposition).

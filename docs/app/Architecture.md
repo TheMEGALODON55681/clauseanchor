@@ -143,8 +143,8 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 
 ### 7.1 Data flow
 
-1. `Start` creates a session, uploads a file (or a sample id in sample mode) and polls the parse job until the document is ready.
-2. The user picks a role and a party. `Start` sets the party binding, starts the analysis job and navigates to `/review/:documentId`.
+1. `Start` is three steps, and the step lives in `?step=`. Step 1 creates a session, uploads a file (or a sample id in sample mode) and polls the parse job until the document is ready. Step 2 can open while parsing still runs. `lib/startFlow.ts` holds the state as a pure reducer and says which step it allows. `pages/start/useStartFlow.ts` holds the upload, the polling and the calls to `client`.
+2. In step 2 the user picks a role and a party, or "None of these". Neither is preselected. Step 3 sets the scope. `Start` then sets the party binding, starts the analysis job and navigates to `/review/:documentId`.
 3. `Reader` polls the job and fetches the analysis as categories resolve, then the manual-review list. It also handles re-binding the party, cancel, retry, report download and delete.
 4. Every call goes through `client` in `src/api/client.ts`. Nothing else imports the mock. Today `client` is the in-memory mock adapter. The swap to an HTTP adapter is one line, planned for 4-C, and the adapter follows API.md.
 
@@ -160,7 +160,8 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Theming | Tokens are CSS custom properties in `src/index.css`, dark values under `.dark`. The first load follows `prefers-color-scheme` | One set of tokens for every component. DesignSystem.md lists them |
 | Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono, twelve files in `public/fonts/` (seven Latin and five Latin-extended), with `@font-face` rules, `unicode-range` and metric-matched fallbacks in `index.css` | No request leaves for a third party, which keeps the privacy promise. The rupee sign comes from the Latin-extended files, which the browser fetches only on a page that holds a character in that range (the landing page requests none). Other scripts fall back to a system font (`FrontendDesign.md` 17.2, S, and 17.3, X) |
 | Motion and widths | Tokens in `index.css` (`--ease-out`, `--dur-*`, `--w-*`), one reduced-motion block, route changes through the View Transitions API | One set of values for every part. `DesignSystem.md` 3.5 lists them |
-| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
+| Start flow | A pure reducer in `lib/startFlow.ts`, a hook for the side effects in `pages/start/useStartFlow.ts`, and the step in the address (`?step=`) | The rules are testable without a DOM. The address owns the step because a second copy in state raced on browser Back. Each upload carries a `seq`, so a late answer for a replaced file changes nothing (`FrontendDesign.md` 6.2 and 17.4, AD) |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 37 tests: 7 reveal, 8 colour tokens, 5 hero fixture, 17 start flow | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
@@ -198,9 +199,14 @@ frontend/
       reveal.ts             # scroll reveal core: pure, takes the observer as an argument
       reveal.test.ts
       useReveal.ts          # the hook around reveal.ts
+      startFlow.ts          # the /start flow as a pure reducer, plus maxReachableStep, clampStep, nextBlocker, parseStep, suggestedParty
+      startFlow.test.ts
     pages/
       Landing.tsx           # the landing page: hero, sections 1 to 6, closing call to action
-      Start.tsx             # upload, role, party, start (the baseline form, moved; FE-4 rebuilds it as a stepped flow)
+      Start.tsx             # the three-step flow: upload, role and party, scope and start
+      start/
+        useStartFlow.ts     # upload, parse polling and the client calls, reporting to the reducer
+        Summary.tsx         # what the user has chosen: the rail list from 1280 px, one line below
       landing/
         HeroDemo.tsx        # the live demo: excerpt, ruler, clause panel, "Next example"
         heroExamples.ts     # typed fixture: three findings from the sample contract, with code point offsets
@@ -220,6 +226,4 @@ frontend/
       PreviewControls.tsx   # development only: mock switches and the gallery link
 ```
 
-The FE parts change this tree. Each part updates this section. FE-2 and FE-3 are built and are in the tree above. `FrontendDesign.md` holds the plan, and this addition is **(planned)**:
-
-- FE-4: `lib/startFlow.ts` with its test, and `pages/Start.tsx` rebuilt as the stepped flow.
+The FE parts change this tree. Each part updates this section. FE-2, FE-3 and FE-4 are built and are in the tree above. `FrontendDesign.md` holds the plan for FE-5 and FE-6.

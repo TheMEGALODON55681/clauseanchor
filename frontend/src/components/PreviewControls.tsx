@@ -25,6 +25,7 @@ export default function PreviewControls() {
         <Switch checked={mock.sampleMode} onChange={(v) => setMock({ sampleMode: v })} label="Sample mode" description="Uploads off, prepared example only." />
         <Switch checked={mock.partialRun} onChange={(v) => setMock({ partialRun: v })} label="Partial run" description="Some categories finish as Unavailable." />
         <Switch checked={mock.failAnalysis} onChange={(v) => setMock({ failAnalysis: v })} label="Failed analysis" description="The review stops partway." />
+        <Switch checked={mock.failParse} onChange={(v) => setMock({ failParse: v })} label="Fail parse" description="Reading the document stops partway. Try again turns it off." />
         <Switch checked={mock.shortSession} onChange={(v) => setMock({ shortSession: v })} label="Short session" description="Expires in 9 minutes, shows the notice." />
         <Switch checked={mock.failNextRequest} onChange={(v) => setMock({ failNextRequest: v })} label="Fail next request" description="One network error, then normal." />
         <p className="mt-2 text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>

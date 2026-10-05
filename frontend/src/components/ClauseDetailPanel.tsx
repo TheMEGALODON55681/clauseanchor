@@ -74,7 +74,7 @@ function Shell({ children, fill = false }: { children: ReactNode; fill?: boolean
         fill
           ? { width: "100%", minHeight: "100%", background: "var(--paper-base)" }
           : {
-              width: 400,
+              width: "var(--panel-w, 400px)",
               maxWidth: "100%",
               background: "var(--paper-base)",
               border: "1px solid var(--rule-default)",

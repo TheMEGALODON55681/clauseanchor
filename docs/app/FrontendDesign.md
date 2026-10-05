@@ -36,7 +36,7 @@ This section moved here from `Phases.md`, which keeps a one-line pointer.
 - The dev server starts and every route renders with no console error or warning.
 - Screenshots at 375, 768, 1024, 1280 and 1440 px, light and dark, for every route the part touched, in `frontend/.screens/<part>/`. Runs use a headless browser with extensions disabled.
 - The tool-name grep over `frontend/`, the `Rules.md` section 1 scrub, and the dash check over `frontend/src`, `docs/app` and `README.md` print nothing.
-- No calibration figure is hard-coded: `grep -rnoE "Calibrated on [^\"]{0,40}|[0-9]+ examples from [0-9]+ contracts" frontend/src frontend/dist` prints nothing. While no verified passage is set for the landing Evidence section (D7), `grep -rl "Evidence you can check" frontend/dist` prints nothing too.
+- No calibration figure is hard-coded: `grep -rnoE "Calibrated on [^\"]{0,40}|[0-9]+ examples from [0-9]+ contracts|Reviewed as of [^\"]{0,20}" frontend/src frontend/dist` prints nothing. While no verified passage is set for the landing Evidence section (D7), `grep -rl "Evidence you can check" frontend/dist` prints nothing too.
 - `/ponytail:ponytail-review` on the part's diff. Every P1 is fixed. Every P2 is listed with what was done.
 - If Windows App Control blocks a native binary, stop and report the file and the error. Do not swap the toolchain.
 
@@ -236,7 +236,7 @@ On a pathname change, the app sets focus on the page's `h1` (made programmatical
 
 The three live in one file, `components/Layout.tsx`, and not in a `layout/` folder (amendment N). At 1280 px and wider the aside is 320 px (1200 minus 144, 672 and two 32 px gaps). The three-column grid starts at 1280 and not at 1024 because at 1024 the aside would be about 80 px, too narrow for a clause panel (amendment I). The § mark is decorative and `aria-hidden`. The main column's 42 rem measure gives about 75 characters of 19 px serif.
 
-The `/start` flow uses `MarginGrid` too: a 640 px form column in the main slot and the summary rail in the aside slot.
+The `/start` flow uses `MarginGrid` too: a 640 px form column in the main slot and the summary rail in the aside slot. The aside shows only from 1280 px, the same width at which the grid gets its third column (17.4, AE).
 
 ### 5.3 Type
 
@@ -371,13 +371,13 @@ Grid: `MarginGrid` on every section. The margin column holds the § mark and, wh
 | Viewport | Layout |
 |---|---|
 | 375 to 767 | One column. Margin content and the § mark sit inline above each heading. The two buttons stack at full width, 44 px high. The panel sits below the sheet as a marginal note with a 1 px left hairline (not the 4 px rule) |
-| 768 to 1023 | One column at the 42 rem measure. The buttons sit side by side. The panel is below the sheet |
-| 1024 to 1279 | Two columns, margin and main. § marks sit in the margin column. The panel is below the sheet in the main column |
+| 768 to 1023 | One column at the 42 rem measure. The buttons sit side by side. The panel is below the sheet and spans its full width (17.4, AB) |
+| 1024 to 1279 | Two columns, margin and main. § marks sit in the margin column. The panel is below the sheet in the main column and spans the sheet's full width (17.4, AB) |
 | 1280 and wider | Three columns. The panel opens in the aside beside the sheet |
 
 ### 6.2 Start flow (`/start`)
 
-Three steps, one decision each, in a 640 px column. A summary rail sits in the aside from 1024 px (file, role, party, scope). Below 1024 the summary collapses into a line above the buttons.
+Three steps, one decision each, in a 640 px column. A summary rail sits in the aside from 1280 px (file, role, party, scope). Below 1280 the summary is one line above the buttons on steps 1 and 2 and a full list in step 3 (17.4, AE).
 
 | Step | Heading | Content | Next is enabled when |
 |---|---|---|---|
@@ -387,12 +387,12 @@ Three steps, one decision each, in a 640 px column. A summary rail sits in the a
 
 The page shows "Step n of 3", Back and Next. The step number lives in `?step=`.
 
-**Flow state is a pure reducer** in `src/lib/startFlow.ts`, tested first (section 13). States: `step`, `upload` (idle, validating, uploaded, error with a code), `parse` (idle, running, done, failed), `role`, `party`, `partyNone`, `india`. Rules:
+**Flow state is a pure reducer** in `src/lib/startFlow.ts`, tested first (section 13). State: `seq`, `upload` (idle, validating, uploaded, error with a code), `parse` (idle, running, done, failed), `role` (null until chosen), `party`, `partyNone` and `india`. The step is not in the state. The address owns it and `clampStep` says which step the state allows (17.4, AD). Actions: `upload-started`, `upload-done`, `upload-failed`, `parse-done`, `parse-failed`, `set-role`, `set-party`, `set-party-none` and `set-india`. Every action that answers a request carries the `seq` of its upload, so a late answer for a replaced file changes nothing. Rules:
 
-- `maxReachableStep` is 1 until a file is uploaded, 2 until step 2 is complete, then 3. A `?step=3` link that is not reachable is corrected to the highest reachable step with a replace, so Back does not trap the user.
+- `maxReachableStep` is 1 until a file is uploaded, 2 until step 2 is complete, then 3. It is read off `nextBlocker`, so a step is reachable exactly when nothing blocks Next on the one before it. `clampStep` never returns a step past it. A `?step=3` link that is not reachable is corrected to the highest reachable step with a replace, so Back does not trap the user. `nextBlocker` names what stops Next on a step, and the page turns it into the hint under the buttons.
 - Back keeps every input. Going back to step 1 and replacing the file resets the party and `partyNone` and keeps the role and the scope.
-- **No party is preselected.** The party that fits the role best is listed first and marked "Suggested". The user must choose one. A wrong binding silently flips Burden and Benefit on every finding, so it needs an explicit act.
-- The upload, the polling and the calls to `client` stay in a small hook. The reducer holds no side effect.
+- **No party is preselected, and no role either.** The party that fits the role best is listed first and marked "Suggested". The user must choose one. A wrong binding silently flips Burden and Benefit on every finding, so it needs an explicit act. A contract that names no party has only "None of these" to choose, so `parse-done` with no parties records that choice itself.
+- The upload, the polling and the calls to `client` stay in a small hook, `pages/start/useStartFlow.ts`. The reducer holds no side effect.
 
 Errors use the four exact messages from `UploadDropzone`:
 
@@ -463,6 +463,7 @@ The sheet's side padding stays 64 px. The rail holds one icon button with a 12 p
 
 - `/gallery` is registered only when `import.meta.env.DEV` is true and is loaded with a dynamic import, so the production build holds no Gallery code.
 - The mock settings panel leaves the Home page and becomes a floating **Preview controls** drawer, rendered by `Root` only in development, also lazy-imported.
+- The drawer holds six switches: sample mode, partial run, failed analysis, fail parse, short session and fail next request. The retry that follows a forced failure turns that switch off (17.4, AN).
 - **Build check at FE-2 and FE-R:** `grep -rl "Preview controls" frontend/dist` and a listing of `frontend/dist/assets` for a Gallery chunk both print nothing.
 
 ### 6.8 Loading and code splitting
@@ -479,7 +480,7 @@ The existing components keep the states `DesignSystem.md` and the gallery alread
 | Page without JavaScript | n/a | `<noscript>` line in `index.html`: "ClauseAnchor needs JavaScript to read your contract." | n/a | n/a |
 | Hero demo | n/a, the data is local | n/a | A fixture that fails its test fails the build, so the page never shows a broken example | Interrupted animation shows the final state |
 | Start step 1 | The dropzone's validating state | The idle dropzone with the privacy line | The four upload messages inline, and the network `ErrorCard` with Retry | File uploaded, parsing still running: Next is available |
-| Start step 2 | A "Reading your document" line and the party skeleton | No party found: "No party names were found. You can continue without choosing a party. Findings will say Party unclear." | Parse failed: "This file could not be read." with Replace file. Role is kept | Role chosen, parsing running: Next waits with "Still reading your document" |
+| Start step 2 | A "Reading your document" line and the party skeleton | No party found: the line "We will mark party-specific clauses as Party unclear." and no party to choose (17.4, AN) | Parse failed: the card "We could not read your document" with "Try again, or go back and choose a different file." and a Try again button. Next stays disabled and the role is kept (17.4, AN) | Role chosen, parsing running: Next waits with "Still reading your document" |
 | Start step 3 | Start review in its loading state | n/a | The network `ErrorCard` with Retry. Every input is kept | n/a |
 | Reader, analysing | The stage band with real counts | Zero findings: the fixed-phrase band in 6.3 | Failed analysis: `ErrorCard` with Retry. Cancelled: a line saying the review was cancelled and Start again | Some categories Unavailable: the existing partial notice. A partial parse shows the parser-warning notice. Neither reads as "not found" |
 | Clause panel | n/a | "Nothing selected" with one action | A retrieval failure: "Case law was not retrieved for this clause." | One passage reviewed and one overruled: the status shows on each passage |
@@ -570,7 +571,7 @@ Not verified and therefore not used: any figure for missed clauses, time saved, 
 | § 3 | Evidence you can check. | "Case law appears as a quoted passage with its court, year and citation, so you can look it up yourself. Nothing is paraphrased." |
 | § 4 | Built to tell you when to call a lawyer. | "When the evidence for a category is close, ClauseAnchor does not guess. It marks the category Needs a lawyer and shows you the text it found. Take the marked clauses and their quoted evidence to a lawyer, and start the conversation at the clause." |
 | § 5 | 46 clause categories, in seven groups. | "From basics such as governing law to India-specific clauses such as stamping and registration. A category that is not on the list is not checked." |
-| § 6 | Nothing is kept after your session. | "Your contract is processed in memory and deleted within 60 minutes. Reloading the page ends your session, and nothing is written to your browser's storage. The Accuracy page lists the measured figures for each category once the evaluation is complete. Until then it shows labelled example numbers." |
+| § 6 | Your contract is deleted within 60 minutes. | "Your contract is processed in memory and deleted within 60 minutes. Reloading the page ends your session, and nothing is written to your browser's storage. The Accuracy page lists the measured figures for each category once the evaluation is complete. Until then it shows labelled example numbers." |
 | § 7 | Questions before you upload. | The five answers in 8.4. |
 | Final | Start with the contract in front of you. | Buttons as above. |
 
@@ -578,11 +579,11 @@ The mid-page button after § 2 reads "Review a contract".
 
 ### 8.3 Other pages
 
-**Start flow.** Heading "Review a contract". Steps: "Upload the contract", "Say which side you are", "Confirm the scope". Buttons: "Back", "Next", "Start review". Step line: "Step 2 of 3". Waiting line: "Reading your document." Party label: "Suggested". Blocked Next: "Still reading your document." The Indian law switch keeps the text it has today: "Review under Indian law" and its description. The baseline's line "The review takes about a minute on real documents." is dropped until 4-C measures a real run (C8).
+**Start flow.** Heading "Review a contract". Steps: "Upload the contract", "Say which side you are", "Confirm the scope". Buttons: "Back", "Next", "Start review". Step line: "Step 2 of 3". Waiting line: "Reading your document." Party label: "Suggested". Blocked Next: "Still reading your document." The Indian law switch keeps the text it has today: "Review under Indian law" and its description. The baseline's line "The review takes about a minute on real documents." is dropped until 4-C measures a real run (C8). The hints, the summary labels and the parse-failure card are new strings, listed in 17.4.
 
 **NotFound.** "We could not find that page." "The link may be wrong or out of date." Links "Review a contract" and "How it works".
 
-**Document titles.** In 4.1. **Meta description** (kept from FE-0, 143 characters): "Know which clauses to ask a lawyer about. Every finding quotes your contract or a published judgment, and nothing is stored after your session."
+**Document titles.** In 4.1. **Meta description** (149 characters, changed at the end of FE-4, 17.4 AL): "Know which clauses to ask a lawyer about. Every finding quotes your contract or a published judgment, and your contract is deleted within 60 minutes."
 
 ### 8.4 The objections list (native `<details>`, § 7)
 
@@ -660,18 +661,18 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 | | `gstack-design-review`, `gstack-qa`, `gstack-qa-only` | FE-R | Not run yet |
 | | `gstack-benchmark` | FE-R | Not run yet |
 | | `gstack-design-shotgun`, `gstack-design-html` | Not used | They generate variants and files outside the allowed folders |
-| Marketing, conversion, psychology | `copywriting` | FE-1, FE-3, FE-4, FE-6 | Ran |
-| | `copy-editing`, `stop-slop` | Every part with prose | Ran on this file |
+| Marketing, conversion, psychology | `copywriting` | FE-1, FE-3, FE-4, FE-6 | Ran at FE-1 and FE-3, and at the end of FE-4 over the FE-4 strings (17.4, AO) |
+| | `copy-editing`, `stop-slop` | Every part with prose | `stop-slop` ran on this file and on the FE-4 strings, and again on the FE-4 copy edits. `copy-editing` ran at FE-3 and at the end of FE-4 |
 | | `cro` | FE-1, FE-3 | Ran |
-| | `signup` | FE-1, FE-4 | Ran (applied to the start flow, which has no account) |
+| | `signup` | FE-1, FE-4 | Ran at FE-1 (applied to the start flow, which has no account). Not run as a pass at FE-4 |
 | | `onboarding` | FE-1, FE-5 | Ran (applied to the first run of the reader) |
 | | `marketing-psychology` | FE-1 | Ran |
 | | `site-architecture` | FE-1 | Ran |
 | | `seo-audit` | FE-R | Titles, descriptions and headings only |
 | | `analytics`, `ab-testing` | Not used | The product collects nothing by design |
 | Prose | `stop-slop` on every user-facing string and doc | Every part | See above |
-| Code quality | `ponytail` (always on) and `/ponytail:ponytail-review` | Every part | Ran at the end of FE-1, FE-2 and FE-3 |
-| | `superpowers:test-driven-development` | FE-2 (reveal, tokens), FE-3 (fixture), FE-4 (reducer) | Ran at FE-2 and FE-3 (the fixture test, seen failing first) |
+| Code quality | `ponytail` (always on) and `/ponytail:ponytail-review` | Every part | Ran at the end of FE-1 to FE-4 |
+| | `superpowers:test-driven-development` | FE-2 (reveal, tokens), FE-3 (fixture), FE-4 (reducer) | Ran at FE-2 and FE-3 (the fixture test, seen failing first), and at FE-4 (the reducer tests, red while the module did not exist, then green, with six mutation checks that each fail at least one test) |
 | | `superpowers:verification-before-completion` | Every part | Applied |
 | | `superpowers:systematic-debugging` | When a test fails | Not needed yet |
 | Accessibility and performance | None installed that is dedicated to either | | `impeccable`, `gstack-qa`, `gstack-qa-only` and `gstack-benchmark` are the nearest. Lighthouse and axe-core run through `npx` in a scratch folder at FE-R, and need approval (section 11) |
@@ -757,7 +758,7 @@ The runner is `node --test` (11.2). Tests sit next to the file they cover as `*.
 | FE-2 | `lib/reveal.test.ts` | Shows at once when no observer exists. Shows at once under reduced motion. Marks pending, then shown on the first intersection. Disconnects after the first intersection. Never marks shown while not intersecting. Works once per element. Uses a fake observer and a plain object, no DOM |
 | FE-2 | `tokens.test.ts` | Reads `index.css` and checks every pair in 5.4, in both themes, against 4.5 or 3 |
 | FE-3 | `pages/landing/heroExamples.test.ts` | Each finding's `start` and `end` slice the excerpt through `lib/offsets.ts` to its quote. Each excerpt appears verbatim in the sample contract. Includes one example with an astral character in a fixture string to prove code point handling |
-| FE-4 | `lib/startFlow.test.ts` | The reducer: `maxReachableStep` at each state. A forced `?step=3` is corrected. Back keeps inputs. Replacing the file resets the party and keeps role and scope. No party is preselected. "None of these" counts as a decision. A failed parse blocks step 2's Next |
+| FE-4 | `lib/startFlow.test.ts` | 17 tests on the reducer and its helpers. A fresh flow has nothing chosen and only step 1 in reach. `maxReachableStep` at each state, including a refused file and a file still parsing. A forced step is corrected, and the `step` value reads as 1, 2 or 3 and anything else as 1. Back keeps inputs. Replacing the file resets the party and `partyNone` and keeps role and scope. A role is never preselected and choosing one does not choose a party. "None of these" counts as a decision, clears a chosen party and the reverse. A contract with no parties needs no choice. A failed parse blocks step 3. A late result for a replaced file is ignored. Each of the four refusals keeps its code. The suggested party follows the role. `nextBlocker` names what is missing on each step. `maxReachableStep` reads from it, so a step is reachable exactly when Next is open on the one before |
 | FE-5 | A measurement script, not a unit test | The full-line average, and capacity by width, at 1024, 1280, 1440 and 1920 |
 
 What these cannot cover is the `.tsx` layer. That is checked by the headless run, the screenshots, axe and the keyboard run at FE-R.
@@ -930,12 +931,12 @@ Amendments are lettered. Each says what changed in the sections above. Later par
 | Item | Owner |
 |---|---|
 | The ink-in keyframes. Resolved in FE-3 (17.3, W). `--stagger` is still unused and belongs to the Reader's rows entering (7.3) | FE-5 |
-| The header restructure: the primary "Review a contract" button, hidden on `/start` and `/review`. `/start` exists as an interim page from FE-3 (17.3, U), and the not-found and expired pages link to it | FE-4 |
+| The header restructure: the primary "Review a contract" button, hidden on `/start` and `/review`. `/start` exists as an interim page from FE-3 (17.3, U), and the not-found and expired pages link to it. Resolved in FE-4 (17.4, AH) | Done |
 | The footer Credits link target (A10 in the plan) | FE-6 |
-| The 4 px rule on `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList`, `PartyBindingField`, `PerformanceTableRow` and `RadioCard` | FE-4, FE-5, FE-6, whichever recomposes the component |
+| The 4 px rule on `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList`, `PartyBindingField`, `PerformanceTableRow` and `RadioCard`. FE-4 removed it from `PartyBindingField` and `RadioCard` (17.4, AG). `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList` and `PerformanceTableRow` keep it | FE-5, FE-6, whichever recomposes the component |
 | Category names squeezed to one letter by the chip and the count (B3 in the audit). The unvalidated row shows about 8 px of its name at 1440 | FE-5 |
 | The ruler's ticks are 12 by 3 px and cluster at the top of a short document. Their hit boxes overlap, so they cannot be enlarged. The marks in the text and the category rows reach every finding from the keyboard | FE-5, which replaces the ruler with a strip |
-| Tabular numerals on counts and metric cells | FE-4, FE-6 |
+| Tabular numerals on counts and metric cells. FE-4 applied them to the step line and the summary note only. Counts and metric cells are still proportional | FE-5, FE-6 |
 | The confidence popover stated a calibration figure with no cited source. Resolved in FE-3 (17.3, Y): the band shows calibration detail only when the data carries it | Done |
 | A Latin-extended font subset (S). Resolved in FE-3 (17.3, X) | Done |
 
@@ -974,8 +975,69 @@ Amendments are lettered. Each says what changed in the sections above. Later par
 
 | Item | Owner |
 |---|---|
-| The heading "Nothing is kept after your session" sits above a body that says the contract is deleted within 60 minutes. A reader can take the heading to mean that nothing remains once the session ends. The meta description says the same. The wording is from 8.2 and stays until Aryan confirms or changes it | Aryan |
-| The hero panel stacks under the sheet from 768 to 1279 px at the margin grid width, which leaves the right half of the row empty (amendment I) | FE-R design review |
+| The heading "Nothing is kept after your session" sits above a body that says the contract is deleted within 60 minutes. A reader can take the heading to mean that nothing remains once the session ends. The meta description says the same. Resolved at the start of FE-4 (17.4, AA): the heading now reads "Your contract is deleted within 60 minutes." The meta description in 8.3 and `index.html` now says "your contract is deleted within 60 minutes" (17.4, AL) | Done |
+| The hero panel stacks under the sheet from 768 to 1279 px at the margin grid width, which leaves the right half of the row empty (amendment I). Resolved at the start of FE-4 (17.4, AB) | Done |
 | The Reader's confidence popover keeps its open state when another finding is selected | FE-5 |
-| `JudgmentCard` carries the authority label "Reviewed as of Sep 2026" as a fixed string. Check it against the passage when the Evidence section gets one | When D7 is answered |
+| `JudgmentCard` carries the authority label "Reviewed as of Sep 2026" as a fixed string. Resolved at the start of FE-4 (17.4, AC): the label comes from the passage's authority status | Done |
 | LCP and CLS for `/` (above) | FE-R |
+
+### 17.4 FE-4: the stepped start flow
+
+**Built.** `/start` is the three-step flow of 6.2: Upload the contract, Say which side you are, Confirm the scope. The step lives in `?step=`. The rules are a pure reducer in `lib/startFlow.ts`, written test first (17 tests), and the upload and the polling are in `pages/start/useStartFlow.ts`. The header gains its primary button (AH), the role and party cards are native radio groups (AF, AG) and the summary rail shows from 1280 px (AE). Three carry-over fixes from FE-3 were made at the start of the part (AA to AC), and a fault in the loading button was found and fixed at the end (AK). A last pass changed the meta description, capped the hero subline, added a Fail parse switch and ran the copy and ponytail reviews again (AL to AO).
+
+**Amendments**
+
+| ID | Change | Sections touched |
+|---|---|---|
+| AA | The landing § 6 heading reads "Your contract is deleted within 60 minutes." A trailing period was added, to match the other section headings. The meta description followed at the end of the part (AL) | 8.2, 17.3 |
+| AB | The hero panel spans the sheet's full width from 768 to 1279 px. Side by side was rejected: it needs about 1,180 px (two columns of about 573 px for 60 characters, and a 32 px gap), and the main column is 720 px in a 768 px viewport, 784 px at 1024 and 1024 px at 1279. The shell width of `ClauseDetailPanel` is `var(--panel-w, 400px)` and `.hero-demo .hero-panel` sets `--panel-w: 100%`. From 1280 the panel stays 320 px in the aside. Measured characters on a full line: 72 to 82 at 768 and 78 to 82 at 1024, for the sheet and the quote alike. At 1279 both run 115 to 120. The sheet was already that long before this change, and the measure is not capped | 6.1, 17.3 |
+| AC | `JudgmentCard` labels follow the passage's authority status: "Reviewed", "Later overruled or modified" or "Not yet reviewed". "Reviewed" carries no date, because the passage data has no date field. The default `authority` prop is `"not-reviewed"` and not `"reviewed"`, so a card given no status never claims a review. The grep in 1.2 also covers `Reviewed as of` | 1.2, 6.3, 17.3 |
+| AD | The step is not part of the reducer state, which 6.2 listed. A copy in the state and a copy in the address needed two effects to stay equal, and the two raced on browser Back. The address owns the step, `clampStep(state, requested)` corrects it, and the reducer has no next, back or goto action | 6.2 |
+| AE | The summary rail shows from 1280 px, where the margin grid has its aside, and not from 1024, where the aside is about 80 px wide (amendment I). Below 1280 the summary is one line above the buttons on steps 1 and 2, with the chosen values joined by a middle dot and Scope left out, and a full list in step 3. The list has four rows, and a row reads "Not chosen yet" until it is decided. The rail has no Change link, which 17.1 (H) had planned: Back and the browser's Back keep every input | 5.2, 6.2 |
+| AF | No role is preselected and no party either. "None of these" is the last radio of the party group, not a separate text button. Choosing a party clears it, and the reverse. The party that fits the role is listed first with the tag "Suggested" | 6.2 |
+| AG | `RadioCard` is a label around a native radio input, so the single tab stop and the arrow keys come from the browser. The chosen card has a 2 px border (the 1 px border and a 1 px inset line), the `anchor-100` tint and a check icon, so the state does not rest on colour alone. The 4 px rule is gone from `RadioCard` and `PartyBindingField`. `RadioCard` gains `tag`, `children`, `value` and `checked`. Each group generates its own name with `useId`: the Gallery shows a light and a dark panel side by side, and a shared name made their radios un-check each other. `RoleSelector` is controlled, with `null` for no role, takes `hideLegend` and drops its `radiogroup` role, because the fieldset and its legend group the cards. `RoleKey` moves to `lib/startFlow.ts`. `PartyBindingField` is a radio group labelled by its question, takes `none` and `suggested`, and shows "Reading your document." while the file is parsed | 5.6, 6.2, DesignSystem.md 3.5 and 6 |
+| AH | The header carries the primary button "Review a contract" at the far right from 768 px. It is absent on `/start` and in the Reader, and below 768 px it sits inside the menu. The "Review" link is gone. This builds 4.2 | 4.2 |
+| AI | `NoticeBanner` shows its dismiss button only when `onDismiss` is given, so the sample-mode and scope notices on `/start` carry no dead control. The refusal line of `UploadDropzone` has `role="alert"`, so a screen reader announces the reason when it appears | 12 |
+| AJ | History and parameters. A step change pushes a history entry. A forced or unreachable `?step=` is corrected with a replace, so Back leaves `/start`. Browser Back from step 2 returns to step 1 with the file kept. The sample link replaces `/start?sample=secondment` with `/start`, starts the upload, then pushes `?step=2`. On a step change, focus moves to the step heading and the page does not scroll | 4.3, 6.2 |
+| AK | `Button` in the loading state ignores clicks. It is not `disabled`, so keyboard focus stays on it, and it keeps `aria-busy`. Found at the end of FE-4: clicks on "Start review" 30 ms apart called `startAnalysis` once each, three calls for three clicks, and now call it once. The baseline page had the same fault | DesignSystem.md 6 |
+| AL | The meta description in `index.html` and 8.3 reads "Know which clauses to ask a lawyer about. Every finding quotes your contract or a published judgment, and your contract is deleted within 60 minutes." (149 characters). "Nothing is stored after your session" is gone. The sentence follows the landing § 6 heading and the privacy line word for word, so it is passive like both | 8.3 |
+| AM | The hero subline is capped at `max-w-[66ch]`. A cap of 68ch was tried first and left lines of 73, 72 and 75 characters, and 75 is not under 75. At 66ch the longest line is 71 at 768, 1100, 1200, 1279 and 1280 px. Before the cap it was 93 at 1100 and 111 at 1279. The heading has no cap: its longest line is 27 characters at 1100 and 34 at 1279, and 66ch of its display size is wider than its text. The hero sheet and the quote were not touched. They still run 93 to 96 characters at 1100 and 117 to 120 at 1279 | 6.1, DesignSystem.md 3.4 |
+| AN | `failParse` joins `MockSettings`, and the Preview controls show a "Fail parse" switch beside "Failed analysis". A document uploaded while it is on gets a parse job that fails 1 s in (half of `PARSE_MS`), so step 2 shows the failure card with no patched call. "Try again" on that card turns the switch off before it uploads again, as the reader does for `failAnalysis`, and only when the parse had failed: a retry after a network error leaves it alone. The states table in 6.9 now names the shipped failure card and the empty-party line. It had planned "This file could not be read." with Replace file, and a longer empty-party sentence | 6.7, 6.9 |
+| AO | The copy pass ran in the order copywriting, copy-editing, stop-slop. Changed: the parse-failure card reads "We could not read your document" over "Try again, or go back and choose a different file." (it was "Your document was not read", a passive title over a message that said the same again), and the rail heading is "Your choices", the words of its label for assistive technology (it was "Your review"). Left as written: the three step titles, "Upload a contract to begin.", "Choose a sample contract to begin.", "Checking your file.", "Still reading your document.", "Choose your role to continue.", "Choose a party, or None of these, to continue.", "Not chosen yet", "Indian law review on" and "off", and "Suggested". "Still" is an adverb and stays because it says the read goes on. The hints say "continue" while the button says "Next", and 8.3 fixes "Next". The `JudgmentCard` label "Reviewed" does not say who reviewed, and no document defines the status, so it is Aryan's call | 8.3 |
+
+**Rules for the next parts.** Call `setSearchParams` with a whole object and never the updater form: the setter keeps the parameters of the render it came from, and a call that outlives its render put `sample` back. End async work with an `alive` flag, not a counter bumped in an effect cleanup: React's StrictMode runs a test unmount in development, and the counter dropped the first upload. Give every radio group its own name.
+
+**Copy beyond 8.3.** The strings new in this part: "Choose your role to continue.", "Choose a party, or None of these, to continue.", "Your choices" (the rail heading and its label for assistive technology), the rail labels "File", "Role", "Party" and "Scope", "Not chosen yet", "Indian law review on" and "Indian law review off", the parse-failure card "We could not read your document" with "Try again, or go back and choose a different file." and its code "ERR_PARSE", "Checking your file." as the hint while the upload is checked, and the Preview controls note "Reading the document stops partway. Try again turns it off." (development only). The upload hints come from the baseline. The strings went through `copywriting`, `copy-editing` and `stop-slop` at the end of the part (AO), and `stop-slop` ran again on the edits.
+
+**What was checked.** Measured earlier in this part, in headless Edge over the DevTools protocol against the dev server, extensions disabled:
+
+- The reducer tests were red first, because the module did not exist, then green. Six mutations of the reducer and its helpers each fail at least one test.
+- A keyboard-only run from the landing header button to a started review at `/review/doc_...` passes, with the arrow keys moving inside each radio group and one tab stop per group.
+- The four upload refusals show inline with the exact messages, and a good file after a refusal recovers. A forced `?step=3` is corrected with a replace and Back leaves `/start`. Browser Back from step 2 returns to step 1 with the file kept.
+- The sample link replaces the address, uploads and lands on step 2. Sample mode (uploads off) works. With the mock set to fail the next request, "Try again" works and lands on step 2.
+- The header button sits at the far right, is absent on `/start` and the Reader, and sits in the menu below 768 px. The "Review" link is gone.
+- The Gallery shows every `RadioCard` and `PartyBindingField` state, and the role specimens on the landing page stay inert.
+- A route sweep at 375 and 1280 px prints nothing to the console and shows no horizontal overflow, except the development-only `/gallery`, which overflows at 1280. Whether that predates FE-4 was not checked.
+- The Reader regression pass: 24 captures in `frontend/.screens/FE-4/reader-clean/` (four widths, both themes, and nothing selected, a found finding selected and a review finding selected). Pixel differences against FE-2 are in `reader-diff/`. The sheet, the marks, the band and the chips are identical, and the differences are run-state data. The one visual change is that the empty "Nothing selected" panel lost its Close button (17.3, Z). FE-2 has no review-selected baseline, and its `reader-selected-1440-dark.png` is a light-theme capture, so 1440 px dark with a found finding selected was compared by eye only.
+
+Run again at the end of the part, on the final code:
+
+- `pnpm typecheck` exit 0, `pnpm test` 37 of 37 (7 reveal, 8 colour tokens, 5 hero fixture, 17 flow) and `pnpm build` 165 modules with no warnings, run again on the final code after the last edits. The index chunk is 239.45 kB (72.67 kB gzipped). The `/start` chunk is 15.24 kB (5.66 kB gzipped, up from 3.96 at FE-3). `dist` holds no "Preview controls", "Fail parse" or "Failed analysis" string. The identifier `failParse` is in the production chunks (the mock settings and the retry), as `failAnalysis` is. The three new modules are `startFlow.ts`, `useStartFlow.ts` and `Summary.tsx`.
+- The parse-failed path through the new switch, in headless Edge with no patched call: with "Fail parse" on, the sample link lands on step 2 and the card "We could not read your document" shows with "Try again, or go back and choose a different file." and `ERR_PARSE`. Next is disabled, the party group is hidden and the console is empty. "Try again" turns the switch off, step 2 shows the party group with its three radios (two parties and None of these) and the card is gone. Capture: `frontend/.screens/FE-4/fail-parse-final/`.
+- AK: with a counter around `client.startAnalysis` and three clicks on "Start review" at most 30 ms apart, the original line made three calls and the fixed line made one. A test that calls `click()` twice in one synchronous run proves nothing, because both clicks land before React commits the loading state.
+- The hero measure after the cap (AM), in headless Edge at 768, 1100, 1200, 1279 and 1280 px with reduced motion on, counting the glyphs on each rendered line: the subline's longest line is 71 characters at every width. The heading, the sheet and the quote were measured in the same run. Captures at 1100 and 1280 px: `frontend/.screens/FE-4/hero-cap/`.
+- `/ponytail:ponytail-review` over the full FE-4 diff, at the end of the part. Fixed, three: `RoleSelector` still re-exported `RoleKey` and nothing imported it from there. `PartyOption` in `useStartFlow.ts` repeated `PartyChoice` field for field and is gone. `maxReachableStep` repeated the gate `nextBlocker` already holds and now reads from it, which left the test that compared the two with nothing to compare, so that test is deleted (18 tests became 17). Fixed, one smaller: the one-line summary excluded the Scope row by its label text and now takes the first three rows. Kept, three: the four refusal codes are listed in the reducer's type, in `REFUSALS` and in `REFUSAL_ZONE` (one line to save, three files to touch). `RoleSelector` holds its own state only for the gallery's uncontrolled example. `upload({ sampleId }, ...)` stands at three call sites in `Start.tsx`, and a helper saves no lines. About 22 lines out, 5 of source and 17 of test.
+
+**Open, not measured.** LCP and CLS for `/`, because no run measured them (FE-R). The hero sheet and quote still run 93 to 96 characters at 1100 px and 117 to 120 at 1279 px (AM).
+
+**Deferred, with the owner**
+
+| Item | Owner |
+|---|---|
+| LCP and CLS for `/` | FE-R |
+| The 4 px rule on `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList` and `PerformanceTableRow` | FE-5, FE-6, whichever recomposes the component |
+| Tabular numerals on counts and metric cells. FE-4 applied them to the step line and the summary note only | FE-5, FE-6 |
+| The hero sheet and quote at 1100 to 1279 px, 93 to 120 characters. One cap on the sheet would fix it, if Aryan asks | FE-R |
+| The `JudgmentCard` label "Reviewed" does not say who reviewed. It needs a definition of the status first | Aryan |
+| Whether the real API accepts a sample id while uploads are on (D8) | 4-C |
+| The `/gallery` overflow at 1280 px, development only, and whether it predates FE-4 | FE-R |

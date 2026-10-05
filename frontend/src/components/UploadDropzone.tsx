@@ -71,7 +71,7 @@ export default function UploadDropzone({
         {dragOver ? "Release to upload" : isError ? "That file did not work" : "Drop your contract here"}
       </div>
       {isError ? (
-        <p style={{ marginTop: 4, fontSize: 14, lineHeight: "20px", color: "var(--status-unavailable-fg)", maxWidth: 380 }}>
+        <p role="alert" style={{ marginTop: 4, fontSize: 14, lineHeight: "20px", color: "var(--status-unavailable-fg)", maxWidth: 380 }}>
           {ERROR_MESSAGE[state]}
         </p>
       ) : (
