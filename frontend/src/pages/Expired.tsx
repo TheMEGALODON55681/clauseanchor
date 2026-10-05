@@ -17,7 +17,7 @@ export default function Expired() {
             ? "The file, its text and the review were removed from the server. Nothing was kept."
             : "Sessions end after a set time, or when the page is reloaded. Your contract was not kept. Upload it again to start a new review."
         }
-        onAction={() => navigate("/", { viewTransition: true })}
+        onAction={() => navigate("/start", { viewTransition: true })}
       />
     </div>
   );

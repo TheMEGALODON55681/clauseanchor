@@ -1,12 +1,15 @@
 import { useState } from "react";
-import Button from "./Button";
 
 export type ConfidenceVariant = "higher" | "review" | "unvalidated";
 export type BandSize = "compact" | "full";
+/** How the band was calibrated, when the data says so. */
+export type CalibrationScope = "category" | "pooled";
 
 type ConfidenceBandProps = {
   variant: ConfidenceVariant;
   size?: BandSize;
+  /** Calibration detail. Without it the band shows only its label, because the label is all the data gives. */
+  calibration?: CalibrationScope;
 };
 
 const TRACK_W = 160;
@@ -21,10 +24,18 @@ const CONFIG: Record<
   unvalidated: { label: "Confidence not validated", segment: null, color: "var(--status-unvalidated-fg)" },
 };
 
-export default function ConfidenceBand({ variant, size = "compact" }: ConfidenceBandProps) {
+export default function ConfidenceBand({ variant, size = "compact", calibration }: ConfidenceBandProps) {
   const [open, setOpen] = useState(false);
   const cfg = CONFIG[variant];
   const trackWidth = size === "compact" ? 120 : TRACK_W;
+  const labelStyle = {
+    fontSize: size === "compact" ? 12 : 13,
+    fontWeight: 500,
+    color: cfg.color,
+    // The track gives way in a narrow panel, never the label.
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+  } as const;
 
   const track = (
     <div
@@ -32,6 +43,7 @@ export default function ConfidenceBand({ variant, size = "compact" }: Confidence
       style={{
         position: "relative",
         width: trackWidth,
+        minWidth: 64,
         height: 8,
         borderRadius: 2,
         background: "var(--paper-sunken)",
@@ -64,27 +76,28 @@ export default function ConfidenceBand({ variant, size = "compact" }: Confidence
     <div className="font-sans inline-flex flex-col gap-2">
       <div className="flex items-center gap-3">
         {track}
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="text-left hit"
-          style={{
-            fontSize: size === "compact" ? 12 : 13,
-            fontWeight: 500,
-            color: cfg.color,
-            textDecoration: "underline",
-            textUnderlineOffset: 3,
-            textDecorationStyle: variant === "unvalidated" ? "dashed" : "solid",
-          }}
-          aria-expanded={open}
-        >
-          {cfg.label}
-        </button>
+        {calibration ? (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="text-left hit"
+            style={{
+              ...labelStyle,
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+              textDecorationStyle: variant === "unvalidated" ? "dashed" : "solid",
+            }}
+            aria-expanded={open}
+          >
+            {cfg.label}
+          </button>
+        ) : (
+          <span style={labelStyle}>{cfg.label}</span>
+        )}
       </div>
 
-      {open && (
+      {calibration && open && (
         <div
-          className="flex flex-col gap-1"
           style={{
             width: size === "compact" ? 240 : 300,
             padding: 12,
@@ -95,17 +108,8 @@ export default function ConfidenceBand({ variant, size = "compact" }: Confidence
           }}
         >
           <p style={{ fontSize: 13, color: "var(--ink-primary)" }}>
-            Calibrated on 214 examples from 48 contracts.
+            Calibration: {calibration === "pooled" ? "pooled" : "category-specific"}
           </p>
-          <p style={{ fontSize: 13, color: "var(--ink-secondary)" }}>
-            Calibration:{" "}
-            {variant === "unvalidated" ? "pooled" : "category-specific"}
-          </p>
-          <div className="mt-1">
-            <Button variant="tertiary" size="s">
-              How confidence works
-            </Button>
-          </div>
         </div>
       )}
     </div>

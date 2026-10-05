@@ -10,7 +10,7 @@ import { useSession } from "../app/session";
 import ReaderToolbar, { type ToolbarVariant } from "../components/ReaderToolbar";
 import StageProgress, { type Step, type StepState } from "../components/StageProgress";
 import CategorySidebar, { type SidebarGroup, type SidebarRow } from "../components/CategorySidebar";
-import ClauseDetailPanel, { type PanelData } from "../components/ClauseDetailPanel";
+import ClauseDetailPanel, { REVIEW_CANDIDATE_NOTE, type PanelData } from "../components/ClauseDetailPanel";
 import MarginRuler, { type RulerMark } from "../components/MarginRuler";
 import ScopePanel from "../components/ScopePanel";
 import ManualReviewList, { type ManualItem } from "../components/ManualReviewList";
@@ -488,10 +488,8 @@ export default function Reader() {
           quote,
           polarity: clause.polarity,
           confidence: clause.confidence_band,
-          reviewNote:
-            clause.status === "review_candidate"
-              ? "This passage may be the clause, but the evidence did not reach the validated threshold. A lawyer should read it with the surrounding text."
-              : undefined,
+          calibration: clause.calibration_scope === "category" || clause.calibration_scope === "pooled" ? clause.calibration_scope : undefined,
+          reviewNote: clause.status === "review_candidate" ? REVIEW_CANDIDATE_NOTE : undefined,
           ruleFlags: clause.rule_flags.length ? (
             <div className="flex flex-col gap-2">
               {clause.rule_flags.map((f) => (

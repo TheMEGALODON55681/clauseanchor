@@ -383,8 +383,9 @@ function Library({ mode }: { mode: Mode }) {
 
       <Group label="Confidence band · a measurement range, never a bare percentage">
         <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
-          <Cell caption="higher"><ConfidenceBand variant="higher" size="full" /></Cell>
-          <Cell caption="review"><ConfidenceBand variant="review" size="full" /></Cell>
+          <Cell caption="higher, with a calibration scope"><ConfidenceBand variant="higher" size="full" calibration="category" /></Cell>
+          <Cell caption="review, with a calibration scope"><ConfidenceBand variant="review" size="full" calibration="pooled" /></Cell>
+          <Cell caption="higher, label only (no calibration in the data)"><ConfidenceBand variant="higher" size="full" /></Cell>
           <Cell caption="unvalidated"><ConfidenceBand variant="unvalidated" size="full" /></Cell>
         </div>
       </Group>

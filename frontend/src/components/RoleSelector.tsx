@@ -2,7 +2,7 @@ import { useState } from "react";
 import RadioCard from "./RadioCard";
 import { PersonWithDocIcon, PilcrowIcon, BracketPairIcon, IndexCardIcon, AnchorIcon, SectionIcon, NeutralIcon } from "./icons";
 
-const ROLES: { key: string; title: string; desc: string; icon: React.ReactNode }[] = [
+export const ROLES: { key: string; title: string; desc: string; icon: React.ReactNode }[] = [
   { key: "buyer", title: "Buyer or customer", desc: "You are receiving goods or services.", icon: <AnchorIcon size={18} /> },
   { key: "supplier", title: "Supplier or vendor", desc: "You are providing goods or services.", icon: <IndexCardIcon size={18} /> },
   { key: "employer", title: "Employer", desc: "You are engaging a person to work.", icon: <SectionIcon size={18} /> },

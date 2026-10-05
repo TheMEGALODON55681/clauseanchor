@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import { createHashRouter, type RouteObject } from "react-router";
 import Root from "./Root";
 import RootError from "./RootError";
-import Home from "../pages/Home";
+import Landing from "../pages/Landing";
 
 /* Every page except the landing page loads on demand, so the landing page does
    not carry the reader. The previous page stays until the next one is ready. */
@@ -21,7 +21,8 @@ const routes: RouteObject[] = [
         // A failing page shows the error inside the shell.
         ErrorBoundary: RootError,
         children: [
-          { index: true, Component: Home },
+          { index: true, Component: Landing },
+          { path: "start", ...page(() => import("../pages/Start")) },
           { path: "review/:documentId", ...page(() => import("../pages/Reader")) },
           { path: "accuracy", ...page(() => import("../pages/Accuracy")) },
           { path: "how-it-works", ...page(() => import("../pages/HowItWorks")) },

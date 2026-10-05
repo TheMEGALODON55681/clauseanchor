@@ -10,19 +10,23 @@ export type SpanKind =
   | "hover"
   | "keyboard";
 
+/* Found and review marks are two background layers, underline over tint, so the
+   ink-in can sweep them by animating background-size (`.ca-ink` in index.css,
+   which lists the sizes in this order). */
+const tint = (c: string) => `linear-gradient(${c}, ${c}) left / 100% 100% no-repeat`;
+const underline = (paint: string) => `${paint} left bottom / 100% 2px no-repeat`;
+
 /* An inline mark: underline + faint tint, never a filled box.
    Text stays fully legible. */
 export function markStyle(kind: SpanKind, hovered: boolean): CSSProperties {
   switch (kind) {
     case "found":
       return {
-        background: "var(--mark-found-tint)",
-        boxShadow: "inset 0 -2px 0 var(--mark-found-line)",
+        background: `${underline("linear-gradient(var(--mark-found-line), var(--mark-found-line))")}, ${tint("var(--mark-found-tint)")}`,
       };
     case "review":
       return {
-        background: "var(--mark-review-tint)",
-        borderBottom: "2px dashed var(--mark-review-line)",
+        background: `${underline("repeating-linear-gradient(to right, var(--mark-review-line) 0 6px, transparent 6px 10px)")}, ${tint("var(--mark-review-tint)")}`,
       };
     case "focused":
       return {

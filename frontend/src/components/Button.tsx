@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { Link as RouterLink } from "react-router";
 
 export type ButtonVariant =
   | "primary"
@@ -26,6 +27,8 @@ type ButtonProps = {
   iconNode?: ReactNode;
   children?: ReactNode;
   onClick?: () => void;
+  /** A router address. The button then renders as a link, with the same look. */
+  to?: string;
   id?: string;
   "aria-label"?: string;
   "aria-expanded"?: boolean;
@@ -63,6 +66,7 @@ function styleFor(variant: ButtonVariant, state: ButtonState): CSSProperties {
   const base: CSSProperties = {
     borderRadius: "var(--radius-md)",
     fontWeight: 500,
+    textDecoration: "none",
     transition: "transform var(--dur-press) var(--ease-out), background var(--dur-press) var(--ease-out)",
     transform: pressed ? "translateY(1px)" : "translateY(0)",
     opacity: disabled ? 0.45 : 1,
@@ -124,6 +128,7 @@ export default function Button({
   iconNode,
   children,
   onClick,
+  to,
   ...rest
 }: ButtonProps) {
   const [hovered, setHovered] = useState(false);
@@ -139,34 +144,28 @@ export default function Button({
 
   const css = styleFor(variant, resolved);
 
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => {
-        setHovered(false);
-        setActive(false);
-      }}
-      onMouseDown={() => setActive(true)}
-      onMouseUp={() => setActive(false)}
-      aria-busy={loading || undefined}
-      className="hit inline-flex items-center justify-center gap-2 font-sans select-none"
-      style={{
-        ...css,
-        minHeight: s.h,
-        minWidth: iconOnly ? s.h : 44,
-        height: s.h,
-        paddingInline: iconOnly ? 0 : s.px,
-        width: iconOnly ? s.h : undefined,
-        fontSize: s.font,
-        ...(state === "focus"
-          ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 }
-          : {}),
-      }}
-      {...rest}
-    >
+  const shared = {
+    onMouseEnter: () => setHovered(true),
+    onMouseLeave: () => {
+      setHovered(false);
+      setActive(false);
+    },
+    onMouseDown: () => setActive(true),
+    onMouseUp: () => setActive(false),
+    className: "hit inline-flex items-center justify-center gap-2 font-sans select-none",
+    style: {
+      ...css,
+      minHeight: s.h,
+      minWidth: iconOnly ? s.h : 44,
+      height: s.h,
+      paddingInline: iconOnly ? 0 : s.px,
+      width: iconOnly ? s.h : undefined,
+      fontSize: s.font,
+      ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {}),
+    },
+  };
+  const content = (
+    <>
       {loading && <Spinner size={s.icon - 2} />}
       {!loading && (icon === "leading" || iconOnly) && (
         <span style={{ display: "inline-flex" }}>{iconNode}</span>
@@ -175,6 +174,19 @@ export default function Button({
       {!loading && icon === "trailing" && (
         <span style={{ display: "inline-flex" }}>{iconNode}</span>
       )}
+    </>
+  );
+
+  if (to) {
+    return (
+      <RouterLink to={to} viewTransition {...shared} {...rest}>
+        {content}
+      </RouterLink>
+    );
+  }
+  return (
+    <button type="button" disabled={disabled} onClick={onClick} aria-busy={loading || undefined} {...shared} {...rest}>
+      {content}
     </button>
   );
 }

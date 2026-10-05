@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { client } from "../api/client";
 import { ApiError, type Document, type Role } from "../api/types";
 import { buildOffsetIndex, sliceCp } from "../lib/offsets";
@@ -13,7 +12,7 @@ import Switch from "../components/Switch";
 import PartyBindingField, { type PartyChoice } from "../components/PartyBindingField";
 import RadioCard from "../components/RadioCard";
 import ErrorCard from "../components/ErrorCard";
-import { BracketPairIcon, CheckIcon, CloseIcon, FileIcon, PilcrowIcon, SectionIcon } from "../components/icons";
+import { FileIcon } from "../components/icons";
 
 const ROLE_FROM_KEY: Record<RoleKey, Role> = {
   buyer: "buyer_customer",
@@ -28,25 +27,6 @@ const ROLE_FROM_KEY: Record<RoleKey, Role> = {
 /* Which party a role usually maps to in a two-party agreement: first or second named. */
 const DEFAULT_PARTY_INDEX: Partial<Record<RoleKey, number>> = { buyer: 0, employer: 0, licensee: 0, supplier: 1, employee: 1, licensor: 1 };
 
-const STEPS: { icon: ReactNode; title: string; line: string }[] = [
-  { icon: <SectionIcon size={20} />, title: "Upload", line: "A PDF or DOCX with selectable text." },
-  { icon: <PilcrowIcon size={20} />, title: "Tell us your side", line: "Your role decides how each clause reads for you." },
-  { icon: <BracketPairIcon size={20} />, title: "Read the marked-up contract", line: "Every finding points to exact text you can check." },
-];
-
-const DOES = [
-  "Finds clauses in 46 listed categories",
-  "Quotes your contract word for word, with character offsets",
-  "Shows passages from published Indian judgments",
-  "Shows how confident it is, and when it is not",
-];
-const DOES_NOT = [
-  "Give legal advice",
-  "Predict how a court will decide",
-  "Write replacement clauses",
-  "Store your contract after the session",
-];
-
 const SAMPLES = [
   { id: "secondment", title: "Services and secondment agreement", description: "Two Indian companies, 14 clauses, about 1,300 words." },
   { id: "licence", title: "Software licence agreement", description: "Being prepared. Not available yet.", disabled: true },
@@ -56,8 +36,10 @@ function formatSize(bytes: number) {
   return bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-export default function Home() {
+/* The baseline form, moved here unchanged from the old home page. FE-4 replaces it with the stepped flow. */
+export default function Start() {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const { ensureToken, setDoc, mock } = useSession();
   const sample = !!mock?.sampleMode;
   const fileInput = useRef<HTMLInputElement>(null);
@@ -163,57 +145,27 @@ export default function Home() {
     }
   }
 
+  /* "Try the sample contract" links here with ?sample=secondment. Read it once and drop it, so a reload does not upload again. */
+  const sampleStarted = useRef(false);
+  useEffect(() => {
+    const id = params.get("sample");
+    if (!id || sampleStarted.current) return;
+    sampleStarted.current = true;
+    setParams({}, { replace: true });
+    if (SAMPLES.some((x) => x.id === id && !x.disabled)) void upload({ sampleId: id });
+  }, []);
+
   const parsing = !!docId && !doc;
   const ready = !!doc && doc.status === "parsed";
 
   return (
     <div>
-      {/* Hero */}
-      <section className="mx-auto w-full max-w-[1120px] px-5 pb-10 pt-12 md:px-8 md:pt-20">
-        <p className="font-mono text-[12px] tracking-[0.08em] uppercase" style={{ color: "var(--ink-tertiary)" }}>
-          § Contract review, India
-        </p>
-        <h1
-          className="mt-4 max-w-[20ch] text-[32px] leading-[40px] md:text-[44px] md:leading-[54px]"
-          style={{ fontFamily: "var(--font-serif)", fontWeight: 500, color: "var(--ink-primary)", letterSpacing: "-0.01em" }}
-        >
-          Read your contract with a careful second pair of eyes.
-        </h1>
-        <p className="mt-5 max-w-[62ch] text-[17px] leading-[28px]" style={{ color: "var(--ink-secondary)" }}>
-          ClauseAnchor points to the clauses that matter, shows real Indian case law about them, and tells you when a lawyer should look.
-        </p>
-
-        <ol className="mt-10 grid gap-0 md:grid-cols-3" style={{ borderTop: "1px solid var(--rule-strong)" }}>
-          {STEPS.map((s, i) => (
-            <li
-              key={s.title}
-              className="flex gap-3 py-5 md:px-5 md:first:pl-0"
-              style={{ borderBottom: "1px solid var(--rule-default)", borderLeft: i > 0 ? undefined : undefined }}
-            >
-              <span className="font-mono text-[12px]" style={{ color: "var(--ink-tertiary)", paddingTop: 3 }}>
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span style={{ color: "var(--anchor-600)", paddingTop: 1 }}>{s.icon}</span>
-              <span className="flex flex-col gap-1">
-                <span className="text-[15px] font-semibold" style={{ color: "var(--ink-primary)" }}>{s.title}</span>
-                <span className="text-[14px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>{s.line}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <ScopeCard title="What it does" items={DOES} kind="does" />
-          <ScopeCard title="What it does not do" items={DOES_NOT} kind="not" />
-        </div>
-      </section>
-
-      {/* Flow */}
+      <title>Review a contract | ClauseAnchor</title>
       <section aria-labelledby="start-title" style={{ background: "var(--paper-sunken)", borderTop: "1px solid var(--rule-default)", borderBottom: "1px solid var(--rule-default)" }}>
         <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6 px-5 py-12">
-          <h2 id="start-title" className="text-[24px] leading-[32px]" style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--ink-primary)" }}>
-            Start a review
-          </h2>
+          <h1 id="start-title" className="text-[24px] leading-[32px]" style={{ fontFamily: "var(--font-serif)", fontWeight: 600, color: "var(--ink-primary)" }}>
+            Review a contract
+          </h1>
           <NoticeBanner variant="review-scope" />
 
           {networkError && (
@@ -333,24 +285,6 @@ export default function Home() {
         </div>
       </section>
 
-    </div>
-  );
-}
-
-function ScopeCard({ title, items, kind }: { title: string; items: string[]; kind: "does" | "not" }) {
-  return (
-    <div style={{ background: "var(--paper-sheet)", border: "1px solid var(--rule-default)", borderRadius: "var(--radius-lg)", padding: "18px 20px" }}>
-      <h2 className="text-[16px] font-semibold" style={{ color: "var(--ink-primary)" }}>{title}</h2>
-      <ul className="mt-3 flex flex-col gap-2">
-        {items.map((i) => (
-          <li key={i} className="flex items-start gap-2 text-[14px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
-            <span style={{ color: kind === "does" ? "var(--anchor-600)" : "var(--ink-tertiary)", paddingTop: 1 }}>
-              {kind === "does" ? <CheckIcon size={16} /> : <CloseIcon size={16} />}
-            </span>
-            {i}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

@@ -198,8 +198,10 @@ Part ids and commit messages are suggestions, like the backend parts. Every part
   `feat(frontend): add motion tokens, layout primitives and 404 route`
   Motion and type tokens, the colour changes, layout primitives, the reveal hook (tests first), route transitions and titles, `NotFound` and error pages, the dev-only gallery and preview controls, the favicon and 44 px hit areas, and self-hosted fonts. Scope and acceptance: `FrontendDesign.md` section 14. Decisions D1 to D13 and the amendments are in section 17.2 of that file.
   Deviations: the layout primitives are one file, `components/Layout.tsx`, not a `layout/` folder. The baseline `Link` never navigated and was fixed. The fonts are the Latin subset. The ink-in keyframes wait for FE-3, the header restructure for FE-4, the footer Credits link for FE-6, and the Reader items (squeezed category names, the ruler, drawer focus) for FE-5. The full list with owners is in `FrontendDesign.md` 17.2.
-- [ ] **FE-3** Landing
+- [x] **FE-3** Landing
   `feat(frontend): rebuild landing with live hero demo`
+  The landing page at `/`: the hero with its live demo (three examples from a typed fixture that a test checks against the sample contract), the problem, three steps beside real component fragments, the lawyer section, the 46 categories, privacy, questions and a closing call to action. The Evidence section is built and stays out of the build until a verified passage exists (D7). The ink-in, the Latin-extended fonts and the `Button` link form land here. Scope and acceptance: `FrontendDesign.md` section 14. Amendments U to Z are in 17.3.
+  Deviations: an interim `/start` page ships here, the baseline form moved out of `Home`, so the buttons have a destination, and FE-4 rebuilds it. The hero ruler is hidden below 640 px. LCP is not measured in this part, because the capture run was blocked, so it moves to the FE-R measurements unless it is rerun first. The heading "Nothing is kept after your session" is open for Aryan to confirm (17.3).
 - [ ] **FE-4** The `/start` stepped flow
   `feat(frontend): add stepped review start flow`
   The flow state is written test-first.

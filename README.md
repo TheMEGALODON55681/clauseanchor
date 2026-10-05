@@ -78,4 +78,4 @@ pnpm build
 
 ### Routes
 
-The app uses hash routes, so it runs on any static host: `#/` (landing and upload), `#/review/:documentId`, `#/how-it-works`, `#/accuracy`, `#/expired`. Any other address shows a page-not-found screen. Fonts are served from `frontend/public/fonts/`, so no page requests a third-party host.
+The app uses hash routes, so it runs on any static host: `#/` (landing), `#/start` (upload and start a review), `#/review/:documentId`, `#/how-it-works`, `#/accuracy`, `#/expired`. Any other address shows a page-not-found screen. Fonts are served from `frontend/public/fonts/`, so no page requests a third-party host.

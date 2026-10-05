@@ -1,10 +1,10 @@
-import { useState } from "react";
 import { SectionIcon } from "./icons";
 
 export type StatuteTagState = "default" | "hover" | "focus";
 
 type StatuteTagProps = {
   citation?: string;
+  /** Forces a visual state, used by the gallery. The tag is a label, not a control. */
   state?: StatuteTagState;
 };
 
@@ -13,24 +13,18 @@ export default function StatuteTag({
   citation = "Section 27, Indian Contract Act 1872",
   state,
 }: StatuteTagProps) {
-  const [hovered, setHovered] = useState(false);
-  const resolved = state ?? (hovered ? "hover" : "default");
   return (
-    <button
-      type="button"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <span
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
         minHeight: 28,
         color: "var(--statute-fg)",
-        background: resolved === "hover" ? "var(--statute-bg)" : "transparent",
+        background: state === "hover" ? "var(--statute-bg)" : "transparent",
         border: "1px solid var(--statute-border)",
         borderRadius: "var(--radius-sm)",
         padding: "3px 8px",
-        cursor: "pointer",
         ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {}),
       }}
     >
@@ -46,6 +40,6 @@ export default function StatuteTag({
       >
         {citation}
       </span>
-    </button>
+    </span>
   );
 }

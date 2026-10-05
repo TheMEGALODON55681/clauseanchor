@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import StatusChip, { type StatusKind } from "./StatusChip";
 import PolarityBadge, { type PolarityKind } from "./PolarityBadge";
-import ConfidenceBand, { type ConfidenceVariant } from "./ConfidenceBand";
+import ConfidenceBand, { type CalibrationScope, type ConfidenceVariant } from "./ConfidenceBand";
 import JudgmentCard from "./JudgmentCard";
 import RuleFlagCard from "./RuleFlagCard";
 import Button from "./Button";
@@ -23,6 +23,7 @@ export type PanelData = {
   quote?: string;
   polarity?: PolarityKind;
   confidence?: ConfidenceVariant;
+  calibration?: CalibrationScope;
   reviewNote?: string;
   ruleFlags?: ReactNode;
   caseLaw?: ReactNode;
@@ -34,6 +35,10 @@ export type PanelData = {
   pager?: ReactNode;
 };
 
+/** The note on a passage that may be the clause but missed the validated threshold. */
+export const REVIEW_CANDIDATE_NOTE =
+  "This passage may be the clause, but the evidence did not reach the validated threshold. A lawyer should read it with the surrounding text.";
+
 type ClauseDetailPanelProps = {
   variant?: PanelVariant;
   data?: PanelData;
@@ -42,6 +47,8 @@ type ClauseDetailPanelProps = {
   fill?: boolean;
   /** Replace the body with custom content inside the same shell. */
   custom?: { title: string; content: ReactNode };
+  /** The title is a heading in the reader. A page that only shows the panel as an example sets "p". */
+  titleAs?: "h2" | "p";
 };
 
 const STATUS_FOR: Record<Exclude<PanelVariant, "loading">, StatusKind> = {
@@ -96,28 +103,28 @@ function Skel({ w, h = 12 }: { w: number | string; h?: number }) {
   );
 }
 
-function PanelHeader({ title, chip, onClose }: { title: string; chip?: ReactNode; onClose?: () => void }) {
+function PanelHeader({ title, chip, onClose, titleAs = "h2" }: { title: string; chip?: ReactNode; onClose?: () => void; titleAs?: "h2" | "p" }) {
+  const Title = titleAs;
   return (
     <div
       className="flex items-start justify-between gap-3"
       style={{ padding: "16px 20px", borderBottom: "1px solid var(--rule-default)" }}
     >
       <div className="flex flex-col gap-2" style={{ minWidth: 0 }}>
-        <h2
-          id="detail-panel-title"
-          tabIndex={-1}
+        <Title
+          {...(titleAs === "h2" ? { id: "detail-panel-title", tabIndex: -1 } : {})}
           style={{ fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: 22, lineHeight: "30px", color: "var(--ink-primary)" }}
         >
           {title}
-        </h2>
+        </Title>
         {chip}
       </div>
-      <Button variant="secondary" size="s" icon="icon-only" aria-label="Close panel" onClick={onClose} iconNode={<CloseIcon size={18} />} />
+      {onClose && <Button variant="secondary" size="s" icon="icon-only" aria-label="Close panel" onClick={onClose} iconNode={<CloseIcon size={18} />} />}
     </div>
   );
 }
 
-export default function ClauseDetailPanel({ variant = "found", data, onClose, fill = false, custom }: ClauseDetailPanelProps) {
+export default function ClauseDetailPanel({ variant = "found", data, onClose, fill = false, custom, titleAs }: ClauseDetailPanelProps) {
   if (custom) {
     return (
       <Shell fill={fill}>
@@ -126,7 +133,7 @@ export default function ClauseDetailPanel({ variant = "found", data, onClose, fi
       </Shell>
     );
   }
-  if (data) return <LivePanel data={data} onClose={onClose} fill={fill} />;
+  if (data) return <LivePanel data={data} onClose={onClose} fill={fill} titleAs={titleAs} />;
   if (variant === "loading") {
     return (
       <Shell fill={fill}>
@@ -355,11 +362,13 @@ const eyebrow = {
   marginBottom: 6,
 };
 
-function LivePanel({ data, onClose, fill }: { data: PanelData; onClose?: () => void; fill: boolean }) {
+function LivePanel({ data, onClose, fill, titleAs }: { data: PanelData; onClose?: () => void; fill: boolean; titleAs?: "h2" | "p" }) {
   const hasQuote = !!data.quote;
+  /* A panel with no case law data leaves the section out. An empty list would claim a search that never ran. */
+  const hasCaseLaw = data.caseLaw !== undefined || data.caseLawCount !== undefined;
   return (
     <Shell fill={fill}>
-      <PanelHeader title={data.title} chip={<StatusChip status={data.status} size="s" />} onClose={onClose} />
+      <PanelHeader title={data.title} chip={<StatusChip status={data.status} size="s" />} onClose={onClose} titleAs={titleAs} />
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
         {data.reviewNote && (
           <div
@@ -419,20 +428,22 @@ function LivePanel({ data, onClose, fill }: { data: PanelData; onClose?: () => v
 
             <div className="flex flex-wrap items-center gap-3">
               {data.polarity && <PolarityBadge polarity={data.polarity} />}
-              {data.confidence && <ConfidenceBand variant={data.confidence} size="full" />}
+              {data.confidence && <ConfidenceBand variant={data.confidence} size="full" calibration={data.calibration} />}
             </div>
 
             {data.ruleFlags}
 
-            <div>
-              <h3 className="flex items-center gap-2" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-primary)", marginBottom: 10 }}>
-                Case law
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-tertiary)", fontWeight: 400 }}>
-                  {data.caseLawCount ?? 0}
-                </span>
-              </h3>
-              <div className="flex flex-col gap-3">{data.caseLaw ?? <JudgmentCard state="empty" />}</div>
-            </div>
+            {hasCaseLaw && (
+              <div>
+                <h3 className="flex items-center gap-2" style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-primary)", marginBottom: 10 }}>
+                  Case law
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-tertiary)", fontWeight: 400 }}>
+                    {data.caseLawCount ?? 0}
+                  </span>
+                </h3>
+                <div className="flex flex-col gap-3">{data.caseLaw ?? <JudgmentCard state="empty" />}</div>
+              </div>
+            )}
           </>
         ) : (
           <div style={{ background: "var(--paper-sheet)", border: "1px solid var(--rule-default)", borderRadius: "var(--radius-md)", padding: 16 }}>

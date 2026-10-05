@@ -25,8 +25,9 @@ type MarginRulerProps = {
   marks?: Mark[];
   selected?: number | null;
   onSelect?: (index: number) => void;
-  /** Viewport box, 0..1 from top, and its fractional height. */
-  viewport?: { top: number; size: number };
+  /** Viewport box, 0..1 from top, and its fractional height. False draws none. */
+  viewport?: { top: number; size: number } | false;
+  /** An empty string draws no caption. */
   caption?: string;
 };
 
@@ -74,7 +75,7 @@ export default function MarginRuler({
       <div
         role="group"
         aria-label="Where findings appear in the document"
-        tabIndex={0}
+        tabIndex={onSelect ? 0 : undefined}
         style={{
           position: "relative",
           width: 28,
@@ -112,19 +113,21 @@ export default function MarginRuler({
         ))}
 
         {/* Viewport position box */}
-        <div
-          style={{
-            position: "absolute",
-            left: 3,
-            right: 3,
-            top: viewport ? `${viewport.top * 100}%` : "48%",
-            height: viewport ? `${Math.max(viewport.size * 100, 2)}%` : 56,
-            borderRadius: 2,
-            background: "color-mix(in srgb, var(--anchor-600) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--anchor-600) 35%, transparent)",
-          }}
-          aria-hidden
-        />
+        {viewport !== false && (
+          <div
+            style={{
+              position: "absolute",
+              left: 3,
+              right: 3,
+              top: viewport ? `${viewport.top * 100}%` : "48%",
+              height: viewport ? `${Math.max(viewport.size * 100, 2)}%` : 56,
+              borderRadius: 2,
+              background: "color-mix(in srgb, var(--anchor-600) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--anchor-600) 35%, transparent)",
+            }}
+            aria-hidden
+          />
+        )}
 
         {/* Finding marks */}
         {marks.map((m, i) => {
@@ -133,6 +136,7 @@ export default function MarginRuler({
           return (
             <div
               key={i}
+              data-ruler-mark
               role={onSelect ? "button" : undefined}
               tabIndex={onSelect ? 0 : undefined}
               aria-label={onSelect ? m.label : undefined}
@@ -203,20 +207,22 @@ export default function MarginRuler({
           );
         })}
       </div>
-      <p
-        style={{
-          maxWidth: 140,
-          fontSize: 12,
-          lineHeight: "15px",
-          color: "var(--ink-tertiary)",
-          textAlign: "center",
-        }}
-      >
-        {caption ??
-          (variant === "empty" || marks.length === 0
-            ? "No findings yet."
-            : "Mark size does not mean severity.")}
-      </p>
+      {caption !== "" && (
+        <p
+          style={{
+            maxWidth: 140,
+            fontSize: 12,
+            lineHeight: "15px",
+            color: "var(--ink-tertiary)",
+            textAlign: "center",
+          }}
+        >
+          {caption ??
+            (variant === "empty" || marks.length === 0
+              ? "No findings yet."
+              : "Mark size does not mean severity.")}
+        </p>
+      )}
     </div>
   );
 }

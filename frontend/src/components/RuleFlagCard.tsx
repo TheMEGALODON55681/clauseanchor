@@ -1,6 +1,5 @@
-import Button from "./Button";
 import StatuteTag from "./StatuteTag";
-import { SectionIcon, ExternalIcon } from "./icons";
+import { SectionIcon } from "./icons";
 
 export type RuleFlagVariant = "standard" | "verify" | "applicability-unclear";
 
@@ -59,12 +58,6 @@ export default function RuleFlagCard({ variant = "standard", citation, note }: R
           <StatuteTag citation={citation ?? (variant === "verify" ? "Section 74, Indian Contract Act 1872" : "Section 27, Indian Contract Act 1872")} />
         </div>
       )}
-
-      <div style={{ marginTop: 8 }}>
-        <Button variant="tertiary" size="s" icon="trailing" iconNode={<ExternalIcon size={14} />}>
-          Read the section
-        </Button>
-      </div>
     </div>
   );
 }

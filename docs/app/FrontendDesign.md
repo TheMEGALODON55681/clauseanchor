@@ -36,6 +36,7 @@ This section moved here from `Phases.md`, which keeps a one-line pointer.
 - The dev server starts and every route renders with no console error or warning.
 - Screenshots at 375, 768, 1024, 1280 and 1440 px, light and dark, for every route the part touched, in `frontend/.screens/<part>/`. Runs use a headless browser with extensions disabled.
 - The tool-name grep over `frontend/`, the `Rules.md` section 1 scrub, and the dash check over `frontend/src`, `docs/app` and `README.md` print nothing.
+- No calibration figure is hard-coded: `grep -rnoE "Calibrated on [^\"]{0,40}|[0-9]+ examples from [0-9]+ contracts" frontend/src frontend/dist` prints nothing. While no verified passage is set for the landing Evidence section (D7), `grep -rl "Evidence you can check" frontend/dist` prints nothing too.
 - `/ponytail:ponytail-review` on the part's diff. Every P1 is fixed. Every P2 is listed with what was done.
 - If Windows App Control blocks a native binary, stop and report the file and the error. Do not swap the toolchain.
 
@@ -643,13 +644,13 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 
 | Category | Skill or command | Runs in | FE-1 status |
 |---|---|---|---|
-| UI and visual design | `ui-ux-pro-max` | FE-1, FE-3 | Ran (search only, nothing written) |
+| UI and visual design | `ui-ux-pro-max` | FE-1, FE-3 | Ran (search only, nothing written). At FE-3 the rule list only, because Python is not installed and the search script cannot run |
 | | `frontend-design` | FE-1, FE-3, FE-5 | Ran |
 | | `impeccable` | FE-1, FE-R | Ran (detector only, read-only) |
-| | `design-taste-frontend` | FE-3 | Available, not run yet |
+| | `design-taste-frontend` | FE-3 | Ran at FE-3 as a review lens. Its bans on section-number marks, a serif display and a line under the buttons conflict with the approved direction, which stands (17.3) |
 | | `tailwindcss` | FE-2 | Available, not run yet |
-| | `emil-design-eng` | FE-3, FE-5 | Available, not run yet |
-| Motion | `animate` | FE-2, FE-3 | Available, not run yet |
+| | `emil-design-eng` | FE-3, FE-5 | Ran at FE-3. The hero is one explanatory run, not repeated interface motion, so its 300 ms limit does not apply |
+| Motion | `animate` | FE-2, FE-3 | Ran at FE-2 and FE-3 |
 | | `find-animation-opportunities` | FE-5 | Available, not run yet |
 | | `improve-animations`, `optimize-web-animations` | FE-R | Available, not run yet |
 | | `animation-vocabulary` | As needed | Reference only |
@@ -669,8 +670,8 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 | | `seo-audit` | FE-R | Titles, descriptions and headings only |
 | | `analytics`, `ab-testing` | Not used | The product collects nothing by design |
 | Prose | `stop-slop` on every user-facing string and doc | Every part | See above |
-| Code quality | `ponytail` (always on) and `/ponytail:ponytail-review` | Every part | Ran at the end of FE-1 |
-| | `superpowers:test-driven-development` | FE-2 (reveal, tokens), FE-3 (fixture), FE-4 (reducer) | Not applicable to docs |
+| Code quality | `ponytail` (always on) and `/ponytail:ponytail-review` | Every part | Ran at the end of FE-1, FE-2 and FE-3 |
+| | `superpowers:test-driven-development` | FE-2 (reveal, tokens), FE-3 (fixture), FE-4 (reducer) | Ran at FE-2 and FE-3 (the fixture test, seen failing first) |
 | | `superpowers:verification-before-completion` | Every part | Applied |
 | | `superpowers:systematic-debugging` | When a test fails | Not needed yet |
 | Accessibility and performance | None installed that is dedicated to either | | `impeccable`, `gstack-qa`, `gstack-qa-only` and `gstack-benchmark` are the nearest. Lighthouse and axe-core run through `npx` in a scratch folder at FE-R, and need approval (section 11) |
@@ -928,12 +929,53 @@ Amendments are lettered. Each says what changed in the sections above. Later par
 
 | Item | Owner |
 |---|---|
-| The ink-in keyframes. `--dur-ink` and `--stagger` exist and nothing uses them yet, because the sweep depends on `SpanHighlight` changes | FE-3 |
-| The header restructure: the primary "Review a contract" button, hidden on `/start` and `/review`. `/start` does not exist, so "Review a contract" on the not-found page links to `/` until then | FE-4 |
+| The ink-in keyframes. Resolved in FE-3 (17.3, W). `--stagger` is still unused and belongs to the Reader's rows entering (7.3) | FE-5 |
+| The header restructure: the primary "Review a contract" button, hidden on `/start` and `/review`. `/start` exists as an interim page from FE-3 (17.3, U), and the not-found and expired pages link to it | FE-4 |
 | The footer Credits link target (A10 in the plan) | FE-6 |
 | The 4 px rule on `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList`, `PartyBindingField`, `PerformanceTableRow` and `RadioCard` | FE-4, FE-5, FE-6, whichever recomposes the component |
 | Category names squeezed to one letter by the chip and the count (B3 in the audit). The unvalidated row shows about 8 px of its name at 1440 | FE-5 |
 | The ruler's ticks are 12 by 3 px and cluster at the top of a short document. Their hit boxes overlap, so they cannot be enlarged. The marks in the text and the category rows reach every finding from the keyboard | FE-5, which replaces the ruler with a strip |
 | Tabular numerals on counts and metric cells | FE-4, FE-6 |
-| The confidence popover in `ConfidenceBand` states "Calibrated on 214 examples from 48 contracts", a figure with no cited source in a component the Reader shows. Replace it with a number from the evaluation, or remove the line | FE-5 |
-| A Latin-extended font subset (S) | The next part that touches fonts |
+| The confidence popover stated a calibration figure with no cited source. Resolved in FE-3 (17.3, Y): the band shows calibration detail only when the data carries it | Done |
+| A Latin-extended font subset (S). Resolved in FE-3 (17.3, X) | Done |
+
+### 17.3 FE-3: landing and the live hero
+
+**Built.** The landing page at `/`, in the order of 6.1: the hero with its live demo, sections § 1 to § 6 and the closing call to action. D1, D2, D8, D9, D10 and D13 are built as recorded in 17.2, and D12 holds: the copy does not mention the report. The Evidence section is built and stays out of the build until D7 is answered (below).
+
+**Amendments**
+
+| ID | Change | Sections touched |
+|---|---|---|
+| U | A page at `/start` ships in FE-3, ahead of the plan's FE-4, because the landing buttons need a destination. It is the baseline form moved out of `Home`, with the marketing hero removed, the heading "Review a contract" and the title "Review a contract \| ClauseAnchor". It reads `?sample=secondment` once, for known sample ids only, then replaces the address. The header "Review" link and the not-found and expired pages point to it. FE-4 replaces the page with the stepped flow | 4.1, 6.2, Architecture.md 7.3 |
+| V | The hero ruler is hidden below 640 px. At 375 px a 28 px rail would take about 9 percent of the sheet. From 640 px the tick shows | 6.1 |
+| W | A found or review mark is two background layers, the underline over the tint, so the ink-in can sweep `background-size`. `.ca-ink` plays the sweep over `--dur-ink` from `--ink-delay`, and the mark keeps its final state as its base style. The review underline is a repeating gradient (6 px dash, 4 px gap) in place of the 2 px dashed border. The Reader uses the same mark, so FE-5 only has to add the class | 3.3, 7.3, DesignSystem.md 3.3 and 6 |
+| X | Five Latin-extended files (Source Serif 4 normal and italic, IBM Plex Sans 400, 500 and 600, 135,184 bytes in all) from the package version D3 used, each with a `unicode-range`. A page fetches them only when it holds a character in that range, and the landing page requests none. The rupee sign renders in Source Serif 4: a probe in the hero paragraph and the Reader at clause 2.2 both used the web font, and with the files blocked the sign fell to Georgia. None of the three hero excerpts contains a rupee sign, and the mock has no finding on clause 2.2. Resolves S | 11.1 |
+| Y | `ConfidenceBand` shows calibration detail only when the data gives it. A `calibration` prop, `category` or `pooled`, which the Reader passes from `calibration_scope`, turns the label into a button that opens "Calibration: category-specific" or "Calibration: pooled". Without the prop the band is plain text. The "How confidence works" button and the line "Calibrated on 214 examples from 48 contracts" are gone, and a grep guards the count (1.2) | 1.2, 6.3 |
+| Z | Shared components lose controls that did nothing, and the hero gets the options it needs. `RuleFlagCard` has no "Read the section" button and `StatuteTag` is a label, because no data holds the statute text. `ClauseDetailPanel` shows Close only with `onClose` and the Case law section only when case law data is given, and takes `titleAs` so a page that shows the panel as an example adds no heading. `MarginRuler` takes `viewport={false}` and `caption=""`, and is a tab stop only with `onSelect`. `Button` takes `to` and renders a router link with the same look. `Layout.tsx` gains `SectionFrame`, which `Section` now uses | 5.2, 6.3 |
+
+**Copy beyond 8.2.** The does and does-not lists, the three example captions, the sentence under "Needs a lawyer", the margin source note, the link texts and the page title are new ("ClauseAnchor \| Know which clauses to ask a lawyer about"). The last item of the does-not list is "Promise that nothing was missed", which replaces a storage claim that the privacy section and the footer already make. The strings went through copywriting, copy-editing and stop-slop. Three changed: the third caption names ClauseAnchor instead of "it", the does list says "when it is unsure" to echo the hero, and "with character offsets" became "and shows where each quote sits".
+
+**Skill advice not followed.** The design-taste review lens bans section-number marks, a serif display, a line under the buttons and a subheading over 20 words. Decisions A to L and D10 choose each of those, so they stand.
+
+**What was checked** (production build; the browser pane for page structure and the Reader, headless captures for the layouts). The build, bundle and grep checks ran on the final build. The rest were measured earlier in this part, before the last copy edits, the removal of the two dead buttons and a link alignment fix:
+
+- `pnpm typecheck`, `pnpm test` (20 of 20: 7 reveal, 8 colour tokens, 5 hero fixture) and `pnpm build` (162 modules) pass. The index chunk is 239.47 kB (72.61 kB gzipped) and the `/start` chunk 3.96 kB gzipped.
+- Landing first load: 0.7 kB of HTML, six script files at 121.4 kB gzipped, 7.3 kB of CSS and five font files at 136.6 kB. That is 22 kB under the FE-0 figure of 143 kB, which was one script file for every route.
+- Fold: at 375 by 667 the privacy line ends at 619 px and the primary button starts at 455 px. At 1280 by 720 the sheet and the panel both start at 550 px, so the excerpt shows.
+- The hero run: the sheet is still until 600 ms, the mark inks in from 600 to 1000 ms, the ruler tick fades in from 1000 to 1200 ms and the panel rises from 1200 to 1520 ms. Hover or focus in the sheet or the panel pauses it. "Next example" replays the run and is not frozen by its own hover. Reduced motion draws the final state at once. The status line reads "Example n of 3: category, status".
+- The page has one `h1` and a heading outline with no skipped level. It has 26 controls, all named, no horizontal overflow, no text under 12 px and no console output. Two targets are under 44 px, both links inside running text, which WCAG 2.5.8 exempts.
+- With no passage set, `grep -rl` for "Evidence you can check", "evidence-title", "look it up yourself" and "EvidencePassage" over `dist` prints nothing. With a fake passage the section renders after § 2 and the later marks run to § 7. The constant was set back to `null` and the build repeated, with the same file hash as before.
+- The Reader after the shared changes: marks draw as two layers (a 2 px underline over the tint, and the repeating dash for a review mark), the band label opens its calibration popover, Case law keeps its section and its empty state, Close panel is present, and no "Read the section" button shows.
+
+**Open, not measured.** LCP and CLS for `/` were not measured, because the capture run was blocked and the browser pane records no paint while its window is hidden. The acceptance row for FE-3 asks for LCP, so it moves to the FE-R Lighthouse run unless Aryan wants a rerun first. The Reader was not captured at five widths: its marks and band were checked by structure and computed style, not by eye.
+
+**Deferred, with the owner**
+
+| Item | Owner |
+|---|---|
+| The heading "Nothing is kept after your session" sits above a body that says the contract is deleted within 60 minutes. A reader can take the heading to mean that nothing remains once the session ends. The meta description says the same. The wording is from 8.2 and stays until Aryan confirms or changes it | Aryan |
+| The hero panel stacks under the sheet from 768 to 1279 px at the margin grid width, which leaves the right half of the row empty (amendment I) | FE-R design review |
+| The Reader's confidence popover keeps its open state when another finding is selected | FE-5 |
+| `JudgmentCard` carries the authority label "Reviewed as of Sep 2026" as a fixed string. Check it against the passage when the Evidence section gets one | When D7 is answered |
+| LCP and CLS for `/` (above) | FE-R |

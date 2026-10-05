@@ -11,7 +11,7 @@ export default function NotFound() {
       </h1>
       <p style={{ fontSize: 16, lineHeight: "26px", color: "var(--ink-secondary)" }}>The link may be wrong or out of date.</p>
       <div className="flex flex-wrap gap-x-8 gap-y-2">
-        <Link variant="standalone" href="#/">Review a contract</Link>
+        <Link variant="standalone" href="#/start">Review a contract</Link>
         <Link variant="standalone" href="#/how-it-works">How it works</Link>
       </div>
     </div>

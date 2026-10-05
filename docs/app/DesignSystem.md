@@ -104,7 +104,7 @@ Rules for semantic color:
 | `mark/focused` | tint 18% + 1px outline in the status color + bracket marks | same, adjusted | Currently selected span |
 | `mark/overlap` | stacked underlines, 2px each, 2px apart, max 3 visible then a `+n` marker in the margin | same | Two or more findings on the same text |
 
-Highlights are **underlines plus a faint tint**, never solid fills. Text must stay fully legible.
+Highlights are **underlines plus a faint tint**, never solid fills. Text must stay fully legible. A found or review mark is drawn as two background layers, the underline over the tint, so the ink-in can sweep each one (section 6). The review underline is a repeating gradient, a 6px dash and a 4px gap.
 
 ### 3.4 Typography
 
@@ -114,9 +114,9 @@ Highlights are **underlines plus a faint tint**, never solid fills. Text must st
 | **IBM Plex Sans** | All UI: buttons, labels, navigation, body UI copy | Own origin, SIL OFL 1.1 |
 | **IBM Plex Mono** | Character offsets, hashes, citations metadata, keyboard hints | Own origin, SIL OFL 1.1 |
 
-The fonts are served from `frontend/public/fonts/`, so no page makes a request to a third party. There are seven Latin-subset files (Source Serif 4 variable weight, normal and italic, IBM Plex Sans 400, 500 and 600, IBM Plex Mono 400 and 500) and the three licence texts. Each family has a fallback face (`Georgia`, `Arial`, `Courier New`) with `size-adjust` and metric overrides, so the swap from the fallback to the web font does not move the layout. The line boxes match exactly at 24, 19 and 15 px and the widths are within 0.6 percent.
+The fonts are served from `frontend/public/fonts/`, so no page makes a request to a third party. There are twelve font files and the three licence texts: seven Latin-subset files (Source Serif 4 variable weight, normal and italic, IBM Plex Sans 400, 500 and 600, IBM Plex Mono 400 and 500) and five Latin-extended files (Source Serif 4 normal and italic, IBM Plex Sans 400, 500 and 600). Every `@font-face` carries a `unicode-range`, so a page fetches a Latin-extended file only when it holds a character in that range. The landing page requests none. Each family has a fallback face (`Georgia`, `Arial`, `Courier New`) with `size-adjust` and metric overrides, so the swap from the fallback to the web font does not move the layout. The line boxes match exactly at 24, 19 and 15 px and the widths are within 0.6 percent.
 
-The files carry the Latin range only. The rupee sign (U+20B9), the bracket marks `⟦ ⟧` and every non-Latin script fall back to a system font. A contract in India will contain the rupee sign, so a Latin-extended subset is worth adding when a part next touches the fonts.
+The rupee sign (U+20B9) comes from the Latin-extended files, and Source Serif 4 renders it in the contract text. The bracket marks `⟦ ⟧` and every non-Latin script fall back to a system font.
 
 Type scale (sizes in px, line height in px):
 
@@ -133,6 +133,7 @@ Type scale (sizes in px, line height in px):
 | `label/sm` | IBM Plex Sans, 500 | 12 / 16 | 0.4% | Chips, badges |
 | `overline` | IBM Plex Sans, 600 | 12 / 16 | 8%, uppercase | Category group headers |
 | `display/xl` | Source Serif 4, 500 | `clamp(2.5rem, 1.9rem + 2.2vw, 3.5rem)` (40 to 56) / 1.08 | -1% | The landing hero heading only |
+| `display/md` | Source Serif 4, 600 | 30 / 38 | -0.5% | Section headings on the landing page |
 | `section-mark` | Source Serif 4, 500 | 24 / 32, tabular figures, `anchor/600` | 0 | A "§ 1" mark in the margin column beside a section heading |
 | `marginal-note` | IBM Plex Sans, 400 | 14 / 21, `ink/secondary`, 28 characters wide at most | 0 | A short note in the margin column or the aside |
 | `prose/lg` | Source Serif 4, 400 | 19 / 32, `ink/secondary` | 0 | Body copy on the landing page and the long-form pages. UI text stays at `body/md` |
@@ -144,7 +145,7 @@ Type scale (sizes in px, line height in px):
 
 Contract reading measure: **68 to 80 characters per line**. Never justify contract text; left-align it.
 
-**12 px is the floor.** Nothing in the app renders below it. The classes are `t-display-xl`, `t-overline`, `t-section-mark`, `t-marginal-note` and `t-prose-lg` in `index.css`. The mono kicker is retired. `section-mark` sets tabular figures. Counts and metric cells do not yet, and FE-4 and FE-6 add `font-variant-numeric: tabular-nums` where numbers must align in a column.
+**12 px is the floor.** Nothing in the app renders below it. The classes are `t-display-xl`, `t-display-md`, `t-overline`, `t-section-mark`, `t-marginal-note` and `t-prose-lg` in `index.css`. The mono kicker is retired. `section-mark` sets tabular figures. Counts and metric cells do not yet, and FE-4 and FE-6 add `font-variant-numeric: tabular-nums` where numbers must align in a column.
 
 **Heading rhythm in long-form text.** A heading sits closer to what it introduces than to what precedes it. Inside a `.flow` container an `h2` has 48 px above and 16 px below, an `h3` has 32 px above and 12 px below, and the first child has no top margin.
 
@@ -166,8 +167,8 @@ Contract reading measure: **68 to 80 characters per line**. Never justify contra
   | `--dur-press` | 120ms | Hover and press |
   | `--dur-state` | 200ms | A state change, a chevron turning, a route cross-fade |
   | `--dur-panel` | 320ms | Panels, drawers, scroll reveals |
-  | `--dur-ink` | 400ms | The ink-in sweep on a mark (used from FE-3) |
-  | `--stagger` | 50ms | Delay between siblings (used from FE-3) |
+  | `--dur-ink` | 400ms | The ink-in sweep on a mark (`.ca-ink`, used by the landing hero and by the Reader from FE-5) |
+  | `--stagger` | 50ms | Delay between siblings (first used for the Reader's rows entering, FE-5) |
 
   Animate `transform` and `opacity` only. One `prefers-reduced-motion` block at the end of `index.css` shortens every animation and transition to near zero, switches the route cross-fade off, and keeps the slow opacity fade on the spinner. Scroll behaviour is instant under it.
 - **Widths:** `--w-page` 1200px, `--w-main` 42rem, `--w-margin` 9rem.
@@ -220,7 +221,7 @@ Buttons use verb-first sentence case: "Upload contract", "Start review", "Downlo
 
 ---
 
-## 6. Patterns added in FE-2
+## 6. Patterns added in FE-2 and FE-3
 
 | Pattern | Spec |
 |---|---|
@@ -232,5 +233,10 @@ Buttons use verb-first sentence case: "Upload contract", "Start review", "Downlo
 | Not found and load error | `NotFound` and `RootError` are plain editorial pages with no warning colour. A bad address is not an error in the product and not an expired session. `RootError` shows no error text, because it could carry contract text |
 | Preview controls | Development only, in `components/PreviewControls.tsx`. A floating drawer holding the mock adapter's switches and the gallery link. It is loaded behind `import.meta.env.DEV`, so a production build holds none of it |
 | Favicon | `public/favicon.svg`, the logomark, with a dark-mode variant. One SVG covers the 16 and 32px sizes |
+| Ink-in | `.ca-ink` in `index.css`. A found or review mark is two background layers, the underline over the tint, and `ca-ink` animates both `background-size` values from zero over `--dur-ink`, starting at `--ink-delay`. The mark's own style is the final state and the keyframe carries only the start, so a mark that cannot animate is simply drawn. The Reader adopts it in FE-5 |
+| Hero demo | `pages/landing/HeroDemo.tsx`, styled by `.hero-demo` in `index.css`. One run: the sheet is still for 600ms, the mark inks in from 600 to 1000ms, the ruler tick fades in from 1000 to 1200ms and the panel rises 12px over `--dur-panel` from 1200 to 1520ms. Hover or focus inside the sheet or the panel pauses it. "Next example" replays the run with a new React key. Reduced motion draws the final state. The ruler is hidden below 640px |
+| Section frame | `SectionFrame` in `components/Layout.tsx`: the rule above, the vertical rhythm and the page width. `Section` is a `SectionFrame` holding one `MarginGrid`. A section that needs several grid rows, such as How it works, builds them inside a `SectionFrame` |
+| Button as a link | `Button` takes `to`, a router address, and then renders a router link with the same look and the 44px hit area. Without `to` it is a `button` |
+| Labels, not controls | A component that shows a fact and has no action is not a button. `StatuteTag` is a label. `RuleFlagCard` has no "Read the section" button until the data holds the statute text. `ConfidenceBand` is plain text until the data gives a calibration scope, and then its label opens a popover. `ClauseDetailPanel` shows Close only with `onClose` and Case law only when case law data is given |
 
 The stepper, the summary rail and the Reader rail are defined here when FE-4 and FE-5 build them.

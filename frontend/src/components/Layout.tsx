@@ -18,6 +18,15 @@ export function MarginGrid({ margin, aside, children }: { margin?: ReactNode; as
   );
 }
 
+/** The section shell: the rule above, the vertical rhythm and the page width. A section that needs more than one grid row builds its rows inside it. */
+export function SectionFrame({ id, labelledBy, children }: { id?: string; labelledBy?: string; children: ReactNode }) {
+  return (
+    <section id={id} aria-labelledby={labelledBy} className="border-t py-16 first:border-t-0 md:py-24 lg:py-32" style={{ borderColor: "var(--rule-default)" }}>
+      <Container>{children}</Container>
+    </section>
+  );
+}
+
 /** A page section. `mark` is a § number that sits in the margin and is hidden from assistive technology. */
 export function Section({
   id,
@@ -33,12 +42,10 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <section id={id} aria-labelledby={labelledBy} className="border-t py-16 first:border-t-0 md:py-24 lg:py-32" style={{ borderColor: "var(--rule-default)" }}>
-      <Container>
-        <MarginGrid margin={mark && <span aria-hidden className="t-section-mark">{mark}</span>} aside={aside}>
-          {children}
-        </MarginGrid>
-      </Container>
-    </section>
+    <SectionFrame id={id} labelledBy={labelledBy}>
+      <MarginGrid margin={mark && <span aria-hidden className="t-section-mark">{mark}</span>} aside={aside}>
+        {children}
+      </MarginGrid>
+    </SectionFrame>
   );
 }

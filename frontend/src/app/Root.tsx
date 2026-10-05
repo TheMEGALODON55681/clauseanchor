@@ -14,7 +14,7 @@ import { useMedia } from "../lib/useMedia";
 const PreviewControls = import.meta.env.DEV ? lazy(() => import("../components/PreviewControls")) : null;
 
 const LINKS = [
-  { label: "Review", href: "#/", path: "/" },
+  { label: "Review", href: "#/start", path: "/start" },
   { label: "How it works", href: "#/how-it-works", path: "/how-it-works" },
   { label: "Accuracy", href: "#/accuracy", path: "/accuracy" },
 ];
@@ -70,7 +70,7 @@ export default function Root() {
   const links = LINKS.map((l) => ({
     label: l.label,
     href: l.href,
-    current: l.path === "/" ? location.pathname === "/" || inReader : location.pathname === l.path,
+    current: l.path === "/start" ? location.pathname === l.path || inReader : location.pathname === l.path,
   }));
 
   return (

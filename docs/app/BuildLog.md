@@ -345,3 +345,61 @@ Found along the way, not fixed, and added to the deferred table in `FrontendDesi
 Blockers: none.
 
 Next action: commit FE-2 with `feat(frontend): add motion tokens, layout primitives and 404 route`, then reply `next` to start FE-3 (landing, with the live hero demo).
+
+
+## 2026-10-05: Part FE-3, landing with the live hero
+
+Part: FE-3 (frontend track). Files changed under `frontend/`, `docs/app/` and `README.md`. Part 1-B stays paused at Aryan's request. No dependency was added.
+
+Files changed:
+- New under `frontend/`: `public/fonts/` (five Latin-extended woff2 files, 135,184 bytes in all), `src/pages/Landing.tsx`, `src/pages/Start.tsx` (the old `Home.tsx`, moved), `src/pages/landing/HeroDemo.tsx`, `src/pages/landing/heroExamples.ts`, `src/pages/landing/heroExamples.test.ts`, `src/pages/landing/Evidence.tsx`.
+- Removed: `src/pages/Home.tsx` (it lives on as `Start.tsx`, with the marketing hero taken out).
+- `src/index.css`: five Latin-extended `@font-face` rules, `.t-display-md`, the `ca-ink`, `ca-fade` and `ca-rise` keyframes, the `.hero-demo` rules and a zero animation delay in the reduced-motion block.
+- Components: `SpanHighlight` (found and review marks as two background layers), `ConfidenceBand` (optional `calibration`, no hard-coded figure), `ClauseDetailPanel` (`titleAs`, Close and Case law only with their data, an exported review note), `StatuteTag` (a label), `RuleFlagCard` (no dead button), `MarginRuler` (`viewport={false}`, `caption=""`, tab stop only with `onSelect`), `Button` (`to`), `Layout` (`SectionFrame`), `RoleSelector` (exports its role list), `Gallery` (band cells show scope or label only).
+- Pages and app: `Reader` (passes the calibration scope, uses the shared review note), `app/routes.tsx` (`/` is the landing page, `/start` loads on demand), `app/Root.tsx` (the header "Review" link points to `/start`), `NotFound` and `Expired` ("Review a contract" goes to `/start`).
+- Docs: `Phases.md` (FE-3 ticked, deviations), `Architecture.md` (tree, routing, fonts, data flow and test rows), `FrontendDesign.md` (1.2 gains two checks, the skills table, the deferred list in 17.2, new 17.3 with amendments U to Z), `DesignSystem.md` (3.3, 3.4, the type table, the motion table, section 6), `README.md` (routes).
+
+Method. Page structure, the Reader and the hit areas were checked in the browser pane against the production build from `pnpm preview` (port 4173). Layouts were read from headless Edge captures over the DevTools protocol, extensions disabled. The capture script wrote the landing, `/start` and hero captures and stopped before its Reader and LCP stages. Rerunning it was blocked in this session, so those stages did not run, and Python is not installed. Scripts live outside the repo.
+
+Skills that ran: `superpowers:test-driven-development` (the hero fixture test, red then green, and a mutation check showing the astral-character test fails on UTF-16 slicing), `animate`, `copywriting`, `copy-editing` and `stop-slop` (in that order, over the new strings and the doc prose), `cro`, `frontend-design`, `design-taste-frontend`, `emil-design-eng` and `ui-ux-pro-max` (the rule list only), `superpowers:verification-before-completion`, `/ponytail:ponytail-review`. Not run, and left to the parts that need them: the gstack design review and QA, `coderabbit`, `gstack-review`, `gstack-cso` and one independent second review run at FE-R.
+
+Decisions: D1, D2, D8, D9, D10 and D13 are built as recorded in 17.2. D7 holds: the Evidence section is built and renders only when `EVIDENCE` in `Landing.tsx` is set, and it is `null`.
+
+Deviations from the plan, each recorded in 17.3:
+- U: an interim `/start` ships now, because the landing buttons need a destination. FE-4 replaces it.
+- V: the hero ruler is hidden below 640 px.
+- W: the mark is two background layers so the ink-in can sweep it. The Reader gets the same mark and adopts the sweep in FE-5.
+- X: five Latin-extended font files, so the rupee sign renders in Source Serif 4. None of the three hero excerpts contains a rupee sign. The probe and the Reader at clause 2.2 do.
+- Y: `ConfidenceBand` shows calibration only when the data gives it, and the hard-coded "214 examples from 48 contracts" line is gone.
+- Z: shared components lose the controls that did nothing (the "Read the section" button, the statute tag as a button, a Close button with no handler).
+
+Deferred, with owners (the full table is in 17.2 and 17.3): LCP and CLS for `/` (FE-R), the header primary button (FE-4), the footer Credits link (FE-6), the 4 px rule on seven more components (FE-4 to FE-6), the squeezed category names and the 12 by 3 px ruler ticks (FE-5), tabular numerals on counts (FE-4, FE-6), the Reader's confidence popover keeping its open state across selections (FE-5) and `--stagger`, still unused (FE-5).
+
+Verification. Run fresh on the final build:
+- `pnpm install --frozen-lockfile`: already up to date. `pnpm typecheck`: exit 0. `pnpm test`: 20 of 20 pass (7 reveal, 8 colour tokens, 5 hero fixture), 0 failed, 0 skipped. `pnpm build`: 162 modules, exit 0, no warnings.
+- Bundle: the index chunk is 239.47 kB (72.61 kB gzipped), the `/start` chunk 3.96 kB gzipped and the Reader chunk 13.46 kB gzipped. The landing route loads six script files, 121.4 kB gzipped in all, 7.3 kB of CSS and five fonts at 136.6 kB. That is 22 kB under the FE-0 figure of 143 kB.
+- `dist` holds no `googleapis` or `gstatic` reference. With `EVIDENCE` set to `null`, `dist` holds none of "Evidence you can check", "evidence-title", "look it up yourself" or "EvidencePassage". The calibration grep prints nothing over `frontend/src` and `frontend/dist`.
+- The tool-name grep, the Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/`, and a node scan for en and em dashes over `frontend/src`, `frontend/public`, `frontend/index.html`, `docs/app` and `README.md`: no output, no match. The scan was checked against a file that holds both dashes, and it found both. No `console.log`, `debugger`, `TODO` or `FIXME` in `frontend/src`.
+- `git status --short` lists no path under `frontend/node_modules`, `frontend/dist` or `frontend/.screens`. No git write command was run.
+
+Measured earlier in this part, on the build before the last copy edits, the removal of the two dead buttons and the link alignment fix. Those edits can change where text wraps and move the Accuracy link 16 px, and nothing else in layout or motion:
+
+- With a fake passage the Evidence section rendered after § 2 and the later marks ran to § 7. The constant went back to `null`, the file matched its backup byte for byte, and the rebuilt bundle had the same file hash.
+- Landing page: one `h1`, no skipped heading level, 26 controls with names, no horizontal overflow, no text under 12 px, no console output, one host. Two targets are under 44 px and both are links inside running text, which WCAG 2.5.8 exempts.
+- Hero: the privacy line ends at 619 px at 375 by 667 and the primary button starts at 455 px. At 1280 by 720 the sheet and panel start at 550 px and the excerpt shows. The run is still until 600 ms, inks in 600 to 1000, ticks 1000 to 1200 and rises 1200 to 1520 ms. Hover or focus pauses it, "Next example" is not frozen by its own hover, and reduced motion draws the final state at once.
+- Reader after the shared changes: 22 found marks and 3 review marks draw with the two-layer background (2 px underline, tint, repeating dash on review marks). The band label opens "Calibration: category-specific" on Non-Compete and "Calibration: pooled" on the review finding. Case law keeps its section and its empty state. Close panel is present and no "Read the section" button shows.
+- Fonts: the rupee sign rendered in the Source Serif 4 web font on a probe in the hero paragraph and on the Reader at clause 2.2. With the Latin-extended files blocked it fell to Georgia.
+
+Not verified: LCP and CLS for `/`. The browser pane records no paint while its window is hidden, and the capture script could not be rerun. The Reader was not captured at five widths, so its marks and band were checked by structure and computed style, not by eye. The headless captures predate the last copy edits, the removal of the dead buttons and a 16 px alignment fix on the "See the Accuracy page" link. The dev server was not started in this part.
+
+Screenshots: 30 files in `frontend/.screens/FE-3/`, gitignored. They are `home-` and `start-<width>-<theme>.png` at 375, 768, 1024, 1280 and 1440 in light and dark, five `hero-seq-` frames at 1280, `hero-example-2` and `-3`, `hero-fold-` at 1280 (dark) and 375 (light) and `hero-reduced-motion`.
+
+ponytail-review: no P1. Three P2 fixed, four kept:
+- Fixed: the `onClick` prop and button branch of `StatuteTag` and the `onRead` prop and button of `RuleFlagCard`, which nothing passed, so both are gone. Fixed: `UploadFragment` and the `SAMPLE` constant, each used once, are inlined. Fixed: the local `Fragment` component shared a name with React's, and is now `Specimen`.
+- Kept: `Evidence.tsx` and its constant are unrendered code, by request (D7). `--stagger` has no user until FE-5. The five Latin-extended `@font-face` rules repeat one `unicode-range`, because CSS cannot take a variable there. `MarginRuler` has two switches (`viewport={false}` and `caption=""`) for one caller, the hero, which is smaller than a variant prop.
+
+Found along the way, not fixed: the heading "Nothing is kept after your session" sits above a body that says the contract is deleted within 60 minutes (8.2 wording, open for Aryan, listed in 17.3). In the browser pane, a click on "Start review" changed the address to the review route and the page stayed on the form until a second route change. It did not happen in headless Edge, and the pane's window was hidden, so it looks like throttling. It has not been reproduced in a visible browser. A full-page capture drops the finished ruler tick unless animations are off, while a viewport capture and a DOM probe both show it painted. That is treated as a capture artefact and its cause is not isolated.
+
+Blockers: none. The LCP gap and the capture rerun need Aryan's call (17.3).
+
+Next action: commit FE-3 with `feat(frontend): rebuild landing with live hero demo`, then reply `next` to start FE-4 (the `/start` stepped flow, reducer test first).

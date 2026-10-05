@@ -143,8 +143,8 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 
 ### 7.1 Data flow
 
-1. `Home` creates a session, uploads a file (or a sample id in sample mode) and polls the parse job until the document is ready.
-2. The user picks a role and a party. `Home` sets the party binding, starts the analysis job and navigates to `/review/:documentId`.
+1. `Start` creates a session, uploads a file (or a sample id in sample mode) and polls the parse job until the document is ready.
+2. The user picks a role and a party. `Start` sets the party binding, starts the analysis job and navigates to `/review/:documentId`.
 3. `Reader` polls the job and fetches the analysis as categories resolve, then the manual-review list. It also handles re-binding the party, cancel, retry, report download and delete.
 4. Every call goes through `client` in `src/api/client.ts`. Nothing else imports the mock. Today `client` is the in-memory mock adapter. The swap to an HTTP adapter is one line, planned for 4-C, and the adapter follows API.md.
 
@@ -156,11 +156,11 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Type names | Kept as the mock defines them (`scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage`, `ReviewUnit`, `ManualReview`, `getManualReview`) | 2-E fixes the final names in API.md and the adapter follows it |
 | Client state | React memory only: session token, contract text and job ids in `session.tsx`, theme in `theme.tsx`. Nothing in localStorage, sessionStorage, IndexedDB or cookies | Matches the promise that nothing is stored after the session |
 | Offsets | `lib/offsets.ts` builds a code point to UTF-16 table once per text. Every slice of contract text goes through `sliceCp` | Backend offsets are code points and JavaScript strings index UTF-16 code units |
-| Routing | `createHashRouter`: `/`, `/review/:documentId`, `/how-it-works`, `/accuracy`, `/expired` and a catch-all that shows `NotFound`. Every page except `/` loads on demand. A failing page shows `RootError` inside the shell. `/gallery` is registered only in development, outside the shell | Works on any static host with no rewrite rules. The landing page does not carry the reader, and a bad address is not an expired session. A production build holds no gallery and no preview controls |
+| Routing | `createHashRouter`: `/`, `/start`, `/review/:documentId`, `/how-it-works`, `/accuracy`, `/expired` and a catch-all that shows `NotFound`. Every page except `/` loads on demand. A failing page shows `RootError` inside the shell. `/gallery` is registered only in development, outside the shell | Works on any static host with no rewrite rules. The landing page does not carry the reader, and a bad address is not an expired session. A production build holds no gallery and no preview controls |
 | Theming | Tokens are CSS custom properties in `src/index.css`, dark values under `.dark`. The first load follows `prefers-color-scheme` | One set of tokens for every component. DesignSystem.md lists them |
-| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono, seven Latin-subset files in `public/fonts/`, with `@font-face` rules and metric-matched fallbacks in `index.css` | No request leaves for a third party, which keeps the privacy promise. The rupee sign and non-Latin scripts fall back to a system font (`FrontendDesign.md` 17.2, S) |
+| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono, twelve files in `public/fonts/` (seven Latin and five Latin-extended), with `@font-face` rules, `unicode-range` and metric-matched fallbacks in `index.css` | No request leaves for a third party, which keeps the privacy promise. The rupee sign comes from the Latin-extended files, which the browser fetches only on a page that holds a character in that range (the landing page requests none). Other scripts fall back to a system font (`FrontendDesign.md` 17.2, S, and 17.3, X) |
 | Motion and widths | Tokens in `index.css` (`--ease-out`, `--dur-*`, `--w-*`), one reduced-motion block, route changes through the View Transitions API | One set of values for every part. `DesignSystem.md` 3.5 lists them |
-| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency | The pure logic (`lib/reveal.ts`, `lib/offsets.ts` from FE-3) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
@@ -174,11 +174,11 @@ frontend/
   .gitignore                # node_modules, dist, .vite, .screens
   public/
     favicon.svg             # the logomark, with a dark-mode variant
-    fonts/                  # seven woff2 files and the three OFL licence texts
+    fonts/                  # twelve woff2 files and the three OFL licence texts
   src/
     main.tsx                # mounts App
     App.tsx                 # ThemeProvider, SessionProvider, RouterProvider
-    index.css               # fonts, design tokens (light, dark, motion, widths), global focus rule, layout and type classes, reveal and reduced-motion CSS
+    index.css               # fonts, design tokens (light, dark, motion, widths), global focus rule, layout and type classes, reveal, ink-in and hero keyframes, reduced-motion CSS
     tokens.test.ts          # asserts the contrast pairs of DesignSystem.md 3.1 against index.css
     api/
       client.ts             # ApiClient interface and the exported client (mock adapter today)
@@ -199,7 +199,13 @@ frontend/
       reveal.test.ts
       useReveal.ts          # the hook around reveal.ts
     pages/
-      Home.tsx              # upload, role, party, start
+      Landing.tsx           # the landing page: hero, sections 1 to 6, closing call to action
+      Start.tsx             # upload, role, party, start (the baseline form, moved; FE-4 rebuilds it as a stepped flow)
+      landing/
+        HeroDemo.tsx        # the live demo: excerpt, ruler, clause panel, "Next example"
+        heroExamples.ts     # typed fixture: three findings from the sample contract, with code point offsets
+        heroExamples.test.ts
+        Evidence.tsx        # the Evidence section, rendered only when Landing.tsx holds a verified passage (D7)
       Reader.tsx            # three-pane reader: categories, document, clause detail
       HowItWorks.tsx
       Accuracy.tsx          # measured performance, labelled as an example until real numbers exist
@@ -209,12 +215,11 @@ frontend/
     components/             # 50 components and icons.tsx: atoms (Button, StatusChip, ...),
                             # molecules (UploadDropzone, ConfidenceBand, JudgmentCard, ...),
                             # organisms (ClauseDetailPanel, CategorySidebar, ReaderToolbar, ...)
-      Layout.tsx            # Container, Section, MarginGrid
+      Layout.tsx            # Container, Section, SectionFrame, MarginGrid
       Disclosure.tsx        # native details with a 44 px summary
       PreviewControls.tsx   # development only: mock switches and the gallery link
 ```
 
-The FE parts change this tree. Each part updates this section. FE-2 is built and is in the tree above. `FrontendDesign.md` holds the plan, and these additions are **(planned)**:
+The FE parts change this tree. Each part updates this section. FE-2 and FE-3 are built and are in the tree above. `FrontendDesign.md` holds the plan, and this addition is **(planned)**:
 
-- FE-3: `pages/landing/` with `heroExamples.ts` and its test.
-- FE-4: `pages/Start.tsx` and `lib/startFlow.ts` with its test.
+- FE-4: `lib/startFlow.ts` with its test, and `pages/Start.tsx` rebuilt as the stepped flow.
