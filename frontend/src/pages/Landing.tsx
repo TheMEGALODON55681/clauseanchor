@@ -47,11 +47,11 @@ const QUESTIONS: [string, string][] = [
 const GROUPS = GROUP_ORDER.map((group) => ({ group, names: CATALOGUE.filter((c) => c.group === group).map((c) => c.label) }));
 
 function RoleFragment() {
-  const pick = (key: string) => ROLES.find((r) => r.key === key)!;
+  const pick = (role: string) => ROLES.find((r) => r.role === role)!;
   return (
     <div className="flex flex-col gap-3">
-      {(["buyer", "supplier"] as const).map((key) => (
-        <RadioCard key={key} title={pick(key).title} description={pick(key).desc} icon={pick(key).icon} state={key === "supplier" ? "selected" : "unselected"} />
+      {(["buyer_customer", "supplier_vendor"] as const).map((role) => (
+        <RadioCard key={role} title={pick(role).title} description={pick(role).desc} icon={pick(role).icon} state={role === "supplier_vendor" ? "selected" : "unselected"} />
       ))}
     </div>
   );

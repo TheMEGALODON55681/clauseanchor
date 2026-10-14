@@ -458,10 +458,16 @@ const id = (p: string) => `${p}_${Date.now().toString(36)}${(++seq).toString(36)
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/* A failure switch fires once, and the retry after it runs normally, so no page has to clear it. */
+function once(key: "failParse" | "failAnalysis" | "failNextRequest"): boolean {
+  const on = settings[key];
+  settings[key] = false;
+  return on;
+}
+
 async function gate(token: string | null, ms = 260) {
   await wait(ms + Math.random() * 180);
-  if (settings.failNextRequest) {
-    settings.failNextRequest = false;
+  if (once("failNextRequest")) {
     throw new ApiError("network", "Could not reach the server. Check your connection and try again.");
   }
   if (token !== null) {
@@ -619,7 +625,7 @@ function exampleRows(seed: number) {
 function newDocument(filename: string): StoredDoc {
   const docId = id("doc");
   const ttl = settings.shortSession ? 9 * 60_000 : 60 * 60_000;
-  const parseJob = { id: id("job"), kind: "parse" as const, status: "running" as JobStatus, stage: "reading", completed_units: 0, total_units: 5, startedAt: Date.now(), fail: settings.failParse };
+  const parseJob = { id: id("job"), kind: "parse" as const, status: "running" as JobStatus, stage: "reading", completed_units: 0, total_units: 5, startedAt: Date.now(), fail: once("failParse") };
   const stored: StoredDoc = {
     doc: {
       id: docId,
@@ -724,7 +730,7 @@ export const mockAdapter: ApiClient = {
       startedAt: Date.now(),
       frozenAt: null,
       partial: settings.partialRun,
-      fail: settings.failAnalysis,
+      fail: once("failAnalysis"),
     };
     s.analysisJob = job;
     s.analysisId = id("an");

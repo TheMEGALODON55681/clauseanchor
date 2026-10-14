@@ -711,3 +711,44 @@ Not run: the `Referer` header on a real cross-origin navigation (the dataset lin
 Housekeeping: the dev server on 5173 stopped.
 
 Next action: commit this part, then commit 5 of 6, dead code.
+
+## 2026-10-14: Part FE-R, step 2, commit 5, dead code
+
+Part: FE-R, step 2, commit 5 of 6 (theme: dead code and invented sample content). Starts from `4ec16e5`. Part 1-B stays paused. No dependency was added. 27 files under `frontend/src`, 126 lines added and 786 deleted.
+
+Files changed:
+- Deleted, no caller outside the Gallery: `components/TextInput.tsx`, `Select.tsx`, `CheckboxRadio.tsx`, `Tooltip.tsx`, `Divider.tsx`, `DocumentBlock.tsx`, `SectionPath.tsx`. `pages/Gallery.tsx` loses their groups.
+- `components/JudgmentCard.tsx`: no sample text. A `passage` is required, or `state="empty"`. `components/ClauseDetailPanel.tsx`: a `caseLaw` prop for the static sample variants, and the panel's `Skel` replaced by `Bar` from `components/Skeleton.tsx`. `pages/Gallery.tsx`: `SAMPLE_PASSAGE`, `SAMPLE_LONG` and `SAMPLE_CASES` hold the invented case.
+- `components/EmptyState.tsx`: no `no-document` variant. `components/ReaderToolbar.tsx` and `pages/Reader.tsx`: no `progress` prop and no `analyzing` variant.
+- `components/RoleSelector.tsx` (the one table, keyed by `Role`), `lib/startFlow.ts` and `startFlow.test.ts` (no `RoleKey`), `pages/start/useStartFlow.ts` (no `ROLE_FROM_KEY`, no mock switch), `pages/start/Summary.tsx`, `pages/Landing.tsx`, `pages/Reader.tsx` (the role table, the party by `suggestedParty`, no mock switch).
+- `api/mock.ts`: `once()`. `components/PreviewControls.tsx`: reads the switches when the drawer opens.
+- `components/Spinner.tsx` and `Button.tsx`: one spinner with an `inline` mode. `components/icons.tsx`, `api/types.ts`, `index.css`: dead declarations removed.
+- `pages/Gallery.tsx`: the dark `ink/tertiary` swatch value.
+- Docs: `FrontendDesign.md` (1.2 claims grep, 6.7, 17.7 rows BX to CD, a rule, the commit 5 checks, the Deferred table), `Architecture.md` (the component count), `Phases.md` (the 4-C mock gate), this entry.
+
+Amendments BX to CD are in `FrontendDesign.md` 17.7, with the figures. Short form:
+- Seven gallery-only components and the `no-document` empty state are gone, as approved. `ReaderToolbar` drops `progress` and `analyzing`.
+- `JudgmentCard` carries no invented case, court, citation or passage. The claims grep names those strings, so they cannot return to a component or to `dist`.
+- One role table, keyed by the API's `Role`. The Reader no longer names the mock's party ids.
+- A forced mock failure fires once, in the adapter, so no page clears a switch.
+- `Skel` and the button's spinner reuse `Skeleton`'s bar and `Spinner`. Three icons, one type and eleven theme lines had no caller.
+- The Gallery's dark `ink/tertiary` swatch matched the value commit 1 replaced.
+
+Checks:
+- `pnpm typecheck`: exit 0. `pnpm test`: 61 of 61 pass (7 reveal, 15 tokens, 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 11 reader), 0 failed, 0 skipped. `pnpm build`: 171 modules, exit 0, no warning.
+- Test count unchanged. The one test touched, `suggestedParty`, now takes the API's role strings. No new test, because every other change is a deletion or a rename that the typechecker covers, and the two behaviour changes (the party by position, the failure switch firing once) were run in the browser.
+- Browser, dev server and the browser pane: the Gallery with an empty console and the counts in 17.7. The start flow sent `supplier_vendor` with `party_provider`. Four role changes in the Reader sent the same party ids as the old table. Both forced failures retried clean, and the drawer showed a fired switch as off after it was opened.
+- Lighthouse on `/`, mobile: 95, 95, 94 on the final build, and 95, 95, 96 interleaved with 92, 97, 96 for `4ec16e5` on the same machine. LCP 2.19 to 2.31 s in all nine runs. The commit moved nothing measurable. The entry grew 0.3 KB gzipped because `Skeleton` moved into it.
+- Claims grep with the new patterns, the old calibration grep, the Evidence gate, the Rules section 1 scrub, the tool-name grep over `frontend/` and README and the dash scan (control file detected): all print nothing.
+- `/ponytail:ponytail-review`: no P1. Two P2 kept and listed: `ReaderToolbar`'s three invented defaults, and `Children.count` for the static panel's count.
+- No user-facing string was added or changed, so the copy passes did not run.
+
+Not run: the dark theme and 375 px captures of the Gallery, and the before and after pairs, which wait for the end of step 2. A screen reader on the Gallery or the Reader.
+
+Housekeeping: the Vite dev server (5173) and two preview servers (4173, 4174) stopped, and a build of `4ec16e5` in the session scratchpad was used for the size and Lighthouse comparison. One slip: the seven deletions were first staged with `git rm`, which is a git write. The index was put back with `git reset` and the deletions sit unstaged in the working tree.
+
+Open for Aryan:
+1. Other components still carry invented sample text as a default, as `JudgmentCard` did: the static branch of `ClauseDetailPanel`, `MobileDrawer`'s title, `MarginRuler`'s fixtures, `PartyBindingField`'s sample parties and `ReaderToolbar`'s three defaults. None reaches a user. Same treatment, or leave?
+2. The disabled "licence" sample card on the landing page (7 lines, a product call) was not in the approved list and is untouched.
+
+Next action: commit this part, then commit 6 of 6, Accuracy mobile grouping (the 46 categories under the 7 catalogue groups as `details` below 768 px, first open).

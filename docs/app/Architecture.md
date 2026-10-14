@@ -232,7 +232,7 @@ frontend/
       Expired.tsx           # session ended or contract deleted, on PlainPage
       NotFound.tsx          # the catch-all route
       Gallery.tsx           # component gallery, development only
-    components/             # 50 components and icons.tsx: atoms (Button, StatusChip, ...),
+    components/             # 47 components and icons.tsx: atoms (Button, StatusChip, ...),
                             # molecules (UploadDropzone, ConfidenceBand, JudgmentCard, ...),
                             # organisms (ClauseDetailPanel, CategorySidebar, ReaderToolbar, ...)
       Layout.tsx            # Container, Section, SectionFrame, MarginGrid, PlainPage

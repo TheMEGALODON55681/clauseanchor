@@ -122,10 +122,10 @@ test("each upload refusal is kept as its code and keeps step 1 as the only reach
 
 test("the party that fits the role is suggested, and nothing is when the fit is unknown", () => {
   assert.equal(suggestedParty("employer", 2), 0);
-  assert.equal(suggestedParty("buyer", 2), 0);
+  assert.equal(suggestedParty("buyer_customer", 2), 0);
   assert.equal(suggestedParty("licensee", 2), 0);
   assert.equal(suggestedParty("employee", 2), 1);
-  assert.equal(suggestedParty("supplier", 2), 1);
+  assert.equal(suggestedParty("supplier_vendor", 2), 1);
   assert.equal(suggestedParty("licensor", 2), 1);
   assert.equal(suggestedParty("other", 2), null);
   assert.equal(suggestedParty(null, 2), null);

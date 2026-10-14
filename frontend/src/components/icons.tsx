@@ -105,17 +105,6 @@ export function IndexCardIcon(props: IconProps) {
   );
 }
 
-/* Risk strip: a margin ruler. */
-export function MarginRulerIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <path d="M7 3v14" />
-      <path d="M7 5h3M7 8h2M7 11h3M7 14h2" />
-      <rect x="11.5" y="7.5" width="3.5" height="5" rx="0.5" />
-    </Svg>
-  );
-}
-
 /* "Needs a lawyer": a person raising a hand with a document.
    Reads as "ask a professional", never as an error. */
 export function PersonWithDocIcon(props: IconProps) {
@@ -264,14 +253,6 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
-export function MinusIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <path d="M5 10h10" />
-    </Svg>
-  );
-}
-
 export function SearchIcon(props: IconProps) {
   return (
     <Svg {...props}>
@@ -295,16 +276,6 @@ export function InfoIcon(props: IconProps) {
       <circle cx="10" cy="10" r="6.5" />
       <path d="M10 9v4" />
       <path d="M10 6.6h.01" />
-    </Svg>
-  );
-}
-
-export function UploadIcon(props: IconProps) {
-  return (
-    <Svg {...props}>
-      <path d="M10 13V4" />
-      <path d="M6.5 7.5L10 4l3.5 3.5" />
-      <path d="M4 14v2h12v-2" />
     </Svg>
   );
 }

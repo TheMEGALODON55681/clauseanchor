@@ -2,25 +2,15 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { useNavigate } from "react-router";
 import { client } from "../../api/client";
 import { SAMPLE_FILENAME } from "../../api/contract";
-import { ApiError, type Document, type Role, type UploadInput } from "../../api/types";
+import { ApiError, type Document, type UploadInput } from "../../api/types";
 import { useSession } from "../../app/session";
 import type { PartyChoice } from "../../components/PartyBindingField";
 import { buildOffsetIndex, sliceCp } from "../../lib/offsets";
-import { flowReducer, initialFlow, partyName, type RoleKey, type UploadErrorCode } from "../../lib/startFlow";
+import { flowReducer, initialFlow, partyName, type UploadErrorCode } from "../../lib/startFlow";
 
 /* The side effects of the /start flow: the upload, the parse polling and the calls to
    `client`. The reducer in lib/startFlow.ts holds the state and this hook reports to it.
    Each upload takes a new `seq`, so an answer for a replaced file changes nothing. */
-
-const ROLE_FROM_KEY: Record<RoleKey, Role> = {
-  buyer: "buyer_customer",
-  supplier: "supplier_vendor",
-  employer: "employer",
-  employee: "employee",
-  licensor: "licensor",
-  licensee: "licensee",
-  other: "other",
-};
 
 const REFUSALS: UploadErrorCode[] = ["unsupported_type", "too_large", "scanned", "protected"];
 
@@ -28,7 +18,7 @@ const formatSize = (bytes: number) => (bytes > 1024 * 1024 ? `${(bytes / 1024 / 
 
 export function useStartFlow() {
   const navigate = useNavigate();
-  const { ensureToken, setDoc, mock, setMock } = useSession();
+  const { ensureToken, setDoc } = useSession();
   const [flow, dispatch] = useReducer(flowReducer, initialFlow);
   const [docId, setDocId] = useState<string | null>(null);
   const [doc, setDocument] = useState<Document | null>(null);
@@ -94,11 +84,10 @@ export function useStartFlow() {
     [ensureToken, setDoc],
   );
 
-  /** Uploads the same file or sample again, after a failed upload or a failed parse. A forced parse failure in the mock is cleared first, as the reader does for a failed analysis. */
+  /** Uploads the same file or sample again, after a failed upload or a failed parse. */
   const retry = useCallback(() => {
-    if (flow.parse === "failed" && mock?.failParse) setMock({ failParse: false });
     if (last.current) void upload(last.current.input, last.current.onAccepted);
-  }, [upload, flow.parse, mock?.failParse, setMock]);
+  }, [upload]);
 
   const start = useCallback(async () => {
     if (!docId || flow.role === null) return;
@@ -106,7 +95,7 @@ export function useStartFlow() {
     setStartFailed(false);
     try {
       const token = await ensureToken();
-      const role = ROLE_FROM_KEY[flow.role];
+      const role = flow.role;
       const partyNodeId = flow.partyNone ? null : flow.party;
       await client.setParty(token, docId, { role, party_node_id: partyNodeId });
       const job = await client.startAnalysis(token, docId, { jurisdiction_scope: flow.india ? "india_review" : "unspecified" });

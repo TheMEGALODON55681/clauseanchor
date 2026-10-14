@@ -4,13 +4,12 @@ import { IndexCardIcon, ExternalIcon } from "./icons";
 import { AUTHORITY_PHRASE, type Authority } from "../lib/authority";
 import { httpsUrl } from "../lib/reader";
 
-export type JudgmentState = "collapsed" | "expanded" | "hover" | "focus" | "empty";
+export type JudgmentState = "collapsed" | "expanded" | "hover" | "focus";
 
-type JudgmentCardProps = {
-  state?: JudgmentState;
-  authority?: Authority;
-  passage?: { caseName: string; court: string; year: number | null; citation: string; text: string; sourceUrl?: string };
-};
+export type JudgmentPassage = { caseName: string; court: string; year: number | null; citation: string; text: string; sourceUrl?: string };
+
+/* A card shows a passage it was given, or it is the empty card. It carries no sample text of its own. */
+type JudgmentCardProps = { state: "empty" } | { state?: JudgmentState; authority?: Authority; passage: JudgmentPassage };
 
 /* The words come from lib/authority.ts. This table is only the colours. */
 const NEUTRAL = { fg: "var(--polarity-neutral-fg)", bg: "var(--polarity-neutral-bg)", border: "var(--rule-default)" };
@@ -21,18 +20,10 @@ const AUTHORITY: Record<Authority, { fg: string; bg: string; border: string }> =
   overruled: { fg: "var(--status-review-fg)", bg: "var(--status-review-bg)", border: "var(--status-review-border)" },
 };
 
-const PASSAGE =
-  "A covenant which restrains a party from carrying on a lawful trade must be read narrowly, and the court will not enforce a restriction wider in area or duration than is necessary to protect a legitimate interest of the party in whose favour it is made.";
-const EXTRA =
-  " The burden of showing that the restriction is reasonable rests on the party seeking to enforce it, and any doubt is resolved in favour of the freedom to trade.";
+export default function JudgmentCard(props: JudgmentCardProps) {
+  const [expanded, setExpanded] = useState(props.state === "expanded");
 
-export default function JudgmentCard({ state = "collapsed", authority = "unknown", passage }: JudgmentCardProps) {
-  const [expanded, setExpanded] = useState(state === "expanded");
-  const isExpanded = state === "expanded" || expanded;
-  const auth = AUTHORITY[authority];
-  const sourceUrl = httpsUrl(passage?.sourceUrl);
-
-  if (state === "empty") {
+  if (props.state === "empty") {
     return (
       <div
         className="font-sans"
@@ -53,6 +44,10 @@ export default function JudgmentCard({ state = "collapsed", authority = "unknown
     );
   }
 
+  const { state = "collapsed", authority = "unknown", passage } = props;
+  const isExpanded = state === "expanded" || expanded;
+  const auth = AUTHORITY[authority];
+  const sourceUrl = httpsUrl(passage.sourceUrl);
   const outline =
     state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {};
   const hoverShadow = state === "hover" ? "var(--elevation-2)" : "var(--elevation-1)";
@@ -90,10 +85,10 @@ export default function JudgmentCard({ state = "collapsed", authority = "unknown
                 color: "var(--ink-primary)",
               }}
             >
-              {passage?.caseName ?? "Sample Traders Pvt. Ltd. v. Example Industries Ltd."}
+              {passage.caseName}
             </div>
             <div style={{ fontSize: 13, color: "var(--ink-secondary)", marginTop: 2 }}>
-              {passage ? `${passage.court}${passage.year ? `, ${passage.year}` : ""}` : "Supreme Court of India, 2019"}
+              {`${passage.court}${passage.year ? `, ${passage.year}` : ""}`}
             </div>
             <div
               style={{
@@ -103,7 +98,7 @@ export default function JudgmentCard({ state = "collapsed", authority = "unknown
                 marginTop: 2,
               }}
             >
-              {passage?.citation ?? "[Placeholder citation]"}
+              {passage.citation}
             </div>
           </div>
         </div>
@@ -137,10 +132,7 @@ export default function JudgmentCard({ state = "collapsed", authority = "unknown
             >
               &#8220;
             </span>
-            {passage ? passage.text : PASSAGE}
-            {isExpanded && !passage && (
-              <span style={{ color: "var(--ink-tertiary)" }}>{EXTRA}</span>
-            )}
+            {passage.text}
             <span
               style={{ color: "var(--evidence-fg)", fontSize: 22, lineHeight: 0, verticalAlign: "-4px", marginLeft: 2 }}
               aria-hidden

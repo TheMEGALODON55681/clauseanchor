@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Link as RouterLink } from "react-router";
+import Spinner from "./Spinner";
 
 export type ButtonVariant =
   | "primary"
@@ -40,22 +41,6 @@ const SIZES: Record<ButtonSize, { h: number; px: number; font: number; icon: num
   m: { h: 40, px: 16, font: 14, icon: 18 },
   l: { h: 48, px: 20, font: 15, icon: 20 },
 };
-
-function Spinner({ size = 14 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      className="animate-spin"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.25" />
-      <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 /** Ink-stamp styling per variant + resolved visual state. */
 function styleFor(variant: ButtonVariant, state: ButtonState): CSSProperties {
@@ -167,7 +152,7 @@ export default function Button({
   };
   const content = (
     <>
-      {loading && <Spinner size={s.icon - 2} />}
+      {loading && <Spinner size={s.icon - 2} inline />}
       {!loading && (icon === "leading" || iconOnly) && (
         <span style={{ display: "inline-flex" }}>{iconNode}</span>
       )}

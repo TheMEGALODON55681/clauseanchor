@@ -137,8 +137,6 @@ export type Document = {
 
 export type Session = { token: string; expires_at: string };
 
-export type PartyCandidate = { name: string; start: number; end: number; text: string };
-
 export type UploadInput = { file: File } | { sampleId: string };
 
 export type EvaluationRow = {

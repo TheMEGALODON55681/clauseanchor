@@ -177,6 +177,7 @@ Needs: the frontend on the real client, and Tanishq's real analyzer and artifact
   `test(backend): add end-to-end review check and CPU benchmark`
   Also run all eight scope cases from plan section 11.3 through the full application, first with fixture findings, then with the real model, and record expected against observed behaviour in BuildLog.md.
   The UI string for `TOO_MUCH_TEXT` is "This file is too large or complex to process". No backend part maps error codes to UI messages, so this first frontend integration part checks that the UI shows it.
+  The swap to the HTTP adapter removes the mock adapter and the sample contract, and the part checks that `dist` holds no mock: no `mock-*` chunk, no sample contract text and no `example.org`. The build is not releasable on the mock until then (`Architecture.md` 7.1, `FrontendDesign.md` 17.7 BW).
 - [ ] **4-R** Phase review, then root docs and README merge (coordinated with Tanishq)
 
 ---

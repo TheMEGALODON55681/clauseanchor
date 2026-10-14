@@ -10,7 +10,7 @@ type Row = { label: string; value: string | null; note?: string };
 
 function rowsOf(flow: FlowState, fileMeta: string, parties: PartyChoice[]): Row[] {
   const file = flow.upload.status === "uploaded" ? flow.upload.fileName : null;
-  const role = ROLES.find((r) => r.key === flow.role)?.title ?? null;
+  const role = ROLES.find((r) => r.role === flow.role)?.title ?? null;
   const party = flow.partyNone ? "None of these" : (parties.find((p) => p.id === flow.party)?.name ?? null);
   return [
     { label: "File", value: file, note: file ? fileMeta : undefined },

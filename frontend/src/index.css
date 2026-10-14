@@ -237,18 +237,6 @@
 }
 
 @theme inline {
-  --color-paper-base: var(--paper-base);
-  --color-paper-sheet: var(--paper-sheet);
-  --color-paper-sunken: var(--paper-sunken);
-  --color-ink-primary: var(--ink-primary);
-  --color-ink-secondary: var(--ink-secondary);
-  --color-ink-tertiary: var(--ink-tertiary);
-  --color-rule-default: var(--rule-default);
-  --color-rule-strong: var(--rule-strong);
-  --color-anchor-600: var(--anchor-600);
-  --color-anchor-700: var(--anchor-700);
-  --color-anchor-100: var(--anchor-100);
-
   --font-serif: 'Source Serif 4', 'Source Serif 4 Fallback', Georgia, serif;
   --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Fallback', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', 'IBM Plex Mono Fallback', ui-monospace, monospace;

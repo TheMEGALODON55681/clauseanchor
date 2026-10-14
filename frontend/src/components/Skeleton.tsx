@@ -1,7 +1,7 @@
 export type SkeletonVariant = "line" | "block" | "paragraph";
 
 /* Slow shimmer over paper/sunken. Static under reduced-motion (see index.css). */
-function Bar({ w, h }: { w: number | string; h: number }) {
+export function Bar({ w, h = 12 }: { w: number | string; h?: number }) {
   return (
     <div
       className="shimmer"

@@ -5,10 +5,9 @@
    The current step is not part of the state. It lives in the address (`?step=`),
    and `clampStep` says which step the state allows. */
 
-import type { DocNode } from "../api/types.ts";
+import type { DocNode, Role } from "../api/types.ts";
 import { sliceCp, type OffsetIndex } from "./offsets.ts";
 
-export type RoleKey = "buyer" | "supplier" | "employer" | "employee" | "licensor" | "licensee" | "other";
 export type Step = 1 | 2 | 3;
 export type UploadErrorCode = "unsupported_type" | "too_large" | "scanned" | "protected" | "network";
 
@@ -24,7 +23,7 @@ export type FlowState = {
   seq: number;
   upload: UploadState;
   parse: ParseState;
-  role: RoleKey | null;
+  role: Role | null;
   /** The id of the chosen party. Never set by the flow itself. */
   party: string | null;
   partyNone: boolean;
@@ -37,7 +36,7 @@ export type FlowAction =
   | { type: "upload-failed"; seq: number; code: UploadErrorCode }
   | { type: "parse-done"; seq: number; parties: number }
   | { type: "parse-failed"; seq: number }
-  | { type: "set-role"; role: RoleKey }
+  | { type: "set-role"; role: Role }
   | { type: "set-party"; party: string }
   | { type: "set-party-none" }
   | { type: "set-india"; on: boolean };
@@ -80,10 +79,10 @@ export function parseStep(raw: string | null): Step {
 }
 
 /* Which party a role usually is in a two-party agreement, by position: first or second named. */
-const SUGGESTED_INDEX: Partial<Record<RoleKey, number>> = { buyer: 0, employer: 0, licensee: 0, supplier: 1, employee: 1, licensor: 1 };
+const SUGGESTED_INDEX: Partial<Record<Role, number>> = { buyer_customer: 0, employer: 0, licensee: 0, supplier_vendor: 1, employee: 1, licensor: 1 };
 
 /** The index of the party to list first and mark "Suggested", or null when the fit is unknown. */
-export function suggestedParty(role: RoleKey | null, count: number): number | null {
+export function suggestedParty(role: Role | null, count: number): number | null {
   const i = role === null ? undefined : SUGGESTED_INDEX[role];
   return i !== undefined && i < count ? i : null;
 }

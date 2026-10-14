@@ -1,10 +1,9 @@
 import Button from "./Button";
-import StageProgress from "./StageProgress";
 import DropdownMenu from "./DropdownMenu";
 import type { ReactNode } from "react";
 import { FileIcon, TrashIcon, DownloadIcon } from "./icons";
 
-export type ToolbarVariant = "analyzing" | "complete" | "partial" | "sample-mode";
+export type ToolbarVariant = "complete" | "partial" | "sample-mode";
 
 /* A long name truncates at the end of the base and keeps its extension. */
 function FileName({ name }: { name: string }) {
@@ -22,7 +21,6 @@ export default function ReaderToolbar({
   variant = "complete",
   filename = "employment-agreement.pdf",
   meta = "8 pages",
-  progress,
   partialNote = "Some categories could not be finished. They are listed as Unavailable.",
   menu,
   leading,
@@ -33,8 +31,6 @@ export default function ReaderToolbar({
   variant?: ToolbarVariant;
   filename?: string;
   meta?: string;
-  /** Live progress node shown while analyzing. */
-  progress?: ReactNode;
   partialNote?: string;
   /** Overflow menu override. */
   menu?: ReactNode;
@@ -78,12 +74,6 @@ export default function ReaderToolbar({
           </span>
         )}
       </div>
-
-      {variant === "analyzing" && progress !== null && (
-        <div style={{ flex: 1, minWidth: 200 }}>
-          {progress ?? <StageProgress compact />}
-        </div>
-      )}
 
       {variant === "partial" && (
         <span style={{ flex: 1, minWidth: 200, fontSize: 13, color: "var(--status-review-fg)" }}>

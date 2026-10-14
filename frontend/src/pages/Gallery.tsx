@@ -5,23 +5,18 @@ import Button from "../components/Button";
 import StatusChip, { type StatusKind, type ChipSize } from "../components/StatusChip";
 import PolarityBadge, { type PolarityKind } from "../components/PolarityBadge";
 import ConfidenceBand from "../components/ConfidenceBand";
-import JudgmentCard from "../components/JudgmentCard";
+import JudgmentCard, { type JudgmentPassage } from "../components/JudgmentCard";
 import MarginRuler from "../components/MarginRuler";
 import SpanHighlight from "../components/SpanHighlight";
 import ClauseDetailPanel from "../components/ClauseDetailPanel";
 
 // Atoms
-import TextInput from "../components/TextInput";
-import Select from "../components/Select";
 import RadioCard from "../components/RadioCard";
-import CheckboxRadio from "../components/CheckboxRadio";
 import Switch from "../components/Switch";
 import StatuteTag from "../components/StatuteTag";
 import CountBadge from "../components/CountBadge";
-import Tooltip from "../components/Tooltip";
 import LinkAtom from "../components/Link";
 import KeyboardHint from "../components/KeyboardHint";
-import DividerAtom from "../components/Divider";
 import Spinner from "../components/Spinner";
 import OffsetTag from "../components/OffsetTag";
 import Skeleton from "../components/Skeleton";
@@ -44,12 +39,10 @@ import EmptyState from "../components/EmptyState";
 import ErrorCard from "../components/ErrorCard";
 import MetricCell from "../components/MetricCell";
 import DropdownMenu from "../components/DropdownMenu";
-import SectionPath from "../components/SectionPath";
 
 // Organisms
 import CategorySidebar from "../components/CategorySidebar";
 import ReaderToolbar from "../components/ReaderToolbar";
-import DocumentBlock from "../components/DocumentBlock";
 import PerformanceTableRow from "../components/PerformanceTableRow";
 import AppHeader from "../components/AppHeader";
 import AppFooter from "../components/AppFooter";
@@ -83,7 +76,7 @@ const CORE: { token: string; light: string; dark: string; on: [string, string] }
   { token: "paper/sunken", light: "#EFEBE2", dark: "#0F1214", on: ["#1B1F24", "#ECE7DD"] },
   { token: "ink/primary", light: "#1B1F24", dark: "#ECE7DD", on: ["#F6F3EC", "#131619"] },
   { token: "ink/secondary", light: "#4E545B", dark: "#B4AEA3", on: ["#F6F3EC", "#131619"] },
-  { token: "ink/tertiary", light: "#646970", dark: "#8B867F", on: ["#F6F3EC", "#131619"] },
+  { token: "ink/tertiary", light: "#646970", dark: "#9A958D", on: ["#F6F3EC", "#131619"] },
   { token: "control/border", light: "#85817A", dark: "#6A6E72", on: ["#F6F3EC", "#131619"] },
   { token: "anchor/600", light: "#0F4C5C", dark: "#6FB8C8", on: ["#FFFDF8", "#131619"] },
   { token: "anchor/700", light: "#0A3945", dark: "#8FCBD8", on: ["#FFFDF8", "#131619"] },
@@ -93,6 +86,23 @@ const SPACING = [
   ["space/1", 4], ["space/2", 8], ["space/3", 12], ["space/4", 16],
   ["space/6", 24], ["space/8", 32], ["space/12", 48], ["space/16", 64],
 ] as const;
+
+/* The sample case the specimens share. It is invented, and it lives here so that no component ships a default case. */
+const SAMPLE_PASSAGE: JudgmentPassage = {
+  caseName: "Sample Traders Pvt. Ltd. v. Example Industries Ltd.",
+  court: "Supreme Court of India",
+  year: 2019,
+  citation: "[Placeholder citation]",
+  text: "A covenant which restrains a party from carrying on a lawful trade must be read narrowly, and the court will not enforce a restriction wider in area or duration than is necessary to protect a legitimate interest of the party in whose favour it is made.",
+};
+const SAMPLE_LONG: JudgmentPassage = {
+  ...SAMPLE_PASSAGE,
+  text: `${SAMPLE_PASSAGE.text} The burden of showing that the restriction is reasonable rests on the party seeking to enforce it, and any doubt is resolved in favour of the freedom to trade.`,
+};
+const SAMPLE_CASES = [
+  <JudgmentCard key="reviewed" authority="reviewed" passage={SAMPLE_PASSAGE} />,
+  <JudgmentCard key="overruled" authority="overruled" passage={SAMPLE_PASSAGE} />,
+];
 
 const TYPE_SPECIMENS: { style: string; family: string; note: string; el: ReactNode }[] = [
   {
@@ -123,7 +133,7 @@ const TYPE_SPECIMENS: { style: string; family: string; note: string; el: ReactNo
     style: "citation",
     family: "Source Serif 4 500 small caps",
     note: "13 / 20",
-    el: <span style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontVariant: "small-caps", letterSpacing: "0.03em", fontSize: 13 }}>Sample Traders Pvt. Ltd. v. Example Industries Ltd.</span>,
+    el: <span style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontVariant: "small-caps", letterSpacing: "0.03em", fontSize: 13 }}>{SAMPLE_PASSAGE.caseName}</span>,
   },
   {
     style: "mono/sm",
@@ -415,11 +425,11 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Judgment card · a library index card">
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, maxWidth: 460 }}>
           <div>
-            <JudgmentCard state="collapsed" authority="reviewed" />
+            <JudgmentCard state="collapsed" authority="reviewed" passage={SAMPLE_PASSAGE} />
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-tertiary)", marginTop: 4 }}>collapsed · reviewed</div>
           </div>
           <div>
-            <JudgmentCard state="expanded" authority="overruled" />
+            <JudgmentCard state="expanded" authority="overruled" passage={SAMPLE_LONG} />
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-tertiary)", marginTop: 4 }}>expanded · later overruled</div>
           </div>
           <div>
@@ -433,7 +443,7 @@ function Library({ mode }: { mode: Mode }) {
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
           {(["found", "review", "absent", "loading"] as const).map((v) => (
             <div key={v} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <ClauseDetailPanel variant={v} />
+              <ClauseDetailPanel variant={v} caseLaw={SAMPLE_CASES} />
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-tertiary)" }}>{v}</span>
             </div>
           ))}
@@ -447,46 +457,11 @@ function Library({ mode }: { mode: Mode }) {
         02 Atoms
       </SectionTitle>
 
-      <Group label="Text input">
-        <Row>
-          {(["default", "hover", "focus", "filled", "error", "disabled"] as const).map((st) => (
-            <Labeled key={st} label={st} width={220}>
-              <TextInput state={st} label="Party name" placeholder="Enter a party name" />
-            </Labeled>
-          ))}
-        </Row>
-      </Group>
-
-      <Group label="Select">
-        <Row>
-          {(["closed", "open", "focus", "disabled"] as const).map((st) => (
-            <Labeled key={st} label={st} width={220}>
-              <Select state={st} label="Your role" />
-            </Labeled>
-          ))}
-        </Row>
-      </Group>
-
       <Group label="Radio card">
         <Row>
           {(["unselected", "hover", "selected", "focus", "disabled"] as const).map((st) => (
             <Labeled key={st} label={st} width={220}>
               <RadioCard state={st} title="Buyer" description="You are receiving goods or services." />
-            </Labeled>
-          ))}
-        </Row>
-      </Group>
-
-      <Group label="Checkbox & radio">
-        <Row>
-          {(["unchecked", "checked", "indeterminate", "focus", "disabled"] as const).map((st) => (
-            <Labeled key={`c-${st}`} label={`checkbox: ${st}`}>
-              <CheckboxRadio kind="checkbox" state={st} label="Include case law" />
-            </Labeled>
-          ))}
-          {(["unchecked", "checked", "focus", "disabled"] as const).map((st) => (
-            <Labeled key={`r-${st}`} label={`radio: ${st}`}>
-              <CheckboxRadio kind="radio" state={st} label="Sample mode" />
             </Labeled>
           ))}
         </Row>
@@ -515,20 +490,6 @@ function Library({ mode }: { mode: Mode }) {
         </Row>
       </Group>
 
-      <Group label="Tooltip · four sides">
-        <div style={{ display: "flex", gap: 44, flexWrap: "wrap", padding: "20px 8px" }}>
-          {(["top", "bottom", "left", "right"] as const).map((side) => (
-            <Labeled key={side} label={side}>
-              <Tooltip side={side} label="Character offsets in the source text" open>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-secondary)", border: "1px dashed var(--rule-strong)", padding: "4px 8px", borderRadius: 4 }}>
-                  hover
-                </span>
-              </Tooltip>
-            </Labeled>
-          ))}
-        </div>
-      </Group>
-
       <Group label="Link · keyboard hint · spinner">
         <Row>
           <Labeled label="inline"><LinkAtom variant="inline">read the clause</LinkAtom></Labeled>
@@ -541,18 +502,6 @@ function Library({ mode }: { mode: Mode }) {
             <Labeled key={s} label={`spinner ${s}`}><Spinner size={s} /></Labeled>
           ))}
         </Row>
-      </Group>
-
-      <Group label="Divider · horizontal / vertical / labelled">
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ width: 260 }}><DividerAtom /></div>
-          <div style={{ height: 40, display: "flex", alignItems: "center" }}>
-            <span style={{ fontSize: 13, color: "var(--ink-secondary)" }}>before</span>
-            <DividerAtom orientation="vertical" />
-            <span style={{ fontSize: 13, color: "var(--ink-secondary)" }}>after</span>
-          </div>
-          <div style={{ width: 260 }}><DividerAtom label="Money and liability" /></div>
-        </div>
       </Group>
 
       <Group label="Skeleton · reduced-motion aware">
@@ -631,11 +580,10 @@ function Library({ mode }: { mode: Mode }) {
         </div>
       </Group>
 
-      <Group label="Tabs · segmented filter · section path">
+      <Group label="Tabs · segmented filter">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <Labeled label="tabs"><Tabs label="Panel section" items={["Findings", "Case law", "Accuracy"]} value="Findings" disabledItems={["Accuracy"]} /></Labeled>
           <Labeled label="segmented filter"><SegmentedFilter label="Filter categories" /></Labeled>
-          <Labeled label="section path"><SectionPath /></Labeled>
         </div>
       </Group>
 
@@ -662,7 +610,7 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Confirm dialog · empty state · error card">
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
           <Labeled label="confirm dialog" width={360}><ConfirmDialog inline /></Labeled>
-          {(["no-document", "no-findings", "no-evidence"] as const).map((v) => (
+          {(["no-findings", "no-evidence"] as const).map((v) => (
             <Labeled key={v} label={`empty: ${v}`} width={280}><EmptyState variant={v} /></Labeled>
           ))}
           <Labeled label="error card" width={360}><ErrorCard /></Labeled>
@@ -696,7 +644,7 @@ function Library({ mode }: { mode: Mode }) {
 
       <Group label="Reader toolbar">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {(["analyzing", "complete", "partial", "sample-mode"] as const).map((v) => (
+          {(["complete", "partial", "sample-mode"] as const).map((v) => (
             <Labeled key={v} label={v} width="100%"><ReaderToolbar variant={v} /></Labeled>
           ))}
         </div>
@@ -708,18 +656,6 @@ function Library({ mode }: { mode: Mode }) {
             <Labeled key={st} label={st}><CategorySidebar state={st} /></Labeled>
           ))}
         </Row>
-      </Group>
-
-      <Group label="Document block · the contract rendered as paper">
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, background: "var(--paper-sheet)", border: "1px solid var(--rule-default)", borderRadius: "var(--radius-md)", padding: 20, maxWidth: 640 }}>
-          <DocumentBlock variant="heading" number="11" />
-          <DocumentBlock variant="clause" number="11.3" />
-          <DocumentBlock variant="sub-clause" number="(b)" />
-          <DocumentBlock variant="definition" />
-          <DocumentBlock variant="table" />
-          <DocumentBlock variant="page-break" />
-          <DocumentBlock variant="header-footer" />
-        </div>
       </Group>
 
       <Group label="Performance table row">

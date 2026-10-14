@@ -3,12 +3,13 @@ import Link from "./Link";
 import Switch from "./Switch";
 
 /* Development only. A floating drawer for the mock adapter's switches and the gallery link.
-   Root loads it behind import.meta.env.DEV, so a production build holds none of it. */
+   Root loads it behind import.meta.env.DEV, so a production build holds none of it.
+   Opening it reads the switches again, because the adapter clears a failure switch once it has fired. */
 export default function PreviewControls() {
   const { mock, setMock } = useSession();
   if (!mock) return null;
   return (
-    <details className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-32px)]">
+    <details className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-32px)]" onToggle={() => setMock({})}>
       <summary
         className="flex min-h-[44px] cursor-pointer items-center rounded-md px-3 text-[13px] font-medium"
         style={{ background: "var(--paper-sheet)", border: "1px solid var(--control-border)", color: "var(--ink-primary)", boxShadow: "var(--elevation-2)" }}

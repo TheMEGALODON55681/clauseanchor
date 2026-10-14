@@ -7,10 +7,12 @@ import { CATALOGUE, CATALOGUE_VERSION, CATEGORY_BY_ID, GROUP_ORDER } from "../ap
 import { buildOffsetIndex, sliceCp, toUtf16, type OffsetIndex } from "../lib/offsets";
 import { authorityOf } from "../lib/authority";
 import { freshDelays, sessionEndsIn } from "../lib/reader";
+import { suggestedParty } from "../lib/startFlow";
 import { panelTransition } from "../lib/panelTransition";
 import { useMedia, useReducedMotion } from "../lib/useMedia";
 import { useSession } from "../app/session";
 import ReaderToolbar, { type ToolbarVariant } from "../components/ReaderToolbar";
+import { ROLES } from "../components/RoleSelector";
 import StageProgress, { type Step, type StepState } from "../components/StageProgress";
 import CategorySidebar, { type SidebarGroup, type SidebarRow } from "../components/CategorySidebar";
 import ClauseDetailPanel, { REVIEW_CANDIDATE_NOTE, type PanelData } from "../components/ClauseDetailPanel";
@@ -43,16 +45,6 @@ const STAGES: { key: string; label: string }[] = [
   { key: "final_checks", label: "Final checks" },
 ];
 
-const ROLES: { role: Role; label: string; party: "party_company" | "party_provider" | null }[] = [
-  { role: "buyer_customer", label: "Buyer or customer", party: "party_company" },
-  { role: "supplier_vendor", label: "Supplier or vendor", party: "party_provider" },
-  { role: "employer", label: "Employer", party: "party_company" },
-  { role: "employee", label: "Employee", party: "party_provider" },
-  { role: "licensor", label: "Licensor", party: "party_provider" },
-  { role: "licensee", label: "Licensee", party: "party_company" },
-  { role: "other", label: "Other", party: null },
-];
-
 const TERMINAL = new Set(["succeeded", "partial", "failed", "cancelled"]);
 
 type Finding = { clause: Clause; categoryId: string; s16: number; e16: number; kind: SpanKind; status: StatusKind };
@@ -83,7 +75,7 @@ function plural(n: number, one: string, many: string) {
 export default function Reader() {
   const { documentId = "" } = useParams();
   const navigate = useNavigate();
-  const { token, docs, setDoc, forgetDoc, toast, mock, setMock } = useSession();
+  const { token, docs, setDoc, forgetDoc, toast } = useSession();
   const meta = docs[documentId];
   const reduced = useReducedMotion();
   const wide = useMedia("(min-width: 1440px)");
@@ -411,14 +403,17 @@ export default function Reader() {
     [manual]
   );
 
-  async function changeRole(r: (typeof ROLES)[number]) {
+  async function changeRole(role: Role) {
     if (!token) return;
     const mine = ++roleSeq.current;
     try {
-      const party = r.party ?? meta?.partyNodeId ?? null;
-      await client.setParty(token, documentId, { role: r.role, party_node_id: party });
+      // The party the role usually is, by position among the named parties. Otherwise the one already chosen.
+      const parties = doc?.nodes.filter((n) => n.kind === "party") ?? [];
+      const at = suggestedParty(role, parties.length);
+      const party = at === null ? (meta?.partyNodeId ?? null) : parties[at].id;
+      await client.setParty(token, documentId, { role, party_node_id: party });
       if (mine !== roleSeq.current) return;
-      setDoc(documentId, { role: r.role, partyNodeId: party });
+      setDoc(documentId, { role, partyNodeId: party });
       const next = await client.getAnalysis(token, documentId);
       if (mine !== roleSeq.current) return;
       setAnalysis(next);
@@ -468,7 +463,6 @@ export default function Reader() {
 
   async function retryAnalysis() {
     if (!token) return;
-    if (mock?.failAnalysis) setMock({ failAnalysis: false });
     try {
       const j = await client.startAnalysis(token, documentId, { jurisdiction_scope: analysis?.jurisdiction_scope ?? "india_review" });
       setManual(null);
@@ -676,11 +670,10 @@ export default function Reader() {
     return { label: s.label, state, detail };
   });
 
-  const variant: ToolbarVariant = !finished
-    ? "analyzing"
-    : job?.status === "partial" || job?.status === "cancelled" || job?.status === "failed"
+  const variant: ToolbarVariant =
+    finished && (job?.status === "partial" || job?.status === "cancelled" || job?.status === "failed")
       ? "partial"
-      : analysis?.mode === "sample"
+      : finished && analysis?.mode === "sample"
         ? "sample-mode"
         : "complete";
 
@@ -693,7 +686,7 @@ export default function Reader() {
           ? `Partial result. Not finished: ${unavailableNames.join(", ")}.`
           : undefined;
 
-  const roleItems: MenuItem[] = ROLES.map((r) => ({ label: r.label, checked: meta?.role === r.role, onSelect: () => void changeRole(r) }));
+  const roleItems: MenuItem[] = ROLES.map((r) => ({ label: r.title, checked: meta?.role === r.role, onSelect: () => void changeRole(r.role) }));
   // On a phone Delete leaves the toolbar, so Download report keeps its line, and joins the role list.
   if (!md) roleItems.push({ label: "Delete document", icon: <TrashIcon size={16} />, onSelect: () => setConfirmDelete(true) });
   const pages = doc ? Math.max(1, ...doc.nodes.map((n) => n.page)) : 0;
@@ -719,7 +712,6 @@ export default function Reader() {
           variant={variant}
           filename={doc?.filename ?? "Loading"}
           meta={doc ? `${plural(pages, "page", "pages")}, ${CATALOGUE.length} categories` : ""}
-          progress={null}
           partialNote={partialNote}
           showDelete={md}
           leading={

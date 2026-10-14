@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import StatusChip, { type StatusKind } from "./StatusChip";
 import PolarityBadge, { type PolarityKind } from "./PolarityBadge";
 import ConfidenceBand, { type CalibrationScope, type ConfidenceVariant } from "./ConfidenceBand";
 import JudgmentCard from "./JudgmentCard";
 import RuleFlagCard from "./RuleFlagCard";
 import Button from "./Button";
+import { Bar } from "./Skeleton";
 import { CloseIcon } from "./icons";
 
 export type PanelVariant =
@@ -49,6 +50,8 @@ type ClauseDetailPanelProps = {
   custom?: { title: string; content: ReactNode };
   /** The title is a heading in the reader. A page that only shows the panel as an example sets "p". */
   titleAs?: "h2" | "p";
+  /** Case law cards for the static sample variants. The Gallery supplies them, so the panel holds no sample passage. */
+  caseLaw?: ReactNode;
 };
 
 const STATUS_FOR: Record<Exclude<PanelVariant, "loading">, StatusKind> = {
@@ -89,20 +92,6 @@ function Shell({ children, fill = false }: { children: ReactNode; fill?: boolean
   );
 }
 
-function Skel({ w, h = 12 }: { w: number | string; h?: number }) {
-  return (
-    <div
-      className="shimmer"
-      style={{
-        width: w,
-        height: h,
-        borderRadius: 3,
-        background: "var(--paper-sunken)",
-      }}
-    />
-  );
-}
-
 function PanelHeader({ title, chip, onClose, titleAs = "h2" }: { title: string; chip?: ReactNode; onClose?: () => void; titleAs?: "h2" | "p" }) {
   const Title = titleAs;
   return (
@@ -124,7 +113,7 @@ function PanelHeader({ title, chip, onClose, titleAs = "h2" }: { title: string; 
   );
 }
 
-export default function ClauseDetailPanel({ variant = "found", data, onClose, fill = false, custom, titleAs }: ClauseDetailPanelProps) {
+export default function ClauseDetailPanel({ variant = "found", data, onClose, fill = false, custom, titleAs, caseLaw }: ClauseDetailPanelProps) {
   if (custom) {
     return (
       <Shell fill={fill}>
@@ -138,14 +127,14 @@ export default function ClauseDetailPanel({ variant = "found", data, onClose, fi
     return (
       <Shell fill={fill}>
         <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-          <Skel w={180} h={20} />
-          <Skel w={120} />
-          <Skel w="100%" h={72} />
+          <Bar w={180} h={20} />
+          <Bar w={120} />
+          <Bar w="100%" h={72} />
           <div className="flex gap-2">
-            <Skel w={110} h={24} />
-            <Skel w={120} h={24} />
+            <Bar w={110} h={24} />
+            <Bar w={120} h={24} />
           </div>
-          <Skel w="100%" h={90} />
+          <Bar w="100%" h={90} />
         </div>
       </Shell>
     );
@@ -306,13 +295,10 @@ export default function ClauseDetailPanel({ variant = "found", data, onClose, fi
                     fontWeight: 400,
                   }}
                 >
-                  2
+                  {Children.count(caseLaw)}
                 </span>
               </div>
-              <div className="flex flex-col gap-3">
-                <JudgmentCard authority="reviewed" />
-                <JudgmentCard authority="overruled" />
-              </div>
+              <div className="flex flex-col gap-3">{caseLaw ?? <JudgmentCard state="empty" />}</div>
             </div>
           </>
         ) : (
