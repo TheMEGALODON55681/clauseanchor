@@ -7,7 +7,6 @@ type ScopePanelProps = {
   variant?: ScopeVariant;
   categoryCount?: number;
   catalogueVersion?: string;
-  support?: { validated: number; pooled: number; notValidated: number };
   limitations?: string[];
   onViewList?: () => void;
 };
@@ -15,21 +14,11 @@ type ScopePanelProps = {
 const SCOPE_TEXT =
   "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.";
 
-function Row({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, color: "var(--ink-secondary)" }}>
-      <span>{label}</span>
-      <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-primary)" }}>{value}</span>
-    </div>
-  );
-}
-
 /* Compact scope card pinned to the top of the category sidebar. Never a verdict. */
 export default function ScopePanel({
   variant = "complete",
   categoryCount = 46,
   catalogueVersion = "cat-2026.09-r1.1",
-  support = { validated: 27, pooled: 14, notValidated: 5 },
   limitations = [],
   onViewList,
 }: ScopePanelProps) {
@@ -39,8 +28,6 @@ export default function ScopePanel({
       style={{
         background: "var(--paper-sheet)",
         border: "1px solid var(--rule-default)",
-        borderLeftWidth: 4,
-        borderLeftColor: "var(--anchor-600)",
         borderRadius: "var(--radius-md)",
         padding: "10px 12px",
         display: "flex",
@@ -65,12 +52,6 @@ export default function ScopePanel({
           View list
         </Button>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <Row label="Validated" value={support.validated} />
-        <Row label="Pooled" value={support.pooled} />
-        <Row label="Not validated" value={support.notValidated} />
-      </div>
-
       {variant === "processing-incomplete" && (
         <div
           style={{

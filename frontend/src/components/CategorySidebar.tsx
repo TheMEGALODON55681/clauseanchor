@@ -10,7 +10,7 @@ import type { StatusKind } from "./StatusChip";
 
 export type SidebarState = "loading" | "populated" | "filtered-empty";
 
-export type SidebarRow = { id?: string; name: string; status: StatusKind; count?: number; pending?: boolean };
+export type SidebarRow = { id?: string; name: string; status: StatusKind; count?: number; pending?: boolean; enterStep?: number };
 type Row = SidebarRow;
 export type SidebarGroup = { label: string; summary: string; rows: Row[] };
 type Grp = SidebarGroup;
@@ -83,7 +83,7 @@ export default function CategorySidebar({
   return (
     <aside
       style={{
-        width: 280,
+        width: fill ? "100%" : 280,
         maxWidth: "100%",
         background: "var(--paper-sunken)",
         borderRight: "1px solid var(--rule-default)",
@@ -96,7 +96,7 @@ export default function CategorySidebar({
       <div style={{ padding: "14px 12px 10px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div>
           <h2 style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-primary)" }}>Clauses reviewed</h2>
-          <p style={{ fontSize: 12, color: "var(--ink-tertiary)", marginTop: 2 }} aria-live="polite">
+          <p style={{ fontSize: 12, color: "var(--ink-tertiary)", marginTop: 2, fontVariantNumeric: "tabular-nums" }} aria-live="polite">
             {summary}
           </p>
         </div>
@@ -138,7 +138,7 @@ export default function CategorySidebar({
                 g.rows.map((r) =>
                   r.pending ? (
                     <div key={r.id ?? r.name} style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 44, padding: "8px 16px" }}>
-                      <span style={{ flex: 1, fontSize: 14, color: "var(--ink-tertiary)" }}>{r.name}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "var(--ink-tertiary)", overflowWrap: "anywhere" }}>{r.name}</span>
                       <span style={{ width: 72, overflow: "hidden" }} aria-label="Still checking">
                         <Skeleton variant="line" />
                       </span>
@@ -149,6 +149,7 @@ export default function CategorySidebar({
                       name={r.name}
                       status={r.status}
                       count={r.count}
+                      enterStep={r.enterStep}
                       state={selected === (r.id ?? r.name) ? "selected" : undefined}
                       onClick={() => {
                         setSelected(r.id ?? r.name);

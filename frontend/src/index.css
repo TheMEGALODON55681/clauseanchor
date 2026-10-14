@@ -267,6 +267,11 @@
   --w-page: 1200px;
   --w-main: 42rem;
   --w-margin: 9rem;
+
+  /* Reading measure: one line of document text (document/body, Source Serif 4 at 17px).
+     612px sets a full line of about 73 characters, inside the 68 to 80 band. The Reader
+     sheet and the hero sheet both take it, so the two pages set the same line. */
+  --measure: 612px;
 }
 
 @theme inline {
@@ -425,6 +430,13 @@ html {
       grid-template-columns: var(--w-margin) minmax(0, var(--w-main)) minmax(0, 1fr);
     }
     .margin-grid > .margin-grid-aside { grid-column: 3; grid-row: 1; }
+  }
+
+  /* The Reader's paper: the measure, 48 px of margin on each side and a 1 px edge. It gives way to a
+     narrow viewport, and the band above the sheet takes the same width. */
+  .reader-sheet {
+    width: calc(var(--measure) + 98px);
+    max-width: 100%;
   }
 
   /* A choice card on a native radio input (components/RadioCard.tsx). The chosen card
@@ -591,9 +603,16 @@ html {
    the ruler tick appears, then the panel rises. About 1.5 s in all. Hovering or
    focusing the sheet or the panel pauses it. The Next example control sits
    outside both, so pressing it never freezes the run it starts. */
-.hero-demo { --ink-delay: 600ms; }
+.hero-demo {
+  --ink-delay: 600ms;
+  /* The measure plus the sheet's own width: 2 px border, 24 px padding each side, the
+     28 px ruler and its 12 px gap. The panel below 1280 px takes the same width, so the
+     quote sets the same line as the sheet. */
+  --hero-sheet-w: calc(var(--measure) + 90px);
+}
+.hero-demo .hero-sheet { max-width: var(--hero-sheet-w); }
 .hero-demo [data-ruler-mark] { animation: ca-fade var(--dur-state) var(--ease-out) 1000ms backwards; }
-.hero-demo .hero-panel { --panel-w: 100%; animation: ca-rise var(--dur-panel) var(--ease-out) 1200ms backwards; }
+.hero-demo .hero-panel { --panel-w: min(100%, var(--hero-sheet-w)); animation: ca-rise var(--dur-panel) var(--ease-out) 1200ms backwards; }
 .hero-demo:has(.hero-sheet:focus-within, .hero-panel:focus-within) :is(.ca-ink, [data-ruler-mark], .hero-panel) {
   animation-play-state: paused;
 }
@@ -603,10 +622,23 @@ html {
   }
 }
 
-/* The bottom sheet mounts when a finding is picked, so it slides up from the edge.
-   The side drawer stays mounted and slides on its transform instead. */
-@keyframes ca-drawer-up {
-  from { transform: translateY(100%); }
+/* A Reader row that resolves while the review runs: opacity over --dur-state, stepped by
+   --stagger. The step comes from reader.ts (freshDelays) as --enter-step, and stops at
+   five, so a burst of rows waits 250 ms at most. */
+.ca-enter {
+  animation: ca-fade var(--dur-state) var(--ease-out) calc(var(--enter-step, 0) * var(--stagger)) backwards;
+}
+
+/* The Reader's detail panel cross-fades when a finding is picked with the pointer
+   (lib/panelTransition.ts). The page itself is not part of that transition: with no name on
+   the root the browser captures only the panel, not a long contract's whole viewport. */
+.reader-panel { view-transition-name: reader-panel; }
+html[data-vt='panel'] { view-transition-name: none; }
+::view-transition-group(reader-panel),
+::view-transition-old(reader-panel),
+::view-transition-new(reader-panel) {
+  animation-duration: var(--dur-state);
+  animation-timing-function: var(--ease-exit);
 }
 
 /* Route change: a short cross-fade. */

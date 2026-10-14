@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Button from "./Button";
 import { InfoIcon, AnchorIcon, PersonWithDocIcon, CloseIcon } from "./icons";
 
-export type NoticeVariant = "legal-scope" | "privacy" | "sample-mode" | "session-expiry" | "review-scope";
+export type NoticeVariant = "legal-scope" | "privacy" | "sample-mode" | "session-expiry" | "review-scope" | "read-partial";
 
 type NoticeBannerProps = {
   variant: NoticeVariant;
@@ -20,6 +20,9 @@ const FIXED: Record<NoticeVariant, string> = {
   "session-expiry": "This session ends in 8 minutes. Download your report before it closes.",
   "review-scope":
     "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
+  // Interim wording. It waits for the parser warning codes in API.md (FrontendDesign.md 17.5, AQ).
+  "read-partial":
+    "ClauseAnchor could not read part of this document. Unread text has no marks, so you may miss a clause there.",
 };
 
 function config(variant: NoticeVariant, onAction?: () => void): {
@@ -61,6 +64,14 @@ function config(variant: NoticeVariant, onAction?: () => void): {
         bg: "var(--paper-sheet)",
         fg: "var(--anchor-600)",
         icon: <InfoIcon size={18} />,
+        dismissible: false,
+      };
+    case "read-partial":
+      return {
+        rule: "var(--status-review-fg)",
+        bg: "var(--status-review-bg)",
+        fg: "var(--status-review-fg)",
+        icon: <PersonWithDocIcon size={18} />,
         dismissible: false,
       };
     case "session-expiry":

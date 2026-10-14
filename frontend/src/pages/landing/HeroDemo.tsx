@@ -74,7 +74,7 @@ export default function HeroDemo() {
                 marks={[{ at, status: e.status, label: e.category }]}
               />
             </div>
-            <p style={{ fontFamily: "var(--font-serif)", fontSize: 17, lineHeight: "30px", color: "var(--ink-primary)" }}>
+            <p style={{ fontFamily: "var(--font-serif)", fontSize: 17, lineHeight: "30px", color: "var(--ink-primary)", maxWidth: "var(--measure)", minWidth: 0 }}>
               {before}
               <span className="sr-only">
                 Finding, {STATUS_WORD[e.status]}: {e.category}.{" "}

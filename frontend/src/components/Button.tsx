@@ -161,6 +161,7 @@ export default function Button({
       paddingInline: iconOnly ? 0 : s.px,
       width: iconOnly ? s.h : undefined,
       fontSize: s.font,
+      whiteSpace: "nowrap" as const,
       ...(state === "focus" ? { outline: "2px solid var(--focus-ring)", outlineOffset: 2 } : {}),
     },
   };

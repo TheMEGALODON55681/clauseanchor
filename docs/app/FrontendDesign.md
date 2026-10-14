@@ -407,17 +407,16 @@ The sample contract is one option on step 1. "Try the sample contract" on the la
 
 Same route, same data logic, same components, recomposed.
 
-**Pane widths**
+**Pane widths** (measured in FE-5, 17.5 AR)
 
-| Viewport | Layout | Sheet | Text column | Capacity by width (estimate) |
+| Viewport | Layout | Sheet | Text column | Full-line average (range) |
 |---|---|---|---|---|
-| 1440 and wider | Sidebar 264, sheet, panel 384 | 708 (the space left, capped at 740) | 580 | about 74 |
-| 1280 to 1439 | Rail 64, sheet, panel 360 | 740 | 612 | about 78 |
-| 1024 to 1279 | Sheet, drawers for categories and the panel | 740 | 612 | about 78 |
-| 768 to 1023 | Sheet, drawers | 684 | 556 | about 71 |
-| Below 768 | Sheet, categories drawer, the panel as a bottom sheet | the viewport minus 32 | about 300 | 36 to 45 |
+| 1440 and wider | Sidebar 264, sheet, panel 384 | 710 | 612 | 73.2 (65 to 81) |
+| 1280 to 1439 | Rail 64, sheet, panel 360 | 710 | 612 | 73.2 (65 to 81) |
+| 768 to 1279 | Sheet, categories in a left drawer, the panel as a bottom sheet | 710 from about 790, 686 at 768 | 612 from about 790, 588 at 768 | 73.2 at 1023 and 1024, 70.3 (62 to 78) at 768 |
+| Below 768 | Sheet, categories drawer, the panel as a bottom sheet | 341 at 375 | 299 | 34.3 (24 to 42) at 375 |
 
-The sheet's side padding stays 64 px. The rail holds one icon button with a 12 px label, Categories. It opens the full sidebar as an overlay drawer, where the manual-review list is one tap away. **Rejected alternatives for 1280:** keeping the 280 px sidebar and shrinking the panel gives about 56 characters, still short, and moving the panel into a drawer removes the evidence from beside the text, which is the product's core. The figures are estimates. FE-5 measures the full-line average (2.4) at 1024, 1280, 1440 and 1920 and adjusts the sheet padding to land between 68 and 80.
+The sheet is the text column plus 48 px of padding on each side and a 1 px edge. The rail holds one icon button with a 12 px label, Categories. It opens the full sidebar as an overlay drawer, where the manual-review list is one tap away. **Rejected alternatives for 1280:** keeping the 280 px sidebar and shrinking the panel gives about 56 characters, still short, and moving the panel into a drawer removes the evidence from beside the text, which is the product's core. **Below 1280 the panel is a bottom sheet and not a right drawer** (17.5, AS): a 400 px right drawer covers the text column at 1024.
 
 **Sidebar**
 
@@ -425,21 +424,21 @@ The sheet's side padding stays 64 px. The rail holds one icon button with a 12 p
 - Category rows wrap their names and never truncate. The status icon and its text move to a second line. The count badge stays on the right.
 - The selected row takes a tint and the bracket mark ⟦, with no left stripe (3.3).
 
-**Margin ruler:** FE-5 first checks whether the short tick is a bug or by design. The target is the ledger strip: full height of the sheet, a tick at each finding at its position in the text, a click jumps to it, and the strip stays in view while scrolling.
+**Margin ruler:** a ledger strip 28 px wide, as tall as the pane and sticky, with one tick per category at its first finding and a box for the part in view. A click picks the nearest tick within 12 px. The strip is a pointer overview and is hidden from assistive technology, because keyboard users reach every finding through the marks in the text and the category list (17.5, AW).
 
-**Toolbar:** below 768, Download report stays on one line and the other actions move into the existing "..." menu. The filename is the visible heading.
+**Toolbar:** below 768, Download report stays on one line and Delete document moves into the "..." menu, which is labelled "More actions" there. A long file name cuts its base and keeps its extension. The file name is a label and not the heading: the `h1` is "Contract review", for assistive technology (17.5, AZ).
 
 **Analysing, as a designed moment.** The parsed text is already readable, so the sheet shows it at once. A slim band above the sheet shows `StageProgress` with the real counts ("Finding clauses: 18 of 46 categories"), never a percentage. As each category resolves, its row enters the sidebar (200 ms fade, 50 ms stagger) and its mark inks in on the sheet. The panel says "Nothing selected" and, once one finding exists, offers **Read the first finding** instead of selecting it for the user. Cancel stays.
 
-**Selection.** Selecting a finding scrolls it to the middle of the sheet (smooth, or instant under reduced motion) and cross-fades the panel through the View Transitions API with an instant fallback. J and K move between findings and Escape closes. The key hint line moves below the sheet from 1024 px and stays in the empty panel.
+**Selection.** Choosing a finding with the pointer scrolls it to the middle of the sheet (smooth, or instant under reduced motion) and cross-fades the panel through the View Transitions API with an instant fallback. J and K step through the findings with no motion and keep focus on the mark. Enter or Space on a mark opens it and moves focus to the panel title (17.5, AT). Escape closes. The key hint line moves below the sheet from 1024 px and stays in the empty panel.
 
 **When nothing is found (amendment C).** If every category resolves with no finding, a quiet band above the sheet reads "46 categories reviewed. No clause found at the validated threshold." That is the fixed phrase, and the band never says the contract is fine. The empty panel then offers "Open the manual review list" in place of "Read the first finding".
 
 **Reload guard (amendment D).** While a review exists, the page registers a `beforeunload` handler, because a reload ends the session and the text is gone. The browser shows its own generic prompt. The app writes no message of its own.
 
-**Large documents (amendment K).** The parser accepts up to 500,000 code points, and the mock sample is about 1,300 words. FE-5 renders a generated 500,000 code point document and checks that no main-thread task blocks for more than 200 ms while scrolling and selecting a finding. If one does, FE-5 asks for approval before adding any windowing. This is an estimate until it is measured.
+**Large documents (amendment K).** The parser accepts up to 500,000 code points, and the mock sample is about 1,300 words. FE-5 renders a generated 500,000 code point document and checks that no main-thread task blocks for more than 200 ms while scrolling and selecting a finding. If one does, FE-5 asks for approval before adding any windowing. Measured in FE-5: no task blocks for 200 ms while scrolling or selecting, with memoisation and no windowing (17.5, AV).
 
-**Parser warnings.** The parser can return `PARTIALLY_SCANNED_PDF`, `UNSUPPORTED_DOCX_FEATURE` and `EMBEDDED_OBJECT`, with `coverage.partial` set. The mock's `warnings` array is the only slot today. FE-5 reserves a notice above the sheet for those warnings, and the final wording waits for API.md (2-E). A partial parse must never read as "nothing found".
+**Parser warnings.** The parser can return `PARTIALLY_SCANNED_PDF`, `UNSUPPORTED_DOCX_FEATURE` and `EMBEDDED_OBJECT`, with `coverage.partial` set. The mock's `warnings` array is the only slot today. FE-5 shows a notice above the sheet when the document carries any warning, with interim wording that waits for API.md (2-E) (17.5, AQ). A partial parse never reads as "nothing found": the zero-findings band is not shown then.
 
 ### 6.4 How it works (`/how-it-works`)
 
@@ -518,8 +517,8 @@ The existing components keep the states `DesignSystem.md` and the gallery alread
 |---|---|---|---|
 | **Ink-in** | A finding first renders, in the hero and in the Reader | A tint and underline sweep from left to right over `--dur-ink`, built from `background-size` on the mark | The mark shows at once |
 | **Scroll reveal** | A How it works fragment or the judgment card enters the viewport | Opacity 0 to 1 and a rise of at most 12 px over `--dur-panel`, once per element | The element is never hidden |
-| **Panel** | Selecting a finding | Cross-fade through the View Transitions API, `--dur-state` | Instant |
-| **Drawer and bottom sheet** | Open or close | `transform` over `--dur-panel` | Opacity only |
+| **Panel** | Choosing a finding with the pointer, while a panel is on screen | Cross-fade of the panel only through the View Transitions API, `--dur-state`. A J or K step and an Enter on a mark are instant (17.5, AT and AU) | Instant |
+| **Drawer and bottom sheet** | Open or close | `transform` over `--dur-panel` in and `--dur-state` out | Instant, by the global rule (7.4) |
 | **Route change** | Navigating | A view transition cross-fade, `--dur-state` | Instant |
 | **Rows entering** | A category resolves | Opacity over `--dur-state`, `--stagger` between rows, capped at six rows | Instant |
 | **Hover and press** | Pointer | Colour or opacity over `--dur-press` | Same, it is not movement |
@@ -652,7 +651,7 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 | | `tailwindcss` | FE-2 | Available, not run yet |
 | | `emil-design-eng` | FE-3, FE-5 | Ran at FE-3. The hero is one explanatory run, not repeated interface motion, so its 300 ms limit does not apply |
 | Motion | `animate` | FE-2, FE-3 | Ran at FE-2 and FE-3 |
-| | `find-animation-opportunities` | FE-5 | Available, not run yet |
+| | `find-animation-opportunities` | FE-5 | Ran at the end of FE-5 over the Reader (17.5). Three overlays that appear instantly were found, none changed |
 | | `improve-animations`, `optimize-web-animations` | FE-R | Available, not run yet |
 | | `animation-vocabulary` | As needed | Reference only |
 | | `gsap`, `gsap-scrolltrigger-storytelling`, `cinematic-gsap-lenis-motion-system`, `animation-on-scroll`, `threejs` | Not used | Each adds a dependency or a banned pattern (scroll-jacking, decorative parallax) |
@@ -661,8 +660,8 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 | | `gstack-design-review`, `gstack-qa`, `gstack-qa-only` | FE-R | Not run yet |
 | | `gstack-benchmark` | FE-R | Not run yet |
 | | `gstack-design-shotgun`, `gstack-design-html` | Not used | They generate variants and files outside the allowed folders |
-| Marketing, conversion, psychology | `copywriting` | FE-1, FE-3, FE-4, FE-6 | Ran at FE-1 and FE-3, and at the end of FE-4 over the FE-4 strings (17.4, AO) |
-| | `copy-editing`, `stop-slop` | Every part with prose | `stop-slop` ran on this file and on the FE-4 strings, and again on the FE-4 copy edits. `copy-editing` ran at FE-3 and at the end of FE-4 |
+| Marketing, conversion, psychology | `copywriting` | FE-1, FE-3, FE-4, FE-5, FE-6 | Ran at FE-1 and FE-3, and at the end of FE-4 and FE-5 over each part's strings (17.4 AO, 17.5 BA) |
+| | `copy-editing`, `stop-slop` | Every part with prose | `stop-slop` ran on this file, on the FE-4 and FE-5 strings and again on their copy edits. `copy-editing` ran at FE-3, FE-4 and FE-5 |
 | | `cro` | FE-1, FE-3 | Ran |
 | | `signup` | FE-1, FE-4 | Ran at FE-1 (applied to the start flow, which has no account). Not run as a pass at FE-4 |
 | | `onboarding` | FE-1, FE-5 | Ran (applied to the first run of the reader) |
@@ -671,7 +670,7 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 | | `seo-audit` | FE-R | Titles, descriptions and headings only |
 | | `analytics`, `ab-testing` | Not used | The product collects nothing by design |
 | Prose | `stop-slop` on every user-facing string and doc | Every part | See above |
-| Code quality | `ponytail` (always on) and `/ponytail:ponytail-review` | Every part | Ran at the end of FE-1 to FE-4 |
+| Code quality | `ponytail` (always on) and `/ponytail:ponytail-review` | Every part | Ran at the end of FE-1 to FE-5 |
 | | `superpowers:test-driven-development` | FE-2 (reveal, tokens), FE-3 (fixture), FE-4 (reducer) | Ran at FE-2 and FE-3 (the fixture test, seen failing first), and at FE-4 (the reducer tests, red while the module did not exist, then green, with six mutation checks that each fail at least one test) |
 | | `superpowers:verification-before-completion` | Every part | Applied |
 | | `superpowers:systematic-debugging` | When a test fails | Not needed yet |
@@ -759,7 +758,10 @@ The runner is `node --test` (11.2). Tests sit next to the file they cover as `*.
 | FE-2 | `tokens.test.ts` | Reads `index.css` and checks every pair in 5.4, in both themes, against 4.5 or 3 |
 | FE-3 | `pages/landing/heroExamples.test.ts` | Each finding's `start` and `end` slice the excerpt through `lib/offsets.ts` to its quote. Each excerpt appears verbatim in the sample contract. Includes one example with an astral character in a fixture string to prove code point handling |
 | FE-4 | `lib/startFlow.test.ts` | 17 tests on the reducer and its helpers. A fresh flow has nothing chosen and only step 1 in reach. `maxReachableStep` at each state, including a refused file and a file still parsing. A forced step is corrected, and the `step` value reads as 1, 2 or 3 and anything else as 1. Back keeps inputs. Replacing the file resets the party and `partyNone` and keeps role and scope. A role is never preselected and choosing one does not choose a party. "None of these" counts as a decision, clears a chosen party and the reverse. A contract with no parties needs no choice. A failed parse blocks step 3. A late result for a replaced file is ignored. Each of the four refusals keeps its code. The suggested party follows the role. `nextBlocker` names what is missing on each step. `maxReachableStep` reads from it, so a step is reachable exactly when Next is open on the one before |
-| FE-5 | A measurement script, not a unit test | The full-line average, and capacity by width, at 1024, 1280, 1440 and 1920 |
+| FE-5 | `lib/authority.test.ts` | 3 tests. Each known status maps to its own fixed phrase. A value the card does not know (an empty string, `superseded`, `REVIEWED`, `not-reviewed`, `reviewed ` with a space) gets the unknown phrase and never reads as checked. No phrase is the bare word "Reviewed", and no two phrases match |
+| FE-5 | `lib/reader.test.ts` | 7 tests. `nearestMark`: a click on a tick picks it, the closer of two ticks wins and a tie takes the first, a click past 12 px from every tick picks none (the 12 and 13 px edge), and no ticks or a zero-height strip pick none. `freshDelays`: nothing new gives no delays, new ids step 0, 1, 2 in order with known ids skipped, and the stagger stops at the cap |
+| FE-5 | `tokens.test.ts`, two tests added | `--measure` is defined in px and sits in 572 to 673. The Reader and the hero sheet both read `var(--measure)` |
+| FE-5 | A measurement script, not a unit test | The full-line average at 768, 1023, 1024, 1280, 1440, 1920 and 375 (17.5, AR), and the long tasks on a 500,000 code point document (AV) |
 
 What these cannot cover is the `.tsx` layer. That is checked by the headless run, the screenshots, axe and the keyboard run at FE-R.
 
@@ -821,6 +823,11 @@ Each is deliberate and needs Aryan's sign-off through the decisions above.
 11. **The landing page gains a seventh numbered section, "Questions",** because the brief's privacy and accuracy section would otherwise carry three jobs.
 12. **The three-column margin grid starts at 1280, not 1024,** because the aside is about 80 px at 1024 and cannot hold a clause panel.
 13. **The landing page promises no report,** until 3-B confirms what the report contains. (D12)
+14. **Below 1280 the panel is a bottom sheet, not a right drawer,** because a 400 px drawer covers the text column at 1024. It replaces the drawer of item 10. (17.5, AS)
+15. **Only a pointer pick cross-fades the panel.** A J or K step and an Enter on a mark are instant, so the selection row of 7.3 is narrower than the brief. (17.5, AT)
+16. **The root is out of the panel transition,** so the page behind the panel is not captured. (17.5, AU)
+17. **The bottom sheet's header shows no title and no Close,** only Peek or Open. The panel's own heading and Close do those jobs. (17.5, AS)
+18. **The hero sheet is capped by the reading measure,** which 17.4 had left to FE-R. (17.5, AR)
 
 ---
 
@@ -1041,3 +1048,58 @@ Run again at the end of the part, on the final code:
 | The `JudgmentCard` label "Reviewed" does not say who reviewed. It needs a definition of the status first | Aryan |
 | Whether the real API accepts a sample id while uploads are on (D8) | 4-C |
 | The `/gallery` overflow at 1280 px, development only, and whether it predates FE-4 | FE-R |
+
+### 17.5 FE-5: the Reader composition and motion
+
+**Built.** The Reader is recomposed to 6.3. The contract sits on one 710 px sheet whose text column is the `--measure` token (AR). Three layout tiers say where the categories and the panel live (AS). A pick is one of three kinds, and only the pointer cross-fades the panel (AT, AU). The margin ruler is a ledger strip with a pointer overview (AW). A band above the sheet carries progress, the partial-read notice and the zero-findings line (AX). The sidebar, the toolbar and the judgment card were reworked (AP, AY and AZ), and a 500,000 code point document no longer blocks the main thread for 200 ms while scrolling or picking (AV). The part closes audit rows B1 to B6 and the focus and exit-animation items left by 17.2 (P).
+
+**Amendments**
+
+| ID | Change | Sections touched |
+|---|---|---|
+| AP | The words on a `JudgmentCard` come from `lib/authority.ts`, one phrase per status: "Checked against later judgments" (`reviewed`), "Not checked against later judgments" (`not_reviewed`), "Overruled or modified by a later judgment" (`overruled`) and "Later judgments: status unknown" for any other value. `authority_status` is a free string in the contract, with no definition in the repo, so a value the card does not know gets its own phrase and never reads as a check that was made. The default `authority` prop is `"unknown"`. This replaces the three labels of 17.4 (AC), and it ends the open item that "Reviewed" did not say who reviewed. The words are interim: they wait for Tanishq's definition of the status, then Aryan's sign-off. `DesignSystem.md` 4 holds the table | 6.3, 17.4 (AC), DesignSystem.md 4 |
+| AQ | `NoticeBanner` gains the variant `read-partial`: "ClauseAnchor could not read part of this document. Unread text has no marks, so you may miss a clause there." It shows above the sheet whenever the parsed document carries a warning, and it stays. The zero-findings line is not shown while it does, so a partial read never says "no clause found". The wording is interim and waits for the parser warning codes in API.md (2-E). It names no code, because `Document.warnings` is a list of plain strings today | 6.3 |
+| AR | One token, `--measure: 612px`, sets the reading column. The Reader sheet is `calc(var(--measure) + 98px)`: the measure, 48 px of padding on each side and a 1 px edge. It gives way to a narrow pane (`max-width: 100%`). The hero sheet takes the same token (`--hero-sheet-w` is the measure plus 90 px), so the two pages set one line. Measured full-line average in the Reader: 73.2 characters (65 to 81) at 1023, 1024, 1280, 1440 and 1920, 70.3 (62 to 78) at 768 and 34.3 (24 to 42) at 375. Hero: 75 (longest 78) from 768 to 1279 and 70.3 (longest 72) at 1280 and 1440, and the hero quote 76.7 (longest 79) from 768 to 1279. This closes B1 and B6, and it caps the hero sheet, the item 17.4 (AM) left to FE-R. `tokens.test.ts` holds two tests: the token sits in 572 to 673 px, and both pages read it. Its constants (7.83 px a character, 93 percent fill) are an estimate. An in-page canvas probe gave 8.12 px, and the measured line averages above are the evidence | 2.4, 6.1, 6.3, DesignSystem.md 3.4 |
+| AS | Three tiers. From 1440 the category list is docked at 264 px beside the panel at 384. From 1280 to 1439 a 64 px rail with one "Categories" button opens the list in a left drawer, and the panel is docked at 360. Below 1280 the panel is a bottom sheet and the categories are the left drawer. 6.3 had both as drawers below 1280, but a 400 px right drawer would cover the text column at 1024, so the panel sits at the bottom, at most 720 px wide and centred. The sheet stays mounted so it can slide out, and while it leaves it holds the panel it showed. It peeks at 168 px (the handle row and about 136 px of the panel) and opens to 78 percent of the viewport height. Its one visible control is Peek or Open, on the handle row. The panel's own heading and Close are the title and the close, and the dialog keeps its `aria-label`. The categories drawer is modal: the page behind it is `inert`, focus moves in on open and back to the button that opened it on close. This closes 17.2 (P). The bottom sheet's reduced-motion cell in 7.3 now says "Instant", which is what the global rule does. The unused `ca-drawer-up` keyframes are gone | 6.3, 7.3, 16, 17.2 (P) |
+| AT | A pick is one of three kinds. A **pointer** pick (a click on a mark, a ruler tick or a category row) scrolls smoothly and cross-fades the panel, only while a panel is on screen. A **step** (J or K) is instant and keeps focus on the mark, so the next key carries on from there. An **activate** (Enter or Space on a mark, or "Read the first finding") is instant and moves focus to the panel title. 7.3 had one cross-fade for every selection. A cross-fade per key press queues up when J is held, and a focus move on each step would drop the reader's place | 6.3, 7.3 |
+| AU | The cross-fade belongs to `.reader-panel` alone (`lib/panelTransition.ts`). While `data-vt='panel'` is set the root is out of the transition, so the browser captures the panel and not the contract's whole viewport, and the page stays live behind it. With the root in, a pointer pick on the 500,000 code point document was a task of up to 235 ms, and five of 17 passed 200 ms. With the root out, 16 tasks passed 50 ms, the longest is 182 ms and none passes 200. Route changes keep their root cross-fade. Where the API is missing, and under reduced motion, the update runs at once | 7.3, 7.4 |
+| AV | Large documents (K). No windowing was added. The cost was React work and not layout: every pick and every scroll event rendered every paragraph, because `measure` set new objects on each scroll. The fix is memoisation. `DocumentText` and each `TextBlock` are memoised, the findings that touch each block are worked out once per set of findings, the selected and hovered ids reach only the blocks that hold them, the pick callback has one identity, and `measure` keeps its old state when the marks and the viewport box are equal. The test document is the 7,862 code point sample 64 times (503,294 code points): 1,600 marks, 3,456 paragraphs, 11.8 thousand elements, 311 thousand px tall. In production React, with the main-thread tasks over 50 ms counted by a long-task observer: wheel scroll, a jump scroll and 12 J steps give none, eight pointer picks give 182 ms at most, a ruler click 181 ms. Load has one task of 278 to 314 ms over two runs, which is outside the scrolling and selecting rule. In development React the figures before and after are a jump scroll of 448 and 57 ms, J steps of 545 and 245 ms, and a load of 1,112 and 746 ms. Development React overstates the cost and is not the figure to judge by. The baseline failed the same check | 6.3 (K) |
+| AW | `MarginRuler` is a pointer overview. The strip is 28 px wide inside a 44 px click zone, as tall as the pane and sticky, with one tick per category at its first finding, placed from the rendered marks so the ticks follow wrapping. A click picks the nearest tick within 12 px (`nearestMark`, tested), so neighbouring ticks never share a hit area. The strip is hidden from assistive technology: keyboard users reach every finding through the marks in the text and the category list. B4 was not reproduced from the baseline code, which already drew a sticky strip, so the cause of the short tick in the audit capture was not isolated | 6.3 |
+| AX | The band above the sheet holds, in order, the compact progress line with Cancel while the review runs, the read-partial notice (AQ) and the zero-findings line "46 categories reviewed. No clause found at the validated threshold." (the count is `CATALOGUE.length`). The band and the sheet share a left edge: from 768 px a spacer the width of the ruler sits beside the band. The toolbar carries no progress. When the progress line leaves, the text moves up by about 40 px and relies on scroll anchoring to stay still, which was not verified | 6.3 |
+| AY | Sidebar and rows. `ScopePanel` lost its Validated, Pooled and Not validated counts and its 4 px rule (B2), and `ManualReviewList` lost its 4 px rules. A `CategoryRow` wraps its name and puts a plain status (icon and words, no border or fill) on a second line, so no name truncates (B3). `StatusChip` takes `plain` for this. Counts use tabular numerals: the count badge, the group and sidebar summaries and the progress line. `Button` does not wrap its label. A row that resolves while the review runs fades in over `--dur-state` with `--stagger` between rows, at most six steps, through `.ca-enter` and `--enter-step` (`freshDelays`, tested). A finished or reopened review draws every row at once. A mark on its own text inks in when it first draws, and keeps the class when selected, so a selection never replays the sweep | 6.3, 7.3, DesignSystem.md 3.3, 3.5, 6 |
+| AZ | Toolbar. A long file name cuts its base and keeps its extension, with the whole name in `title`. Below 768 px "Delete document" is in the "..." menu, which is labelled "More actions" there and "Change your role" from 768 px, and Download report keeps its line (B5). The `h1` and the page title were already in place from FE-2. 6.3 planned the file name as the visible heading, and it stays a label, so the toolbar keeps one row | 6.3 |
+| BA | Copy. The strings new in this part went through `copywriting`, `copy-editing` and `stop-slop`: the four authority phrases (AP), the read-partial notice (AQ), the zero-findings line (AX), "Read the first finding", "Open the manual review list", "More actions", "Show categories" (the label of the drawer button), the rail label "Categories" and the hint line "J next finding, K previous, Esc close". Changed: the authority phrases were "Later judgments checked", "Later judgments not checked" and "Later overruled or modified", fragments whose third read as "later was overruled". The notice was "Part of this document could not be read. Text that was not read has no marks, so a clause in it may be missed.", two passives. The edit that `stop-slop` asked for was checked against its rules again. Left as written: the zero-findings line (the fixed phrase of `DesignSystem.md` 4 with a count), both buttons, "More actions", "Categories", "Show categories" and the hint line. The `/how-it-works` sentence on case law said each passage shows "whether it has been reviewed". It now says "whether it was checked against later judgments, and whether a later judgment overruled or modified it", so the page and the card agree | 8.3, 17.4 (AO) |
+
+**Rules for the next parts.** Keep the pick kind (`pointer`, `step`, `activate`) as an argument of `choose`, because the motion and the focus both hang on it. Give a new component that renders per paragraph the same care as `TextBlock`: pass it only the props that change for the blocks that hold them, and keep callbacks at one identity. Judge render cost on production React. A development build of React is several times slower and led to the wrong fix first.
+
+**What was checked.** Measured in this part, in headless Edge over the DevTools protocol against the dev server, extensions disabled. The 500,000 code point run used production React, served by the Vite dev server with `NODE_ENV=production`, because the probe patches the client module in the page and a built bundle cannot be patched.
+
+- The probe at 1024 with motion on: a first pointer pick with the sheet closed starts no transition. A pick with the panel showing starts one. J starts none and leaves focus on the mark. Enter on a mark leaves focus on `#detail-panel-title`. On exit the sheet holds its content, then turns `visibility: hidden`. The categories drawer holds focus inside it, makes one element `inert`, and returns focus to `#open-categories`. No horizontal overflow at 1440, 1280, 1024, 768 and 375.
+- A mid-transition probe at 1440 and 1024, with `--dur-state` set to 3 s: the only animations are the group, old and new pseudo-elements of `reader-panel`, none on the root. `data-vt` is set during the transition and gone at its end. The article stays laid out and the scroll position does not move. A capture halfway shows the old and the new panel text blended while the sidebar and the sheet already show the new selection.
+- The bands, with a patched client: the zero-findings line, the partial-read notice and the running progress line render the right content at 1440 light and 375 dark, with no overflow.
+- The longest authority phrase measures 241 px at 1440 and 247 px at 1280 and 375, and wraps nowhere on the Gallery. The key hint line shows from 1024 px and is gone below.
+- The console is empty on every run.
+- Captures: `frontend/.screens/FE-5/`, gitignored. The Reader, a selected finding and the landing page at 375, 768, 1024, 1280 and 1440 px in both themes, the three bands, the mid-transition frames, and the 500,000 code point document at load and mid-scroll (`reader-large-500k-light-1440`).
+- `/ponytail:ponytail-review` over the full FE-5 diff. No P1. Fixed, two: `panelTransition.ts` typed `startViewTransition` by hand and TypeScript 5.9 ships the type, and a JavaScript media query drove one line of hint text that `hidden lg:flex` does. About 8 lines out. Kept, five: `progress={null}` on `ReaderToolbar` means "draw none", where the Gallery's analysing state draws the default. `freshDelays` takes a cap that one caller leaves at its default, and a constant saves no lines. `MarginRuler` keeps its variants and fixtures, which the Gallery draws. The second `tokens.test.ts` test only checks that a source file names the token, and it fails when either page stops reading it. `Math.max(1, ...nodes)` for the page count is baseline code, fine to about 100,000 nodes where the document limit gives about 3,600.
+- `find-animation-opportunities`, read-only, over the Reader and the components it mounts. Three survive the gate, and all three are occasional overlays that appear with no bridge. `ConfirmDialog` (the delete confirmation): the backdrop fades in over `--dur-state` and the card goes from `opacity: 0` and `scale(0.97)` to rest over `--dur-state` with `--ease-out`, from the centre, and it leaves at once. `DropdownMenu`: the menu goes from `opacity: 0` and `scale(0.96)` to rest over 150 ms with `--ease-out`, with `transform-origin` at the top right where the trigger is, and it leaves at once. `Toast`: the existing `ca-rise` over `--dur-state`, leaving at once. None is built in this part, because none sits in the Reader's reading path and all three components belong to FE-2. Rejected: a press scale on `Button` (it already drops 1 px and loses its shadow), the J and K step and Enter on a mark (keyboard, 100 or more a day), the progress line leaving (moving text for style, and scroll anchoring keeps the place), "View full passage" (it needs a height animation, which 3.5 rules out, and an opacity fade alone does not bridge the push on the rows below), `ErrorCard` (an alert, so urgent), and the selected ruler tick (it animates `left` and `width`, which are layout properties).
+
+Run again at the end of the part, on the final code:
+
+- `pnpm typecheck` exit 0, `pnpm test` 49 of 49 (7 reveal, 10 tokens, 5 hero fixture, 17 start flow, 3 authority, 7 reader) and `pnpm build` 168 modules with no warnings. The Reader chunk is 50.16 kB (14.85 kB gzipped, up from 45.58 and 13.46 at FE-4), the index chunk 240.12 kB (72.95 gzipped, up from 239.45 and 72.66) and the stylesheet 31.33 kB (7.76 gzipped).
+
+**Open, not measured.** LCP and CLS for `/` (FE-R). The contrast of the plain status text on the sunken sidebar and on the selected `anchor-100` row, which was reasoned and not computed. The 40 px shift when the progress line leaves (AX). The hero quote column, which sets 25.9 characters a line at 1280 and 1440 px beside a 320 px panel: it is the panel's width, and it was not examined.
+
+**Deferred, with the owner**
+
+| Item | Owner |
+|---|---|
+| LCP and CLS for `/` | FE-R |
+| The 4 px rule on `ErrorCard`, `Toast` and `PerformanceTableRow` | FE-6 |
+| Tabular numerals on `MetricCell` | FE-6 |
+| The words and the colours of the authority status, and its definition in the contract | Tanishq, then Aryan |
+| Parser warning wording and codes | 2-E (API.md) |
+| Whether the real API accepts a sample id while uploads are on (D8) | 4-C |
+| The `/gallery` overflow at 1280 and 375 px, development only. At 375 the cause is its two 520 px specimen panes, in code FE-5 did not change. At 1280 it was not examined | FE-R |
+| Contrast of the plain status on sunken and `anchor-100` surfaces, added to `tokens.test.ts` | FE-R |
+| The hero ruler wrapper that stretches its child (`[&>div]:flex-1` in `HeroDemo.tsx`), not examined | FE-R |
+| Enter motion for `ConfirmDialog`, `DropdownMenu` and `Toast`, from the animation sweep above. About 15 lines of CSS, if Aryan asks | FE-6 |

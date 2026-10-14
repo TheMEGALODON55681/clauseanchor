@@ -45,7 +45,7 @@ export default function CategoryGroupHeader({
         {label}
       </span>
       {summary && (
-        <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--ink-tertiary)" }}>{summary}</span>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--ink-tertiary)", fontVariantNumeric: "tabular-nums" }}>{summary}</span>
       )}
     </button>
   );

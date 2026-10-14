@@ -1,8 +1,8 @@
 import { useState } from "react";
 import Button from "./Button";
 import { IndexCardIcon, ExternalIcon } from "./icons";
+import { AUTHORITY_PHRASE, type Authority } from "../lib/authority";
 
-export type Authority = "not-reviewed" | "reviewed" | "overruled";
 export type JudgmentState = "collapsed" | "expanded" | "hover" | "focus" | "empty";
 
 type JudgmentCardProps = {
@@ -11,25 +11,13 @@ type JudgmentCardProps = {
   passage?: { caseName: string; court: string; year: number | null; citation: string; text: string; sourceUrl?: string };
 };
 
-const AUTHORITY: Record<Authority, { label: string; fg: string; bg: string; border: string }> = {
-  "not-reviewed": {
-    label: "Not yet reviewed",
-    fg: "var(--polarity-neutral-fg)",
-    bg: "var(--polarity-neutral-bg)",
-    border: "var(--rule-default)",
-  },
-  reviewed: {
-    label: "Reviewed",
-    fg: "var(--status-found-fg)",
-    bg: "var(--status-found-bg)",
-    border: "var(--status-found-border)",
-  },
-  overruled: {
-    label: "Later overruled or modified",
-    fg: "var(--status-review-fg)",
-    bg: "var(--status-review-bg)",
-    border: "var(--status-review-border)",
-  },
+/* The words come from lib/authority.ts. This table is only the colours. */
+const NEUTRAL = { fg: "var(--polarity-neutral-fg)", bg: "var(--polarity-neutral-bg)", border: "var(--rule-default)" };
+const AUTHORITY: Record<Authority, { fg: string; bg: string; border: string }> = {
+  not_reviewed: NEUTRAL,
+  unknown: NEUTRAL,
+  reviewed: { fg: "var(--status-found-fg)", bg: "var(--status-found-bg)", border: "var(--status-found-border)" },
+  overruled: { fg: "var(--status-review-fg)", bg: "var(--status-review-bg)", border: "var(--status-review-border)" },
 };
 
 const PASSAGE =
@@ -37,7 +25,7 @@ const PASSAGE =
 const EXTRA =
   " The burden of showing that the restriction is reasonable rests on the party seeking to enforce it, and any doubt is resolved in favour of the freedom to trade.";
 
-export default function JudgmentCard({ state = "collapsed", authority = "not-reviewed", passage }: JudgmentCardProps) {
+export default function JudgmentCard({ state = "collapsed", authority = "unknown", passage }: JudgmentCardProps) {
   const [expanded, setExpanded] = useState(state === "expanded");
   const isExpanded = state === "expanded" || expanded;
   const auth = AUTHORITY[authority];
@@ -174,7 +162,7 @@ export default function JudgmentCard({ state = "collapsed", authority = "not-rev
               padding: "2px 8px",
             }}
           >
-            {auth.label}
+            {AUTHORITY_PHRASE[authority]}
           </span>
           <div className="flex items-center gap-1">
             <Button variant="tertiary" size="s" onClick={() => setExpanded((v) => !v)}>

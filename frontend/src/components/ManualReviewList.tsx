@@ -60,8 +60,6 @@ export function ManualReviewItem({ item, onGo }: { item: ManualItem; onGo?: (id:
       style={{
         background: unavailable ? "var(--status-unavailable-bg)" : "var(--paper-sheet)",
         border: `1px solid ${unavailable ? "var(--status-unavailable-border)" : "var(--rule-default)"}`,
-        borderLeftWidth: 4,
-        borderLeftColor: unavailable ? "var(--status-unavailable-fg)" : "var(--rule-strong)",
         borderRadius: "var(--radius-md)",
         padding: "12px 14px",
         display: "flex",
@@ -138,8 +136,6 @@ export default function ManualReviewList({
           style={{
             background: "var(--status-review-bg)",
             border: "1px solid var(--status-review-border)",
-            borderLeftWidth: 4,
-            borderLeftColor: "var(--status-review-fg)",
             borderRadius: "var(--radius-md)",
             padding: "12px 14px",
             display: "flex",

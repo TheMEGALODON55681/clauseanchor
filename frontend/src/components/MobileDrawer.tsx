@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { DragHandleIcon } from "./icons";
 
@@ -15,7 +16,7 @@ type MobileDrawerProps = {
   size?: number | string;
   /** Header controls, such as Peek, Open and Close. */
   actions?: ReactNode;
-  /** Fixed to the viewport with a backdrop that closes on click. */
+  /** Fixed to the viewport. A left drawer is modal: it has a backdrop that closes on click, takes focus on open and gives it back on close. */
   onBackdrop?: () => void;
   fixed?: boolean;
 };
@@ -36,22 +37,39 @@ export default function MobileDrawer({
 }: MobileDrawerProps) {
   const bottom = side === "bottom";
   const closed = state === "closed";
+  const modal = fixed && !bottom;
+  const dialog = useRef<HTMLDivElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
 
-  /* The fixed drawer stays mounted and slides on transform only, so it can animate out.
-     The gallery frame shows static states. */
+  /* Focus. A modal drawer takes focus when it opens. Either kind gives it back to what was focused
+     before when it closes, if focus is still inside it or has been dropped. */
+  useEffect(() => {
+    if (!fixed) return;
+    if (!closed) {
+      opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      if (modal) dialog.current?.focus({ preventScroll: true });
+      return;
+    }
+    const back = opener.current;
+    opener.current = null;
+    const now = document.activeElement;
+    if (back?.isConnected && (!now || now === document.body || dialog.current?.contains(now))) back.focus({ preventScroll: true });
+  }, [closed, fixed, modal]);
+
+  /* The fixed drawer stays mounted and slides on transform only, so it can animate out, and it
+     leaves faster than it arrives. The gallery frame shows static states. */
   const slide = bottom
     ? { open: "translateY(0)", peek: `translateY(calc(100% - ${PEEK_PX}px))`, closed: "translateY(100%)" }
     : { open: "translateX(0)", peek: "translateX(0)", closed: "translateX(-100%)" };
   const fixedStyle = {
     ...(bottom
-      ? { left: 0, right: 0, bottom: 0, height: size ?? "78dvh", borderTopLeftRadius: 14, borderTopRightRadius: 14 }
+      ? { left: 0, right: 0, marginInline: "auto", width: "min(100%, 720px)", bottom: 0, height: size ?? "78dvh", borderTopLeftRadius: 14, borderTopRightRadius: 14 }
       : { left: 0, top: 0, bottom: 0, width: size ?? 260, borderTopRightRadius: 14, borderBottomRightRadius: 14 }),
     transform: slide[state],
     visibility: closed ? ("hidden" as const) : ("visible" as const),
-    transition: `transform var(--dur-panel) ${closed ? "var(--ease-exit)" : "var(--ease-out)"}, visibility 0s linear ${closed ? "var(--dur-panel)" : "0s"}`,
+    transition: `transform var(--${closed ? "dur-state" : "dur-panel"}) ${closed ? "var(--ease-exit)" : "var(--ease-out)"}, visibility 0s linear ${closed ? "var(--dur-state)" : "0s"}`,
     display: "flex",
     flexDirection: "column" as const,
-    animation: bottom ? "ca-drawer-up var(--dur-panel) var(--ease-out)" : undefined,
   };
   const framedHeight = bottom ? (size ?? (state === "peek" ? 140 : state === "open" ? 360 : 0)) : 480;
   const framedWidth = bottom ? 320 : closed ? 0 : (size ?? 260);
@@ -64,10 +82,12 @@ export default function MobileDrawer({
 
   const panel = (
     <div
+      ref={dialog}
       role="dialog"
       aria-label={title}
-      aria-modal={fixed && !bottom ? true : undefined}
+      aria-modal={modal ? true : undefined}
       aria-hidden={fixed && closed ? true : undefined}
+      tabIndex={modal ? -1 : undefined}
       style={{
         position: "absolute",
         ...(fixed ? fixedStyle : framedStyle),
@@ -79,14 +99,16 @@ export default function MobileDrawer({
       }}
     >
       {bottom && (
-        <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px", color: "var(--ink-tertiary)" }}>
+        <div style={{ position: "relative", display: "flex", justifyContent: "center", padding: "8px 0 4px", color: "var(--ink-tertiary)" }}>
           <DragHandleIcon size={20} />
+          {/* A bottom sheet holds a panel that already heads itself, so its title is only the dialog name and its controls share the handle row. */}
+          {fixed && actions && <div style={{ position: "absolute", right: 12, top: 0 }}>{actions}</div>}
         </div>
       )}
       {fixed ? (
         <>
-          {(title || actions) && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: bottom ? "0 12px 8px 16px" : "12px 12px 8px 16px" }}>
+          {!bottom && (title || actions) && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 12px 8px 16px" }}>
               <div style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 600, color: "var(--ink-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
               {actions}
             </div>
@@ -117,7 +139,7 @@ export default function MobileDrawer({
               background: "rgba(27,31,36,0.3)",
               opacity: closed ? 0 : 1,
               pointerEvents: closed ? "none" : "auto",
-              transition: `opacity var(--dur-panel) ${closed ? "var(--ease-exit)" : "var(--ease-out)"}`,
+              transition: `opacity var(--${closed ? "dur-state" : "dur-panel"}) ${closed ? "var(--ease-exit)" : "var(--ease-out)"}`,
             }}
           />
         )}

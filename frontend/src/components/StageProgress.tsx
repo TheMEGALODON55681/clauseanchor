@@ -59,10 +59,15 @@ export default function StageProgress({
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 8 }} aria-live="polite">
         <Marker state={active.state} />
-        <span style={{ fontSize: 13, color: "var(--ink-secondary)" }}>
+        <span style={{ fontSize: 13, color: "var(--ink-secondary)", fontVariantNumeric: "tabular-nums" }}>
           {active.label}
           {active.detail ? `: ${active.detail}` : ""}
         </span>
+        {showCancel && onCancel && (
+          <Button variant="tertiary" size="s" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
       </div>
     );
   }

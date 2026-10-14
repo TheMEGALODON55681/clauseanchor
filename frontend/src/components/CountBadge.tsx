@@ -14,6 +14,7 @@ export default function CountBadge({ count = 1, tone = "neutral" }: { count?: nu
         borderRadius: 999,
         fontFamily: "var(--font-mono)",
         fontSize: 12,
+        fontVariantNumeric: "tabular-nums",
         lineHeight: 1,
         color: anchor ? "var(--paper-sheet)" : "var(--ink-secondary)",
         background: anchor ? "var(--anchor-600)" : "var(--paper-sunken)",

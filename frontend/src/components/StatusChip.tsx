@@ -18,6 +18,8 @@ export type ChipSize = "s" | "m";
 type StatusChipProps = {
   status: StatusKind;
   size?: ChipSize;
+  /** Icon and text only, with no border or fill, for a row that has its own surface. */
+  plain?: boolean;
 };
 
 const CONFIG: Record<
@@ -71,7 +73,7 @@ const CONFIG: Record<
   },
 };
 
-export default function StatusChip({ status, size = "m" }: StatusChipProps) {
+export default function StatusChip({ status, size = "m", plain = false }: StatusChipProps) {
   const cfg = CONFIG[status];
   const iconSize = size === "s" ? 14 : 16;
   return (
@@ -79,9 +81,10 @@ export default function StatusChip({ status, size = "m" }: StatusChipProps) {
       className="inline-flex items-center gap-1.5 font-sans font-medium whitespace-nowrap"
       style={{
         ...cfg.style,
+        ...(plain ? { background: "transparent", border: "none" } : {}),
         borderRadius: "var(--radius-sm)",
-        paddingInline: size === "s" ? 6 : 8,
-        paddingBlock: size === "s" ? 2 : 4,
+        paddingInline: plain ? 0 : size === "s" ? 6 : 8,
+        paddingBlock: plain ? 0 : size === "s" ? 2 : 4,
         fontSize: size === "s" ? 12 : 14,
         letterSpacing: size === "s" ? "0.02em" : 0,
         lineHeight: 1.2,

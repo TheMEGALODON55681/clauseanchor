@@ -478,3 +478,54 @@ Found along the way. Fixed: "Start review" called `startAnalysis` once per click
 Blockers: none. Aryan's call: whether the hero sheet and quote should be capped too (one cap on the sheet), and the `JudgmentCard` label "Reviewed", which does not say who reviewed.
 
 Next action: commit FE-4 with `feat(frontend): add stepped review start flow`, then reply `next` to start FE-5 (the Reader recomposition).
+
+
+## 2026-10-14: Part FE-5, the Reader composition and motion
+
+Part: FE-5 (frontend track). Files changed under `frontend/` and `docs/app/`. `README.md` needed no change: no command or route moved. Part 1-B stays paused at Aryan's request. No dependency was added.
+
+Files changed:
+- New under `frontend/`: `src/lib/authority.ts` (one phrase per authority status) and `authority.test.ts` (3 tests), `src/lib/reader.ts` (`nearestMark`, `freshDelays`) and `reader.test.ts` (7 tests), `src/lib/panelTransition.ts` (a state update inside a view transition of the panel only).
+- Rewritten: `src/pages/Reader.tsx` (layout tiers, pick kinds, the band, the memoised document text), `src/components/MarginRuler.tsx` (a pointer overview strip).
+- Components: `MobileDrawer` (the sheet stays mounted and holds its content while it leaves, focus in and back on a modal drawer, Peek or Open on the handle row), `CategoryRow` (a wrapped name, a plain status on a second line, an entry step), `CategorySidebar`, `CategoryGroupHeader`, `CountBadge`, `StageProgress` (Cancel in the compact line, tabular numerals), `StatusChip` (`plain`), `ScopePanel` (the mock counts and the 4 px rule are gone), `ManualReviewList` (the 4 px rules are gone), `JudgmentCard` (phrases from `lib/authority.ts`), `NoticeBanner` (the `read-partial` variant), `ReaderToolbar` (the file name keeps its extension, `showDelete`), `Button` (no label wrapping).
+- Pages: `pages/HowItWorks.tsx` (one sentence on case law, so the page matches the card), `pages/landing/Evidence.tsx` (the `Authority` type import), `pages/landing/HeroDemo.tsx` (the quote takes the measure).
+- `src/index.css`: `--measure`, `.reader-sheet`, the hero sheet width, `.ca-enter`, the panel transition rules. The unused `ca-drawer-up` keyframes are gone.
+- `src/tokens.test.ts`: two tests added for the measure.
+- Docs: `Phases.md` (FE-5 ticked, deviations), `Architecture.md` (two decision rows, the tests row, the tree), `FrontendDesign.md` (6.3, 7.3, the skills rows in 10, the FE-5 test rows in 13, deviations 14 to 18 in 16, new 17.5 with amendments AP to BA), `DesignSystem.md` (3.4, 3.5, the authority table in 4, section 6).
+
+Method. Every figure below ran in headless Edge over the DevTools protocol, extensions disabled, against the Vite dev server. The 500,000 code point run used production React: the probe patches the client module in the page, so a built bundle could not be used, and the server ran with `NODE_ENV=production` instead. Development React overstated the cost several times over and led to the wrong fix first. The capture and probe scripts live outside the repo. Python is not installed.
+
+Skills that ran: `copywriting`, `copy-editing`, then `stop-slop` over the new strings, with the one edit `stop-slop` asked for checked against its rules again (17.5, BA). `find-animation-opportunities`, read-only over the Reader (17.5). `/ponytail:ponytail-review` over the full diff (below). `superpowers:verification-before-completion`. Not recorded as run in this part: `frontend-design`, `emil-design-eng` and `onboarding`, which section 10 lists for FE-5.
+
+Decisions: none were needed. The calls that are Aryan's are in Blockers.
+
+Deviations from the plan, each recorded in 17.5:
+- AS: below 1280 px the panel is a bottom sheet and not a right drawer. A 400 px drawer covers the text column at 1024. The sheet's header carries only Peek or Open.
+- AT and AU: only a pointer pick cross-fades the panel, and the root is out of that transition.
+- AR: the hero sheet is capped by the same measure token, which 17.4 had left to FE-R.
+- AP and AQ: the authority phrases and the partial-read notice are interim wording, waiting for a definition of `authority_status` and for the parser codes in API.md.
+- AW: B4 (the short ruler tick) was not reproduced from the baseline code, so its cause stays open.
+
+Large documents (K). The 500,000 code point document (the 7,862 code point sample 64 times: 503,294 code points, 1,600 marks, 3,456 paragraphs, 311 thousand px tall) failed the 200 ms rule at the baseline, so this is not a regression of FE-5. Cause: every pick and every scroll event rendered every paragraph, because `measure` set new objects on each scroll event. No windowing was added, so no approval was needed. The fix is memoisation (17.5, AV). In production React, tasks over 50 ms: wheel scroll 0, jump scroll 0, 12 J steps 0, eight pointer picks 16 tasks with 182 ms the longest and none over 200, a ruler click 181 ms. The load has a longest task of 278 to 314 ms over two runs, outside the scrolling and selecting rule. Before the root was taken out of the panel transition, a pointer pick reached 235 ms and five of 17 tasks passed 200 ms. With reduced motion, so no transition, the longest was 78 ms.
+
+Measure. One `--measure` token, 612 px. Full-line average in the Reader: 73.2 characters (65 to 81) at 1023, 1024, 1280, 1440 and 1920, 70.3 at 768, 34.3 at 375. Hero: 75 (longest 78) from 768 to 1279, 70.3 at 1280 and 1440. The earlier estimate in `tokens.test.ts` (7.83 px a character) and the in-page canvas probe (8.12) disagree, and the measured line averages are the evidence.
+
+Verification. Run fresh on the final code:
+- `pnpm typecheck`: exit 0. `pnpm test`: 49 of 49 pass (7 reveal, 10 tokens, 5 hero fixture, 17 flow, 3 authority, 7 reader), 0 failed, 0 skipped. `pnpm build`: 168 modules, exit 0, no warning.
+- Bundle: the Reader chunk is 50.16 kB (14.85 kB gzipped), up from 45.58 and 13.46 at FE-4. The index chunk is 240.12 kB (72.95 kB gzipped), up from 239.45 and 72.66. The stylesheet is 31.33 kB (7.76 kB gzipped).
+- The probe at 1024 with motion on: no transition for a first pick with the sheet closed, one for a pick with the panel showing, none for J (focus stays on the mark), focus on `#detail-panel-title` after Enter, the sheet holds its content while it exits, the categories drawer takes focus, makes one element `inert` and gives focus back to `#open-categories`. No horizontal overflow at 1440, 1280, 1024, 768 and 375.
+- The mid-transition probe at 1440 and 1024, with `--dur-state` at 3 s: the only animations are on `reader-panel`, none on the root. `data-vt` is cleared at the end. The page stays live behind it.
+- The three bands render the right content at 1440 light and 375 dark, with no overflow. The longest authority phrase does not wrap at 1440, 1280 and 375. The key hint shows from 1024 px.
+- The console is empty on every run.
+
+Not verified: LCP and CLS for `/` (FE-R). The contrast of the plain status text on the sunken sidebar and on the selected `anchor-100` row, which was reasoned and not computed. The 40 px shift when the progress line leaves, which relies on scroll anchoring. The hero quote column, 25.9 characters a line at 1280 and 1440 px beside a 320 px panel. The `Math.max(1, ...nodes)` page count, fine at the 3,600 nodes the document limit gives. A pixel comparison against the FE-4 captures, which would show the recomposition and not a regression.
+
+Screenshots: `frontend/.screens/FE-5/`, gitignored. The Reader, a selected finding and the landing page at 375, 768, 1024, 1280 and 1440 px in light and dark, the three bands, the mid-transition frames at 1440 and 1024, and the 500,000 code point document at load and mid-scroll.
+
+ponytail-review over the full FE-5 diff. No P1. Fixed, two: `panelTransition.ts` typed `startViewTransition` by hand, and TypeScript 5.9 ships the type. A JavaScript media query drove one hint line, which is now `hidden lg:flex`. About 8 lines out. Kept, five: `progress={null}` on `ReaderToolbar` means "draw none", where the Gallery's analysing state draws the default. `freshDelays` takes a cap that its one caller leaves at the default, and a constant saves no lines. `MarginRuler` keeps its variants and fixtures for the Gallery. The second `tokens.test.ts` test only checks that two source files name the token. `Math.max(1, ...nodes)` is baseline code.
+
+Found along the way. Fixed: the `/how-it-works` page said each passage shows "whether it has been reviewed", which the card no longer says. Not fixed: the `/gallery` overflow at 375 px has its cause in the two 520 px specimen panes (code FE-5 did not touch), and at 1280 px it was not examined. The development-only Preview controls button sits over the last sidebar row and the bottom-left of the sheet in captures. It is development only.
+
+Blockers: none. Aryan's call: the authority wording (AP), whether the hero sheet cap in AR is what was wanted, whether the enter motion for the delete confirmation, the menu and the toast (17.5) belongs in FE-6, and the partial-read wording once API.md has the warning codes.
+
+Next action: commit FE-5 with `refactor(frontend): recompose reader with motion`, then reply `next` to start FE-6 (How it works, Accuracy, Expired, NotFound).

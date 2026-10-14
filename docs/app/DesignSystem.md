@@ -143,11 +143,11 @@ Type scale (sizes in px, line height in px):
 | `citation` | Source Serif 4, 500 small caps | 13 / 20 | 3% | Case citations |
 | `mono/sm` | IBM Plex Mono, 400 | 12 / 18 | 0 | Offsets like `4210 to 4488`, hashes |
 
-Contract reading measure: **68 to 80 characters per line**. Never justify contract text; left-align it.
+Contract reading measure: **68 to 80 characters per line**. Never justify contract text; left-align it. One token holds it: `--measure` is 612px, the text column of the Reader sheet and of the hero sheet. The Reader sheet is `calc(var(--measure) + 98px)` (the measure, 48px of padding each side and a 1px edge) and gives way to a narrow pane. Measured full lines in the Reader average 73.2 characters (65 to 81) from 1024 to 1920px (FrontendDesign.md 17.5, AR).
 
-Hero subline measure: capped at `66ch` (`max-w-[66ch]`), which gives a longest line of 71 characters from 768 to 1440 px. A cap of 68ch left a 75 character line. The hero heading needs none, and the sample sheet and quote in the hero are not capped (FrontendDesign.md 17.4, AM).
+Hero subline measure: capped at `66ch` (`max-w-[66ch]`), which gives a longest line of 71 characters from 768 to 1440 px. A cap of 68ch left a 75 character line. The hero heading needs none. The hero sheet and its quote take the reading measure above, and run 75 characters on a full line from 768 to 1279px (FrontendDesign.md 17.4, AM, and 17.5, AR).
 
-**12 px is the floor.** Nothing in the app renders below it. The classes are `t-display-xl`, `t-display-md`, `t-overline`, `t-section-mark`, `t-marginal-note` and `t-prose-lg` in `index.css`. The mono kicker is retired. `section-mark` sets tabular figures. Counts and metric cells do not yet, and FE-4 and FE-6 add `font-variant-numeric: tabular-nums` where numbers must align in a column.
+**12 px is the floor.** Nothing in the app renders below it. The classes are `t-display-xl`, `t-display-md`, `t-overline`, `t-section-mark`, `t-marginal-note` and `t-prose-lg` in `index.css`. The mono kicker is retired. `section-mark` sets tabular figures. So do the Reader's counts (the count badge, the group and sidebar summaries and the progress line) from FE-5. Metric cells do not yet, and FE-6 adds `font-variant-numeric: tabular-nums` where numbers must align in a column.
 
 **Heading rhythm in long-form text.** A heading sits closer to what it introduces than to what precedes it. Inside a `.flow` container an `h2` has 48 px above and 16 px below, an `h3` has 32 px above and 12 px below, and the first child has no top margin.
 
@@ -156,7 +156,7 @@ Hero subline measure: capped at `66ch` (`max-w-[66ch]`), which gives a longest l
 - **Spacing:** 4px base. Tokens `space/1` = 4 through `space/12` = 48, plus `space/16` = 64, `space/24` = 96 and `space/32` = 128. The last two have no CSS token, because Tailwind derives `py-24` and `py-32` from `--spacing`.
 - **Radius:** `radius/sm` 4px (chips, inputs), `radius/md` 6px (buttons, cards), `radius/lg` 10px (panels, modals). **No full pill shapes** except the tiny count badge.
 - **Elevation:** paper-like, almost flat. `elevation/1`: 0 1px 0 `rule/default` (a printed edge). `elevation/2`: 0 2px 8px rgba(27,31,36,0.06). `elevation/3` (modals only): 0 12px 32px rgba(27,31,36,0.12). No glows.
-- **Borders:** 1px `rule/default` by default. Emphasis via a **4px left rule** in a semantic color (the "margin rule"), used on notices (`NoticeBanner`), rule-flag cards (`RuleFlagCard`) and judgment cards (`JudgmentCard`), where it marks a different voice. Controls take `control-border`. `ErrorCard`, `Toast`, `ScopePanel`, `ManualReviewList` and `PerformanceTableRow` still carry the baseline 4px rule. FE-5 and FE-6 remove it from the ones they recompose. `RadioCard` and `PartyBindingField` lost it in FE-4. A chosen choice card takes a 2px `anchor/600` border and a tint instead.
+- **Borders:** 1px `rule/default` by default. Emphasis via a **4px left rule** in a semantic color (the "margin rule"), used on notices (`NoticeBanner`), rule-flag cards (`RuleFlagCard`) and judgment cards (`JudgmentCard`), where it marks a different voice. Controls take `control-border`. `ErrorCard`, `Toast` and `PerformanceTableRow` still carry the baseline 4px rule, and FE-6 removes it. `ScopePanel` and `ManualReviewList` lost it in FE-5, and `RadioCard` and `PartyBindingField` in FE-4. A chosen choice card takes a 2px `anchor/600` border and a tint instead.
 - **Grid:** the marketing grid is the margin grid in section 6: a 9rem margin column, a 42rem main column and an aside, in a page 1200px wide. The Reader keeps its three panes: left sidebar 280px, document column max 760px, right detail panel 400px. FE-5 sets the Reader widths below 1440. Mobile is one column with 16px side gutters.
 - **Touch targets:** a hit area of at least 44 x 44 px on every interactive element, reached with padding or the `.hit` class (a 44px `::after` centred on the control). The button sizes S 32, M 40 and L 48 are visual sizes. Neighbouring hit areas do not overlap.
 - **Focus:** one rule in `index.css`: `:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px }`. Components carry no focus code of their own. `.focus-inset` pulls the ring inside for full-width rows. Programmatic focus on a heading or on `main` (`tabindex="-1"`) shows no ring.
@@ -169,11 +169,11 @@ Hero subline measure: capped at `66ch` (`max-w-[66ch]`), which gives a longest l
   | `--dur-press` | 120ms | Hover and press |
   | `--dur-state` | 200ms | A state change, a chevron turning, a route cross-fade |
   | `--dur-panel` | 320ms | Panels, drawers, scroll reveals |
-  | `--dur-ink` | 400ms | The ink-in sweep on a mark (`.ca-ink`, used by the landing hero and by the Reader from FE-5) |
-  | `--stagger` | 50ms | Delay between siblings (first used for the Reader's rows entering, FE-5) |
+  | `--dur-ink` | 400ms | The ink-in sweep on a mark (`.ca-ink`, used by the landing hero and by the Reader) |
+  | `--stagger` | 50ms | Delay between siblings (the Reader's rows entering, at most six steps) |
 
   Animate `transform` and `opacity` only. One `prefers-reduced-motion` block at the end of `index.css` shortens every animation and transition to near zero, switches the route cross-fade off, and keeps the slow opacity fade on the spinner. Scroll behaviour is instant under it.
-- **Widths:** `--w-page` 1200px, `--w-main` 42rem, `--w-margin` 9rem.
+- **Widths:** `--w-page` 1200px, `--w-main` 42rem, `--w-margin` 9rem, and `--measure` 612px for a line of contract text (3.4).
 
 ### 3.6 Iconography
 
@@ -203,6 +203,17 @@ Fixed phrases (use exactly, sentence case):
 - "Your contract is processed in memory and deleted within 60 minutes."
 - "Sample mode: showing a prepared example. Uploads are turned off."
 
+Judgment authority status. The card shows one phrase for the status of a passage (FrontendDesign.md 17.5, AP). The words are interim and wait for a definition of `authority_status` in the contract.
+
+| Status value | Phrase | Colour |
+|---|---|---|
+| `reviewed` | Checked against later judgments | found |
+| `not_reviewed` | Not checked against later judgments | neutral |
+| `overruled` | Overruled or modified by a later judgment | review |
+| any other value | Later judgments: status unknown | neutral |
+
+A card never says "Reviewed" on its own, because that does not say who reviewed or against what.
+
 Buttons use verb-first sentence case: "Upload contract", "Start review", "Download report", "Delete document", "View full passage".
 
 ---
@@ -223,7 +234,7 @@ Buttons use verb-first sentence case: "Upload contract", "Start review", "Downlo
 
 ---
 
-## 6. Patterns added in FE-2 to FE-4
+## 6. Patterns added in FE-2 to FE-5
 
 | Pattern | Spec |
 |---|---|
@@ -235,7 +246,7 @@ Buttons use verb-first sentence case: "Upload contract", "Start review", "Downlo
 | Not found and load error | `NotFound` and `RootError` are plain editorial pages with no warning colour. A bad address is not an error in the product and not an expired session. `RootError` shows no error text, because it could carry contract text |
 | Preview controls | Development only, in `components/PreviewControls.tsx`. A floating drawer holding the mock adapter's switches and the gallery link. It is loaded behind `import.meta.env.DEV`, so a production build holds none of it |
 | Favicon | `public/favicon.svg`, the logomark, with a dark-mode variant. One SVG covers the 16 and 32px sizes |
-| Ink-in | `.ca-ink` in `index.css`. A found or review mark is two background layers, the underline over the tint, and `ca-ink` animates both `background-size` values from zero over `--dur-ink`, starting at `--ink-delay`. The mark's own style is the final state and the keyframe carries only the start, so a mark that cannot animate is simply drawn. The Reader adopts it in FE-5 |
+| Ink-in | `.ca-ink` in `index.css`. A found or review mark is two background layers, the underline over the tint, and `ca-ink` animates both `background-size` values from zero over `--dur-ink`, starting at `--ink-delay`. The mark's own style is the final state and the keyframe carries only the start, so a mark that cannot animate is simply drawn. The Reader uses it for a mark that sits on its own text, and the class stays when the mark is selected, so a selection never replays the sweep |
 | Hero demo | `pages/landing/HeroDemo.tsx`, styled by `.hero-demo` in `index.css`. One run: the sheet is still for 600ms, the mark inks in from 600 to 1000ms, the ruler tick fades in from 1000 to 1200ms and the panel rises 12px over `--dur-panel` from 1200 to 1520ms. Hover or focus inside the sheet or the panel pauses it. "Next example" replays the run with a new React key. Reduced motion draws the final state. The ruler is hidden below 640px |
 | Section frame | `SectionFrame` in `components/Layout.tsx`: the rule above, the vertical rhythm and the page width. `Section` is a `SectionFrame` holding one `MarginGrid`. A section that needs several grid rows, such as How it works, builds them inside a `SectionFrame` |
 | Button as a link | `Button` takes `to`, a router address, and then renders a router link with the same look and the 44px hit area. Without `to` it is a `button` |
@@ -245,5 +256,12 @@ Buttons use verb-first sentence case: "Upload contract", "Start review", "Downlo
 | Summary | `pages/start/Summary.tsx`. A list of File, Role, Party and Scope, each reading "Not chosen yet" until decided. It shows in the aside from 1280px and in step 3 below that. On steps 1 and 2 below 1280px it is one line of the chosen values joined by a middle dot. It has no Change link |
 | Header action | The primary "Review a contract" button sits at the far right of the header from 768px and inside the menu below it. It is absent on `/start` and in the Reader, which have their own primary action |
 | Loading button | `Button` in the `loading` state shows a spinner, sets `aria-busy` and ignores clicks. It is not `disabled`, so keyboard focus stays on it |
-
-The Reader rail is defined here when FE-5 builds it.
+| Reader sheet | `.reader-sheet` in `index.css`: `calc(var(--measure) + 98px)`, with `max-width: 100%`. The band above it takes the same class, and from 768px a 28px spacer beside the band stands for the ruler, so the two share a left edge |
+| Reader rail | A 64px column from 1280 to 1439px, one button with a list icon over the 12px label "Categories", on the sunken paper. It opens the category list in the left drawer. From 1440px the list is docked at 264px and the rail is gone |
+| Bottom sheet | `MobileDrawer` with `side="bottom"`, below 1280px, at most 720px wide and centred. It stays mounted, slides on `transform` over `--dur-panel` in and `--dur-state` out, and holds its content while it leaves. It peeks at 168px and opens to 78dvh. The handle row holds a grip and, at the right, one Peek or Open button. The panel's own heading and Close are the sheet's title and close |
+| Left drawer | `MobileDrawer` with `side="left"`, for the categories. It is modal: a backdrop that closes on click, the page behind it `inert`, focus moved in on open and back to the opener on close |
+| Panel transition | `lib/panelTransition.ts`. A pointer pick runs its update inside a view transition of `.reader-panel` alone. `html[data-vt='panel']` takes the root out of the transition for its length, so the page is not captured and stays live. Reduced motion, a step and an activate run the update at once |
+| Row entering | `.ca-enter` in `index.css`: opacity over `--dur-state`, delayed by `--enter-step` times `--stagger`. `freshDelays` in `lib/reader.ts` gives each new row the next step, up to five, and a finished or reopened review gives none |
+| Band | The strip above the Reader sheet: the compact progress line with Cancel, the read-partial notice, or the zero-findings line. It sits on the sunken paper with no left rule |
+| Margin ruler strip | `MarginRuler` in the Reader: 28px wide inside a 44px click zone, sticky, one tick per category at its first finding, a box for the part in view and the caption "Findings". A click picks the nearest tick within 12px. It is hidden from assistive technology |
+| Plain status | `StatusChip` with `plain`: the icon and the words with no border, fill or padding, for a row that has its own surface. A `CategoryRow` puts it on a second line under the name |

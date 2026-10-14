@@ -83,3 +83,21 @@ test("the focus ring reaches 3 on every surface in both themes", () => {
   check(light, "light", on("focus-ring", surfaces, 3));
   check(dark, "dark", on("focus-ring", surfaces, 3));
 });
+
+/* The reading measure (DesignSystem.md 3.4) is one token. The Reader sheet and the hero
+   sheet both read it, so the two pages set the same line. Source Serif 4 at 17 px averages
+   7.83 px a character, and a ragged full line fills about 93 percent of its column
+   (measured in FE-5), so 68 to 80 characters is a column of 572 to 673 px. */
+test("one --measure token holds a column that sets a 68 to 80 character line", () => {
+  const m = css.match(/--measure:\s*(\d+)px;/);
+  assert.ok(m, "--measure is defined in px");
+  const px = Number(m[1]);
+  assert.ok(px >= 572 && px <= 673, `--measure is ${px}px, needs 572 to 673`);
+});
+
+test("the Reader and the hero sheet both set their text column from --measure", () => {
+  for (const file of ["pages/Reader.tsx", "pages/landing/HeroDemo.tsx"]) {
+    const src = readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
+    assert.ok(src.includes("var(--measure)"), `${file} reads var(--measure)`);
+  }
+});

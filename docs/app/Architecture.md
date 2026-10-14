@@ -161,7 +161,9 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono, twelve files in `public/fonts/` (seven Latin and five Latin-extended), with `@font-face` rules, `unicode-range` and metric-matched fallbacks in `index.css` | No request leaves for a third party, which keeps the privacy promise. The rupee sign comes from the Latin-extended files, which the browser fetches only on a page that holds a character in that range (the landing page requests none). Other scripts fall back to a system font (`FrontendDesign.md` 17.2, S, and 17.3, X) |
 | Motion and widths | Tokens in `index.css` (`--ease-out`, `--dur-*`, `--w-*`), one reduced-motion block, route changes through the View Transitions API | One set of values for every part. `DesignSystem.md` 3.5 lists them |
 | Start flow | A pure reducer in `lib/startFlow.ts`, a hook for the side effects in `pages/start/useStartFlow.ts`, and the step in the address (`?step=`) | The rules are testable without a DOM. The address owns the step because a second copy in state raced on browser Back. Each upload carries a `seq`, so a late answer for a replaced file changes nothing (`FrontendDesign.md` 6.2 and 17.4, AD) |
-| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 37 tests: 7 reveal, 8 colour tokens, 5 hero fixture, 17 start flow | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
+| Reader selection | One `choose` function in `pages/Reader.tsx` takes the pick kind (`pointer`, `step`, `activate`). Only a pointer pick runs through `lib/panelTransition.ts`, a view transition of `.reader-panel` with the root left out | Keyboard stepping stays instant and keeps focus on the mark, and the page behind the panel is never captured (`FrontendDesign.md` 17.5, AT and AU) |
+| Large documents | `DocumentText` and `TextBlock` are memoised. The findings per block are worked out once, the selected and hovered ids reach only the blocks that hold them, and the pick callback has one identity | A pick or a scroll no longer renders every paragraph. No windowing was needed up to 500,000 code points (17.5, AV) |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 49 tests: 7 reveal, 10 tokens (8 colour, 2 reading measure), 5 hero fixture, 17 start flow, 3 authority, 7 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
@@ -180,7 +182,7 @@ frontend/
     main.tsx                # mounts App
     App.tsx                 # ThemeProvider, SessionProvider, RouterProvider
     index.css               # fonts, design tokens (light, dark, motion, widths), global focus rule, layout and type classes, reveal, ink-in and hero keyframes, reduced-motion CSS
-    tokens.test.ts          # asserts the contrast pairs of DesignSystem.md 3.1 against index.css
+    tokens.test.ts          # asserts the contrast pairs of DesignSystem.md 3.1 and the reading measure token against index.css
     api/
       client.ts             # ApiClient interface and the exported client (mock adapter today)
       types.ts              # API types; offsets are code points
@@ -201,6 +203,11 @@ frontend/
       useReveal.ts          # the hook around reveal.ts
       startFlow.ts          # the /start flow as a pure reducer, plus maxReachableStep, clampStep, nextBlocker, parseStep, suggestedParty
       startFlow.test.ts
+      authority.ts          # the one phrase per passage authority status, and the mapping from a free string
+      authority.test.ts
+      reader.ts             # nearestMark (ruler hit test) and freshDelays (row stagger), pure
+      reader.test.ts
+      panelTransition.ts    # runs a state update in a view transition of the detail panel only
     pages/
       Landing.tsx           # the landing page: hero, sections 1 to 6, closing call to action
       Start.tsx             # the three-step flow: upload, role and party, scope and start
@@ -212,7 +219,7 @@ frontend/
         heroExamples.ts     # typed fixture: three findings from the sample contract, with code point offsets
         heroExamples.test.ts
         Evidence.tsx        # the Evidence section, rendered only when Landing.tsx holds a verified passage (D7)
-      Reader.tsx            # three-pane reader: categories, document, clause detail
+      Reader.tsx            # the reader: categories, the contract sheet with its ruler, clause detail (docked, or a bottom sheet below 1280 px)
       HowItWorks.tsx
       Accuracy.tsx          # measured performance, labelled as an example until real numbers exist
       Expired.tsx
@@ -226,4 +233,4 @@ frontend/
       PreviewControls.tsx   # development only: mock switches and the gallery link
 ```
 
-The FE parts change this tree. Each part updates this section. FE-2, FE-3 and FE-4 are built and are in the tree above. `FrontendDesign.md` holds the plan for FE-5 and FE-6.
+The FE parts change this tree. Each part updates this section. FE-2 to FE-5 are built and are in the tree above. `FrontendDesign.md` holds the plan for FE-6.

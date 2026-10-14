@@ -1,4 +1,5 @@
-import JudgmentCard, { type Authority } from "../../components/JudgmentCard";
+import JudgmentCard from "../../components/JudgmentCard";
+import type { Authority } from "../../lib/authority";
 import { Section } from "../../components/Layout";
 import { useReveal } from "../../lib/useReveal";
 

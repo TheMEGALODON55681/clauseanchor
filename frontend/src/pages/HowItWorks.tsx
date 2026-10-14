@@ -50,7 +50,7 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
           With Indian law review on, some clauses get a short note citing the statute that a court would look at, for example Section 27 of the Indian Contract Act 1872 for restraints of trade. These notes describe what to check. They do not predict an outcome.
         </p>
         <p>
-          Case law passages are quoted word for word from published judgments, with the court, year and citation. Each shows whether it has been reviewed and whether it was later overruled or modified. If no verified passage exists, the panel says so.
+          Case law passages are quoted word for word from published judgments, with the court, year and citation. Each shows whether it was checked against later judgments, and whether a later judgment overruled or modified it. If no verified passage exists, the panel says so.
         </p>
       </>
     ),
