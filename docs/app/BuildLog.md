@@ -792,3 +792,35 @@ Housekeeping: the Vite dev servers (5173, 5174) and the two preview servers (417
 Open for Aryan: none. The three groups of content left in components are statute text, catalogue constants and plain labels, none of them contract or case content.
 
 Next action: commit this part, then commit 7 of 7, Accuracy mobile grouping (the 46 categories under the 7 catalogue groups as `details` below 768 px, first open).
+
+## 2026-10-14: Part FE-R, step 2, commit 7, Accuracy mobile grouping
+
+Part: FE-R, step 2, commit 7 of 7 (theme: the Accuracy list below 768 px). Starts from `f86a36a`. Part 1-B stays paused. No dependency was added. 3 files under `frontend/src` (1 changed, 2 new), 70 lines added and 10 deleted. The final sweep follows this commit. A second round, at Aryan's request before the commit, added the Weak count to each group's summary.
+
+Files changed:
+- `pages/Accuracy.tsx`: below 768 px the 46 blocks sit under the seven catalogue groups, each a `Disclosure` with "Group (count)" in its summary, or "Group (count, n Weak)" when n rows are drawn Weak, and the first open. From 768 px the flat table is unchanged. Both layouts are in the DOM and CSS shows one (`hidden md:block`, `md:hidden`).
+- `lib/accuracy.ts` and `lib/accuracy.test.ts`: `rowVariant` (how a row is drawn) and `groupRows` (with each group's Weak count), pure, with 2 tests.
+- Docs: `FrontendDesign.md` (6.5, 17.7 rows CL and CM, a rule, the commit 7 checks, one Deferred row), `Architecture.md` (7.2 one decision row, the file tree and the test count), `DesignSystem.md` (the Accuracy row), this entry.
+
+Amendments CL and CM are in `FrontendDesign.md` 17.7, with the figures. Short form:
+- CL: a summary carries the group's Weak count when it is above zero, "Restrictions (9, 2 Weak)", so a closed group cannot hide a Weak row. "Drawn Weak" has one definition, `rowVariant`, which the row, the group counts and the headline "N are marked Weak" line all read. The headline read `r.weak` before and could have counted a not-measured row, and with the mock no figure moved (the group counts add up to 10 and 15, the headline's). "Weak" is capitalised as the page names the status, where the request's example was lowercase.
+- CL: the groups are in catalogue order and the page's sort applies inside each group. An id the catalogue does not list falls under "Other categories", so no row drops out. A group the reader opened stays open through a sort and a switch of evaluation set. Each group's table is named "CUAD test set results, Basics", so the set stays in the name. `Disclosure`'s 15 px text on a 24 px line made every row about 23 px taller in the first build, and the group's table resets it: the 46 row heights are identical to the flat list's.
+- CM: a width hook (`useMedia`) was tried first and not taken. It made the bundler split the hook out and move `StatuteTag` into the entry, +0.64 KB gzipped on every route. CSS costs 46 hidden rows in the DOM and no entry bytes.
+
+Checks:
+- `pnpm typecheck`: exit 0. `pnpm test`: 63 of 63 pass (7 reveal, 15 tokens, 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 11 reader, 2 accuracy), 0 failed, 0 skipped. `pnpm build`: 172 modules, exit 0, no warning. Entry 73.58 KB gzipped (73.57 on `f86a36a`), Accuracy chunk 3.23 KB (3.03), Reader chunk 15.08 KB (unchanged).
+- Test first, twice: the grouping test failed on the missing module before `lib/accuracy.ts` was written, and the Weak count test failed on the missing `rowVariant` export before the second round's code. Both pass.
+- Weak counts, in the browser, both themes, both evaluation sets: every summary's count equals its rows and its Weak part equals the rows carrying the Weak note, the group totals equal the headline (10 and 15), no summary reads ", 0 Weak", and none wraps at 375 or 320 px (longest "Intellectual property (9, 6 Weak)"). 375 px heights are unchanged: 3,585 px with the first group open, 12,029 px with all open.
+- Browser, production builds of this commit and of `f86a36a` on `vite preview`, headless Edge, real pointer and key events, both themes: 7 groups summing to 46 with the first open; a click opens and closes a group; Enter opens and Space closes a focused summary; Tab moves summary to summary; "Recall" sorts ascending inside every group; 767 px shows the groups and 768 px the table; axe reports no violation and nothing incomplete at 375, 768 and 1280 px; the console is empty. 375 px height 11,525 px, then 3,585 px with the first group open and 12,029 px with all open.
+- The wide layout against `f86a36a`: full page screenshot hashes at 768, 1024, 1280 and 1440 px in both themes. Over three runs 21 of 24 pairs were identical and 3 differed once each. Repeats matched for light 1024 (6 of 6) and dark 1280 (4 of 4). For light 1440, `f86a36a` itself gave two images (4 of 5 and 1 of 5) that differ by one pixel (x 346, y 1995), and every capture of this commit is 0 pixels from the `f86a36a` capture with the same hash. The wide output is the same, and the cause of the single pixel was not established.
+- Claims grep, calibration grep, Evidence gate, Rules section 1 scrub, tool-name grep over `frontend/` and README and the dash scan (control file detected): all print nothing.
+- `/ponytail:ponytail-review`, two rounds: no P1, no P2. Round one, two P3 fixed (the `useMemo` and a long comment). Round two, after the Weak count, nothing to cut. Kept: both layouts in the DOM, `UNLISTED`, `groupRows` in `lib/`.
+- Copy passes on the two new strings (the group table's accessible name, and the summary's Weak part): copywriting, copy-editing and stop-slop, no change to either string. Stop-slop cut one word from a code comment.
+
+Not run: Lighthouse on `/accuracy` and `/`, the dark and 375 px keyboard run across the whole page, the before and after pairs (all in the final sweep). A screen reader on the grouped list.
+
+Housekeeping: the two preview servers (4173, 4174) stopped. A build of `f86a36a` sat in the session scratchpad with `node_modules` junctioned in, and the junction was removed with `rmdir`. Screenshots of this commit are in `frontend/.screens/FE-R/c7/`, gitignored. No git write was run.
+
+Open for Aryan: below 768 px "Recall" and "Silent miss" sort inside groups, so the worst rows are no longer first across the list. The Weak count in each summary shows where the Weak rows are, and a flat worst-first list would restore the order. Not asked for, and listed under Deferred in 17.7.
+
+Next action: commit this part, then the final sweep (Lighthouse and axe on every route, the keyboard run in dark and at 375 px with a real click on a Reader sidebar row at 1280 and in the categories drawer at 375, the before and after pairs, the quality bars in the final BuildLog entry, FE-R ticked in `Phases.md`).

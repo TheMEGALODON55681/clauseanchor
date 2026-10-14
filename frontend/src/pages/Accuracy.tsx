@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { client } from "../api/client";
 import type { EvaluationRow, Evaluations } from "../api/types";
 import { CATEGORY_BY_ID } from "../api/catalogue";
+import { groupRows, rowVariant } from "../lib/accuracy";
+import Disclosure from "../components/Disclosure";
 import Tabs from "../components/Tabs";
 import SegmentedFilter from "../components/SegmentedFilter";
 import { Container, MarginGrid } from "../components/Layout";
@@ -57,7 +59,16 @@ export default function Accuracy() {
 
   const set = data?.sets.find((s) => s.label === tab) ?? data?.sets[0];
   const rows = useMemo(() => (set ? sortRows(set.rows, sort) : []), [set, sort]);
-  const weak = rows.filter((r) => r.weak).length;
+  const weak = rows.filter((r) => rowVariant(r) === "weak").length;
+  const groups = groupRows(rows);
+  const renderRow = (r: EvaluationRow) => (
+    <PerformanceTableRow
+      key={r.category_id}
+      category={CATEGORY_BY_ID[r.category_id]?.label ?? r.category_id}
+      variant={rowVariant(r)}
+      metrics={{ support: r.support, precision: r.precision, recall: r.recall, silentMiss: r.silent_miss, abstention: r.abstention }}
+    />
+  );
 
   return (
     <div className="pb-16 md:pb-24">
@@ -134,23 +145,28 @@ export default function Accuracy() {
                     </p>
                   )}
 
-                  <div className="mt-4" role="table" aria-label={`${set?.label ?? "Evaluation"} results`}>
+                  {/* Two layouts, and CSS shows one: a flat table sorted across all rows from 768 px, and below that the seven catalogue groups, the first open, sorted inside each. A width hook here splits useMedia out of the entry and drags StatuteTag in with it. */}
+                  <div className="mt-4 hidden md:block" role="table" aria-label={`${set?.label ?? "Evaluation"} results`}>
                     <div
                       role="row"
-                      className={`z-10 hidden gap-3 border-b px-3 py-2 text-[12px] font-semibold md:sticky md:top-0 md:grid ${PERF_COLUMNS}`}
+                      className={`sticky top-0 z-10 grid gap-3 border-b px-3 py-2 text-[12px] font-semibold ${PERF_COLUMNS}`}
                       style={{ color: "var(--ink-secondary)", background: "var(--paper-base)", borderColor: "var(--rule-strong)" }}
                     >
                       {COLS.map((c) => (
                         <span role="columnheader" key={c}>{c}</span>
                       ))}
                     </div>
-                    {rows.map((r) => (
-                      <PerformanceTableRow
-                        key={r.category_id}
-                        category={CATEGORY_BY_ID[r.category_id]?.label ?? r.category_id}
-                        variant={r.recall === null ? "not-measured" : r.weak ? "weak" : "strong"}
-                        metrics={{ support: r.support, precision: r.precision, recall: r.recall, silentMiss: r.silent_miss, abstention: r.abstention }}
-                      />
+                    {rows.map(renderRow)}
+                  </div>
+                  <div className="mt-4 md:hidden">
+                    {groups.map((g, i) => (
+                      /* The summary counts the rows drawn Weak, so a closed group cannot hide one. */
+                      <Disclosure key={g.group} summary={`${g.group} (${g.rows.length}${g.weak > 0 ? `, ${g.weak} Weak` : ""})`} open={i === 0}>
+                        {/* Disclosure sets 15 px text on a 24 px line for its answers. The rows keep the page's own size and 1.5 leading. */}
+                        <div role="table" aria-label={`${set?.label ?? "Evaluation"} results, ${g.group}`} style={{ fontSize: 16, lineHeight: 1.5 }}>
+                          {g.rows.map(renderRow)}
+                        </div>
+                      </Disclosure>
                     ))}
                   </div>
                 </>
