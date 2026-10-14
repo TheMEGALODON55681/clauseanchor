@@ -1,8 +1,19 @@
+import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { useLocation } from "react-router";
+import { Container, MarginGrid } from "../components/Layout";
 import Link from "../components/Link";
 import NoticeBanner from "../components/NoticeBanner";
+import PolarityBadge, { type PolarityKind } from "../components/PolarityBadge";
+import Specimen from "../components/Specimen";
+import StatusChip from "../components/StatusChip";
+import StatuteTag from "../components/StatuteTag";
 
-const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
+const POLARITIES: PolarityKind[] = ["exposure", "protection", "mixed", "neutral", "unresolved"];
+
+/* `fragment` is a real component that shows what the text describes. It sits in the aside from
+   1280 px and under the text below that. */
+const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNode }[] = [
   {
     id: "reading",
     title: "Reading the contract",
@@ -11,7 +22,9 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
         <p>
           Your file is turned into plain text once, when you upload it. Every finding afterwards points back into that exact text by character position, so the passage you see highlighted is the passage that was read. Nothing is paraphrased into the document.
         </p>
-        <p>Scanned images and password-protected files are refused at upload, because there is no reliable text to point to.</p>
+        <p>
+          ClauseAnchor refuses a file at upload if it is scanned throughout or password protected, because there is no reliable text to point to. If only some pages are scanned, ClauseAnchor reads the rest and tells you in the reader that it could not read part of the document.
+        </p>
       </>
     ),
   },
@@ -31,6 +44,13 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
   },
   {
     id: "confidence",
+    fragment: (
+      <div className="flex flex-col items-start gap-2">
+        <StatusChip status="found" />
+        <StatusChip status="review" />
+        <StatusChip status="unvalidated" />
+      </div>
+    ),
     title: "Saying how sure it is",
     body: (
       <>
@@ -43,6 +63,7 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
   },
   {
     id: "law",
+    fragment: <StatuteTag />,
     title: "Indian law review and case law",
     body: (
       <>
@@ -57,6 +78,13 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
   },
   {
     id: "role",
+    fragment: (
+      <div className="flex flex-col items-start gap-2">
+        {POLARITIES.map((p) => (
+          <PolarityBadge key={p} polarity={p} />
+        ))}
+      </div>
+    ),
     title: "Reading from your side",
     body: (
       <p>
@@ -102,54 +130,89 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
   },
 ];
 
-export default function HowItWorks() {
-  return (
-    <div className="mx-auto w-full max-w-[1120px] px-5 py-12 md:px-8 md:py-16">
-      <title>How it works | ClauseAnchor</title>
-      <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
-        <nav aria-label="On this page" className="lg:sticky lg:top-8 lg:self-start">
-          <p className="font-mono text-[12px] tracking-[0.08em] uppercase" style={{ color: "var(--ink-tertiary)" }}>On this page</p>
-          <ol className="mt-3 flex flex-col">
-            {SECTIONS.map((s, i) => (
-              <li key={s.id} className="text-[14px]">
-                <a
-                  href={`#/how-it-works`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById(s.id)?.scrollIntoView({ block: "start" });
-                    document.getElementById(`${s.id}-h`)?.focus({ preventScroll: true });
-                  }}
-                  className="inline-block py-[13px] hover:underline"
-                  style={{ color: "var(--ink-secondary)" }}
-                >
-                  <span className="font-mono text-[12px]" style={{ color: "var(--ink-tertiary)" }}>{i + 1}.</span> {s.title}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </nav>
+/* The page keeps its hash route, so a section cannot be a fragment. The contents links and the
+   footer's Credits link (?at=credits) scroll to a heading and move focus to it. */
+function goTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ block: "start" });
+  document.getElementById(`${id}-h`)?.focus({ preventScroll: true });
+}
 
-        <article className="max-w-[74ch]" style={{ fontFamily: "var(--font-serif)", color: "var(--ink-primary)" }}>
-          <h1 className="text-[36px] leading-[44px]" style={{ fontWeight: 500 }}>How it works</h1>
-          <p className="mt-4 text-[19px] leading-[32px]" style={{ color: "var(--ink-secondary)" }}>
-            A plain account of what happens to your contract, what the marks in the reader mean, and where the limits are.
-          </p>
-          <div className="mt-6 font-sans">
-            <NoticeBanner variant="legal-scope" />
-          </div>
-          {SECTIONS.map((s) => (
-            <section key={s.id} id={s.id} className="mt-12" aria-labelledby={`${s.id}-h`}>
-              <h2 id={`${s.id}-h`} tabIndex={-1} className="flex items-baseline gap-3 text-[24px] leading-[32px]" style={{ fontWeight: 600 }}>
-                <span aria-hidden style={{ color: "var(--anchor-600)" }}>§</span>
-                {s.title}
-              </h2>
-              <div className="mt-4 flex flex-col gap-4 text-[18px] leading-[30px]" style={{ color: "var(--ink-secondary)" }}>
-                {s.body}
+export default function HowItWorks() {
+  const { key, search } = useLocation();
+  const at = new URLSearchParams(search).get("at");
+  useEffect(() => {
+    if (!at) return;
+    // Root resets scroll and focus after the page mounts, so wait one frame.
+    const frame = requestAnimationFrame(() => goTo(at));
+    return () => cancelAnimationFrame(frame);
+  }, [at, key]);
+
+  return (
+    <div className="pb-16 md:pb-24">
+      <title>How it works | ClauseAnchor</title>
+
+      <section aria-labelledby="how-title" className="pb-10 pt-8 md:pt-12 lg:pt-16">
+        <Container>
+          <MarginGrid>
+            <h1 id="how-title" className="t-display-md">How it works</h1>
+            <p className="t-prose-lg mt-4">A plain account of what happens to your contract, what the marks in the reader mean, and where the limits are.</p>
+            <div className="mt-6">
+              <NoticeBanner variant="legal-scope" />
+            </div>
+          </MarginGrid>
+        </Container>
+      </section>
+
+      <Container>
+        <MarginGrid
+          margin={
+            <nav aria-label="On this page" className="lg:sticky lg:top-8">
+              <p className="t-overline" style={{ color: "var(--ink-tertiary)" }}>On this page</p>
+              <ol className="mt-2 flex flex-col">
+                {SECTIONS.map((s, i) => (
+                  <li key={s.id}>
+                    <a
+                      href="#/how-it-works"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        goTo(s.id);
+                      }}
+                      className="flex min-h-11 items-center gap-2 py-1 text-[14px] leading-[20px] hover:underline"
+                      style={{ color: "var(--ink-secondary)" }}
+                    >
+                      <span aria-hidden className="shrink-0 whitespace-nowrap font-serif tabular-nums" style={{ color: "var(--anchor-600)" }}>§ {i + 1}</span>
+                      {s.title}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          }
+        >
+          {SECTIONS.map((s, i) => (
+            <section
+              key={s.id}
+              id={s.id}
+              aria-labelledby={`${s.id}-h`}
+              className="relative mt-10 border-t pt-10 first:mt-0 first:border-t-0 first:pt-0"
+              style={{ borderColor: "var(--rule-default)" }}
+            >
+              <div className="flex items-baseline gap-3">
+                <span aria-hidden className="t-section-mark">§ {i + 1}</span>
+                <h2 id={`${s.id}-h`} tabIndex={-1} className="font-serif text-[24px] font-semibold leading-[32px]" style={{ color: "var(--ink-primary)" }}>
+                  {s.title}
+                </h2>
               </div>
+              <div className="t-prose-lg mt-4 flex flex-col gap-4">{s.body}</div>
+              {s.fragment && (
+                <div className="mt-6 xl:absolute xl:left-full xl:top-10 xl:ml-8 xl:mt-0 xl:w-[320px]">
+                  <Specimen>{s.fragment}</Specimen>
+                </div>
+              )}
             </section>
           ))}
-        </article>
-      </div>
+        </MarginGrid>
+      </Container>
     </div>
   );
 }

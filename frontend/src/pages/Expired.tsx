@@ -1,24 +1,20 @@
-import { useNavigate, useSearchParams } from "react-router";
-import EmptyState from "../components/EmptyState";
+import { useSearchParams } from "react-router";
+import Button from "../components/Button";
+import { PlainPage } from "../components/Layout";
 
 export default function Expired() {
-  const [params] = useSearchParams();
-  const navigate = useNavigate();
-  const deleted = params.get("reason") === "deleted";
+  const deleted = useSearchParams()[0].get("reason") === "deleted";
   return (
-    <div className="mx-auto flex w-full max-w-[560px] flex-col items-center px-5 py-20 md:py-28">
+    <PlainPage title={deleted ? "Your contract has been deleted." : "This session has ended"}>
       <title>Session ended | ClauseAnchor</title>
-      <EmptyState
-        variant="no-document"
-        headingAs="h1"
-        heading={deleted ? "Your contract has been deleted." : "This session has ended"}
-        line={
-          deleted
-            ? "The file, its text and the review were removed from the server. Nothing was kept."
-            : "Sessions end after a set time, or when the page is reloaded. Your contract was not kept. Upload it again to start a new review."
-        }
-        onAction={() => navigate("/start", { viewTransition: true })}
-      />
-    </div>
+      <p className="t-prose-lg">
+        {deleted
+          ? "The file, its text and the review were removed from the server. Nothing was kept."
+          : "Sessions end after a set time, or when the page is reloaded. Your contract was not kept. Upload it again to start a new review."}
+      </p>
+      <div>
+        <Button to="/start" size="l">Review a contract</Button>
+      </div>
+    </PlainPage>
   );
 }

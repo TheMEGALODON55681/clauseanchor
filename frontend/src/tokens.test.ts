@@ -84,6 +84,19 @@ test("the focus ring reaches 3 on every surface in both themes", () => {
   check(dark, "dark", on("focus-ring", surfaces, 3));
 });
 
+/* A plain status (icon and words, no fill) sits straight on its row: the sunken sidebar, the
+   selected row's anchor-100 tint and the hovered row's sheet (CategoryRow, StatusChip plain). */
+const rowSurfaces = ["paper-sunken", "anchor-100", "paper-sheet"];
+const plainStatus = ["found", "review", "unvalidated", "absent", "unavailable"].map((s) => `status-${s}-fg`);
+
+test("light: plain status text reaches 4.5 on the sunken, selected and hovered rows", () => {
+  for (const fg of plainStatus) check(light, "light", on(fg, rowSurfaces, 4.5));
+});
+
+test("dark: plain status text reaches 4.5 on the sunken, selected and hovered rows", () => {
+  for (const fg of plainStatus) check(dark, "dark", on(fg, rowSurfaces, 4.5));
+});
+
 /* The reading measure (DesignSystem.md 3.4) is one token. The Reader sheet and the hero
    sheet both read it, so the two pages set the same line. Source Serif 4 at 17 px averages
    7.83 px a character, and a ragged full line fills about 93 percent of its column
@@ -100,4 +113,29 @@ test("the Reader and the hero sheet both set their text column from --measure", 
     const src = readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
     assert.ok(src.includes("var(--measure)"), `${file} reads var(--measure)`);
   }
+});
+
+/* The overlay enters (FrontendDesign.md 17.6) take their time from the motion tokens, so none can
+   drift to a raw value. The one reduced-motion rule zeroes every animation, which is the only
+   guard they have, so a change that drops it from `*` fails here. */
+test("overlay enter classes read the motion tokens and the components use them", () => {
+  const uses: Record<string, string> = {
+    ".ca-dialog": "components/ConfirmDialog.tsx",
+    ".ca-menu": "components/DropdownMenu.tsx",
+    ".ca-toast": "components/Toast.tsx",
+  };
+  for (const [selector, file] of Object.entries(uses)) {
+    const m = css.match(new RegExp(`${selector.replace(".", "\.")} \{([^}]*)\}`));
+    assert.ok(m, `${selector} is defined`);
+    assert.match(m[1], /animation:[^;]*var\(--dur-[a-z]+\)[^;]*var\(--ease-out\)/, `${selector} reads a --dur token and --ease-out`);
+    const src = readFileSync(new URL(`./${file}`, import.meta.url), "utf8");
+    assert.ok(src.includes(selector.slice(1)), `${file} uses ${selector}`);
+  }
+});
+
+test("one reduced-motion rule zeroes the duration and delay of every animation", () => {
+  const m = css.match(/@media \(prefers-reduced-motion: reduce\) \{\s*\*,[^{]*\{([^}]*)\}/);
+  assert.ok(m, "the rule selects *");
+  assert.match(m[1], /animation-duration:\s*0\.01ms !important/);
+  assert.match(m[1], /animation-delay:\s*0ms !important/);
 });

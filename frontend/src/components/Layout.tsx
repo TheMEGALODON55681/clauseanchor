@@ -27,6 +27,16 @@ export function SectionFrame({ id, labelledBy, children }: { id?: string; labell
   );
 }
 
+/** A short standalone page: one heading and a few lines, in no warning colour (Expired, NotFound, the error page). */
+export function PlainPage({ title, role, children }: { title: string; role?: "alert"; children: ReactNode }) {
+  return (
+    <div role={role} className="mx-auto flex w-full max-w-[560px] flex-col gap-4 px-5 py-20 md:py-28">
+      <h1 className="t-display-md">{title}</h1>
+      {children}
+    </div>
+  );
+}
+
 /** A page section. `mark` is a § number that sits in the margin and is hidden from assistive technology. */
 export function Section({
   id,

@@ -529,3 +529,53 @@ Found along the way. Fixed: the `/how-it-works` page said each passage shows "wh
 Blockers: none. Aryan's call: the authority wording (AP), whether the hero sheet cap in AR is what was wanted, whether the enter motion for the delete confirmation, the menu and the toast (17.5) belongs in FE-6, and the partial-read wording once API.md has the warning codes.
 
 Next action: commit FE-5 with `refactor(frontend): recompose reader with motion`, then reply `next` to start FE-6 (How it works, Accuracy, Expired, NotFound).
+
+
+## 2026-10-14: Part FE-6, the secondary pages and the overlay enters
+
+Part: FE-6 (frontend track). Files changed under `frontend/` and `docs/app/`. `README.md` needed no change: no command or route moved. Part 1-B stays paused at Aryan's request. No dependency was added.
+
+Files changed:
+- New under `frontend/`: `src/components/Specimen.tsx` (moved out of `Landing.tsx`, two callers).
+- Pages: `pages/HowItWorks.tsx` (two grids, a sticky contents list in the margin, fragments beside the text, the Credits scroll, the corrected sentence on scanned files), `pages/Accuracy.tsx` (the banner, the table in the main column, the glossary in the aside, a sticky header, stacked blocks below 768 px), `pages/Expired.tsx` and `pages/NotFound.tsx` (on `PlainPage`), `pages/Landing.tsx` (imports `Specimen`), `pages/Gallery.tsx` (three `PerformanceTableRow` specimens pass `metrics`).
+- App: `app/RootError.tsx` (on `PlainPage`), `app/Root.tsx` (the footer's Credits link is `#/how-it-works?at=credits`).
+- Components: `Layout.tsx` (`PlainPage`), `PerformanceTableRow.tsx` (rewritten: one branch, ledger row, `PERF_COLUMNS`, cell roles), `MetricCell.tsx` (`emphasis`, `n =` only when a support is given, a `metric-label` class), `ErrorCard.tsx` and `Toast.tsx` (no 4 px rule, `tone`), `ConfirmDialog.tsx`, `DropdownMenu.tsx` and `Toast.tsx` (enter classes), `EmptyState.tsx` (`headingAs` removed).
+- `src/index.css`: the `ca-pop` keyframes, `.ca-dialog`, `.ca-menu` and `.ca-toast`, and the `.ca-enter` comment.
+- `src/tokens.test.ts`: four tests added.
+- Docs: `Phases.md` (FE-6 ticked, deviations), `Architecture.md` (two decision rows, the tests row, the tree), `FrontendDesign.md` (6.4 to 6.6, the skills rows in 10, the FE-6 test rows in 13, deviations 19 to 22 in 16, new 17.6 with amendments BB to BI, the status line), `DesignSystem.md` (3.1, 3.4, 3.5, section 6).
+
+Method. Every figure below ran in headless Edge over the DevTools protocol, extensions disabled, against the Vite dev server. The capture, audit and probe scripts live outside the repo. Python is not installed.
+
+Skills that ran: `animate`, for the three overlay enters (its gate: all three are occasional overlays, none fires from a key at 100 or more a day; it asks for transitions on rapidly retriggered elements, which a mount-time keyframe on a one-shot toast is not). `copywriting`, `copy-editing`, then `stop-slop` over the two new strings, with the one edit `stop-slop` asked for (17.6, BI). `/ponytail:ponytail-review` over the full diff (below). Not recorded as run in this part: `frontend-design`, `cro` and `onboarding`, which section 10 does not list for FE-6, and `superpowers:verification-before-completion` was applied by running the checks fresh and reading their output.
+
+Decisions: none were needed beyond the deviations below. The calls that are Aryan's are in Blockers.
+
+Deviations from the plan, each recorded in 17.6:
+- BD: the Accuracy table stays in the main column and does not span into the aside, because the six columns fit at 672 px.
+- BE: the Credits link target is `?at=credits`, and not router state.
+- BC: the menu enters over `--dur-press` (120 ms), not 150 ms, because no token holds 150.
+- BF: Expired drops its dashed card.
+- BH: tabular numerals on `MetricCell` are closed with no change, because the cells are already mono.
+
+Additions that came with `next`:
+- Plain status contrast (BB). 30 pairs computed, none under 4.5, lowest 4.55 (light absent on `anchor-100`). No token changed, so there is nothing to record in the colour table beyond the check. The mutation check set light `--status-absent-fg` to `#7A7F85`, the test failed, and the value was restored.
+- Overlay enters (BC). Computed in the browser: menu `ca-pop` 120 ms from the top right, card `ca-pop` 200 ms from its centre, backdrop `ca-fade` 200 ms, toast `ca-rise` 200 ms. Under emulated reduced motion each is 0.01 ms with no animation running.
+
+Verification. Run fresh on the final code:
+- `pnpm typecheck`: exit 0. `pnpm test`: 53 of 53 pass (7 reveal, 14 tokens, 5 hero fixture, 17 flow, 3 authority, 7 reader), 0 failed, 0 skipped. `pnpm build`: 169 modules, exit 0, no warning.
+- Bundle: How it works 7.47 kB (3.02 kB gzipped), Accuracy 7.93 kB (2.98 kB gzipped), Expired 0.73 kB, NotFound 0.59 kB. The Reader chunk is 51.45 kB (15.12 kB gzipped, from 50.16 and 14.85 at FE-5). The index chunk is 236.68 kB (72.28 kB gzipped). The stylesheet is 31.93 kB (7.90 kB gzipped). The build holds no "Preview controls" text and no Gallery chunk.
+- The audit over five routes, five widths and two themes (50 pages): one `h1`, a distinct title, no horizontal overflow, no text node under 12 px, and an empty console on every run.
+- The Credits link from the landing page, from the page itself, from a pasted `?at=credits` address and a contents entry: the target heading is in view and holds focus each time.
+- Accuracy at 375 px is 11,525 px tall (46 blocks), and the baseline's 5,779 px had clipped columns.
+
+Not verified: LCP and CLS for `/` (FE-R). Lighthouse and axe on any route (FE-R). A screen-reader pass. Whether a 46 block list at 375 px wants a way to jump or filter. The 40 px shift when the Reader's progress line leaves.
+
+Screenshots: `frontend/.screens/FE-6/`, gitignored. `how-it-works-`, `accuracy-`, `expired-`, `expired-deleted-` and `notfound-` at 375, 768, 1024, 1280 and 1440 px in light and dark, `crop-accuracy-375-top`, `crop-how-375-top`, and `overlay-menu-`, `overlay-dialog-` and `overlay-toast-` at 1280 px in both themes. The development-only Preview controls button shows in the bottom-left of several captures. It is development only.
+
+ponytail-review over the full FE-6 diff. No P1. Fixed, two: `ConfirmDialog`'s `Panel` took a `className` prop so that one of two callers could pass a class, and the class now sits on the panel always. `.ca-backdrop` repeated `.ca-enter` and is gone, with its test row. About 7 lines out. Kept, six: the `Toast` rename from `rule` to `tone`. `EmptyState`'s `no-document` variant with its `action` and `onAction`, which have no production caller and stay for the rule that every component keeps its API and states (about 12 lines if Aryan wants them gone). `PerformanceTableRow`'s `variant`, where only `weak` changes the row, for the same rule. `PERF_COLUMNS`, shared by the header and the row. The overlay class test, which reads CSS text. `MetricCell`'s `emphasis` and `PlainPage`'s `role`, one caller each.
+
+Found along the way. Fixed: the baseline Accuracy table gave a `row` with no cell children, an ARIA structure error, and each measure now sits in a `cell`. The info toast's icon was under 2:1 on the sheet and is now `ink/tertiary`. Not fixed: the `/gallery` overflow at 1280 and 375 px, the hero ruler wrapper and the hero quote column, all from earlier parts and listed in 17.6.
+
+Blockers: none. Aryan's call: whether to delete the `no-document` empty state variant, which has no production caller (about 12 lines), whether the `?at=credits` parameter should clear after a contents click, and the same two open calls from FE-5 that still wait on others: the authority wording (AP, Tanishq's definition first) and the partial-read wording once API.md has the parser codes (AQ).
+
+Next action: commit FE-6 with `refactor(frontend): rebuild secondary pages`, then reply `next` to start FE-R (the phase-end review).

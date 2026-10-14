@@ -15,6 +15,7 @@ function Panel({ title, body, confirmLabel, cancelLabel, onConfirm, onCancel }: 
   return (
     <div
       role="alertdialog"
+      className="ca-dialog"
       aria-labelledby="confirm-title"
       style={{
         width: 400,
@@ -60,6 +61,7 @@ export default function ConfirmDialog({
   if (inline) return panel;
   return (
     <div
+      className="ca-enter"
       style={{
         position: "fixed",
         inset: 0,

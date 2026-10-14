@@ -135,7 +135,7 @@ export default function Root() {
         <Outlet />
       </main>
 
-      {!inReader && <AppFooter sampleMode={sample} creditsHref="#/how-it-works" />}
+      {!inReader && <AppFooter sampleMode={sample} creditsHref="#/how-it-works?at=credits" />}
 
       {PreviewControls && (
         <Suspense fallback={null}>

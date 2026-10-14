@@ -6,10 +6,10 @@ import { Container, MarginGrid, Section, SectionFrame } from "../components/Layo
 import OffsetTag from "../components/OffsetTag";
 import RadioCard from "../components/RadioCard";
 import { ROLES } from "../components/RoleSelector";
+import Specimen from "../components/Specimen";
 import { markStyle } from "../components/SpanHighlight";
 import StatusChip from "../components/StatusChip";
 import UploadDropzone from "../components/UploadDropzone";
-import { useReveal } from "../lib/useReveal";
 import Evidence, { type EvidencePassage } from "./landing/Evidence";
 import HeroDemo from "./landing/HeroDemo";
 import { HERO_EXAMPLES } from "./landing/heroExamples";
@@ -45,17 +45,6 @@ const QUESTIONS: [string, string][] = [
 ];
 
 const GROUPS = GROUP_ORDER.map((group) => ({ group, names: CATALOGUE.filter((c) => c.group === group).map((c) => c.label) }));
-
-/* A real component shown as a specimen. It takes no input and is hidden from assistive
-   technology, because the step beside it says the same thing in words. It rises into view once. */
-function Specimen({ children }: { children: ReactNode }) {
-  const ref = useReveal<HTMLDivElement>();
-  return (
-    <div ref={ref} inert aria-hidden className="max-w-[400px]">
-      {children}
-    </div>
-  );
-}
 
 function RoleFragment() {
   const pick = (key: string) => ROLES.find((r) => r.key === key)!;

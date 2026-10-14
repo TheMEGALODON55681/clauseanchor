@@ -18,8 +18,6 @@ export default function ErrorCard({
       style={{
         background: "var(--status-unavailable-bg)",
         border: "1px solid var(--status-unavailable-border)",
-        borderLeftWidth: 4,
-        borderLeftColor: "var(--status-unavailable-fg)",
         borderRadius: "var(--radius-md)",
         padding: 16,
         maxWidth: 420,

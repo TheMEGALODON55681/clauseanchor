@@ -622,11 +622,31 @@ html {
   }
 }
 
-/* A Reader row that resolves while the review runs: opacity over --dur-state, stepped by
-   --stagger. The step comes from reader.ts (freshDelays) as --enter-step, and stops at
-   five, so a burst of rows waits 250 ms at most. */
+/* A fade over --dur-state, stepped by --stagger: a Reader row that resolves while the review
+   runs, and the confirmation backdrop (no step). The step comes from reader.ts (freshDelays) as
+   --enter-step, and stops at five, so a burst of rows waits 250 ms at most. */
 .ca-enter {
   animation: ca-fade var(--dur-state) var(--ease-out) calc(var(--enter-step, 0) * var(--stagger)) backwards;
+}
+
+/* Overlays that appear on a user action: opacity and a small scale from the point they grow
+   from (a modal from its centre, a menu from its trigger), or a rise for the toast. The dialog
+   backdrop is a plain .ca-enter fade. They leave at once. The reduced-motion rule below zeroes
+   all of them, and --pop-from is the start scale. */
+@keyframes ca-pop {
+  from { opacity: 0; transform: scale(var(--pop-from)); }
+}
+.ca-dialog {
+  --pop-from: 0.97;
+  animation: ca-pop var(--dur-state) var(--ease-out) backwards;
+}
+.ca-menu {
+  --pop-from: 0.96;
+  transform-origin: top right;
+  animation: ca-pop var(--dur-press) var(--ease-out) backwards;
+}
+.ca-toast {
+  animation: ca-rise var(--dur-state) var(--ease-out) backwards;
 }
 
 /* The Reader's detail panel cross-fades when a finding is picked with the pointer

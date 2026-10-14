@@ -163,7 +163,9 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Start flow | A pure reducer in `lib/startFlow.ts`, a hook for the side effects in `pages/start/useStartFlow.ts`, and the step in the address (`?step=`) | The rules are testable without a DOM. The address owns the step because a second copy in state raced on browser Back. Each upload carries a `seq`, so a late answer for a replaced file changes nothing (`FrontendDesign.md` 6.2 and 17.4, AD) |
 | Reader selection | One `choose` function in `pages/Reader.tsx` takes the pick kind (`pointer`, `step`, `activate`). Only a pointer pick runs through `lib/panelTransition.ts`, a view transition of `.reader-panel` with the root left out | Keyboard stepping stays instant and keeps focus on the mark, and the page behind the panel is never captured (`FrontendDesign.md` 17.5, AT and AU) |
 | Large documents | `DocumentText` and `TextBlock` are memoised. The findings per block are worked out once, the selected and hovered ids reach only the blocks that hold them, and the pick callback has one identity | A pick or a scroll no longer renders every paragraph. No windowing was needed up to 500,000 code points (17.5, AV) |
-| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 49 tests: 7 reveal, 10 tokens (8 colour, 2 reading measure), 5 hero fixture, 17 start flow, 3 authority, 7 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
+| Overlay enters | `.ca-dialog`, `.ca-menu` and `.ca-toast` in `index.css`, with `ca-pop` and `ca-rise` keyframes over the motion tokens. The dialog backdrop is `.ca-enter`. The overlays leave at once, and the one reduced-motion block is their only guard | No motion library and no per-component guard. A test fails if the global rule stops selecting `*` (`FrontendDesign.md` 17.6, BC) |
+| Plain pages | `PlainPage` in `components/Layout.tsx` for Expired, NotFound and the error page | One column and one heading style for the three pages that carry no warning colour (17.6, BF) |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 53 tests: 7 reveal, 14 tokens (10 colour, 2 reading measure, 2 overlay motion), 5 hero fixture, 17 start flow, 3 authority, 7 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
@@ -220,17 +222,18 @@ frontend/
         heroExamples.test.ts
         Evidence.tsx        # the Evidence section, rendered only when Landing.tsx holds a verified passage (D7)
       Reader.tsx            # the reader: categories, the contract sheet with its ruler, clause detail (docked, or a bottom sheet below 1280 px)
-      HowItWorks.tsx
-      Accuracy.tsx          # measured performance, labelled as an example until real numbers exist
-      Expired.tsx
+      HowItWorks.tsx        # contents list in the margin, seven sections and Credits, fragments beside the text from 1280 px
+      Accuracy.tsx          # measured performance: a ledger table that stacks below 768 px, labelled as an example until real numbers exist
+      Expired.tsx           # session ended or contract deleted, on PlainPage
       NotFound.tsx          # the catch-all route
       Gallery.tsx           # component gallery, development only
     components/             # 50 components and icons.tsx: atoms (Button, StatusChip, ...),
                             # molecules (UploadDropzone, ConfidenceBand, JudgmentCard, ...),
                             # organisms (ClauseDetailPanel, CategorySidebar, ReaderToolbar, ...)
-      Layout.tsx            # Container, Section, SectionFrame, MarginGrid
+      Layout.tsx            # Container, Section, SectionFrame, MarginGrid, PlainPage
       Disclosure.tsx        # native details with a 44 px summary
+      Specimen.tsx          # a real component shown beside text: inert, hidden from assistive technology, rises once
       PreviewControls.tsx   # development only: mock switches and the gallery link
 ```
 
-The FE parts change this tree. Each part updates this section. FE-2 to FE-5 are built and are in the tree above. `FrontendDesign.md` holds the plan for FE-6.
+The FE parts change this tree. Each part updates this section. FE-2 to FE-6 are built and are in the tree above. `FrontendDesign.md` holds the plan for FE-R.

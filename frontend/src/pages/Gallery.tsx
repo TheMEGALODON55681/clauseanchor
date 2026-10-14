@@ -724,9 +724,9 @@ function Library({ mode }: { mode: Mode }) {
 
       <Group label="Performance table row">
         <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 640 }}>
-          <Labeled label="strong" width="100%"><PerformanceTableRow category="Non-Compete" variant="strong" /></Labeled>
-          <Labeled label="weak" width="100%"><PerformanceTableRow category="Exclusivity" variant="weak" /></Labeled>
-          <Labeled label="not measured" width="100%"><PerformanceTableRow category="Insurance" variant="not-measured" /></Labeled>
+          <Labeled label="strong" width="100%"><PerformanceTableRow category="Non-Compete" variant="strong" metrics={{ support: 42, precision: 0.89, recall: 0.82, silentMiss: 0.07, abstention: 0.12 }} /></Labeled>
+          <Labeled label="weak" width="100%"><PerformanceTableRow category="Exclusivity" variant="weak" metrics={{ support: 42, precision: 0.58, recall: 0.41, silentMiss: 0.34, abstention: 0.12 }} /></Labeled>
+          <Labeled label="not measured" width="100%"><PerformanceTableRow category="Insurance" variant="not-measured" metrics={{ support: 6, precision: null, recall: null, silentMiss: null, abstention: null }} /></Labeled>
         </div>
       </Group>
 

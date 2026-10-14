@@ -57,6 +57,7 @@ export default function DropdownMenu({ items = DEFAULT_ITEMS, open, focusIndex, 
       {show && (
         <ul
           role="menu"
+          className="ca-menu"
           style={{
             position: "absolute",
             top: 44,

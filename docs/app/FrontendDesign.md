@@ -2,7 +2,7 @@
 
 The plan for rebuilding the ClauseAnchor frontend on top of the imported baseline. It follows `DesignSystem.md`, which stays the source of truth for tokens and voice, and it extends that file where this one says so. FE-1 wrote it. FE-2 to FE-R build to it and keep it true to what was built.
 
-Status: for review. No file under `frontend/src` has changed in FE-1.
+Status: FE-1 to FE-6 are built and their amendments are in section 17. FE-R is next.
 
 ---
 
@@ -445,6 +445,7 @@ The sheet is the text column plus 48 px of padding on each side and a 1 px edge.
 - `MarginGrid`. The "On this page" list moves into the margin column and sticks from 1024 px, with the § number beside each entry. The seven sections keep their text and order. The § mark beside each heading is `aria-hidden`.
 - Component fragments sit beside the text in the aside where they explain it: the status chips beside "Saying how sure it is", the polarity labels beside "Reading from your side", a statute tag beside "Indian law review". They reveal on scroll.
 - Corrections to the text, made in FE-6 with the copy pass: the first section says scanned files are refused, and the parser now refuses only a file that is scanned throughout, while a file with some scanned pages is read and the unreadable pages are flagged. The Credits link target works (A10).
+- Built in FE-6 (17.6, BE). The page is two grids, the heading block and then the contents list with the sections. The fragments hang in the third column from 1280 px with absolute positioning, and the Credits link target is `?at=credits`.
 
 ### 6.5 Accuracy (`/accuracy`)
 
@@ -452,11 +453,13 @@ The sheet is the text column plus 48 px of padding on each side and a 1 px edge.
 - From 768 px the table spans the main and aside columns, with a sticky header. Below 768 each category becomes a stacked block: the name, the support, then Precision, Recall, Silent miss and Abstention as a two-by-two grid of `MetricCell`. Nothing clips and nothing is below 12 px.
 - The glossary moves beside the table in the aside from 1024 px, as marginal notes.
 - Silent miss keeps its emphasis, because it is the number that matters: misses with no warning.
+- Built in FE-6 (17.6, BD). The table stays in the main column, so the aside holds the glossary beside it, and the example banner sits directly under the review-scope notice.
 
 ### 6.6 Expired and NotFound
 
 - Both are a single centred column of 560 px with an `h1`. Expired keeps its two variants ("Your contract has been deleted." and "This session has ended"). NotFound reads "We could not find that page." with the line "The link may be wrong or out of date." and two links: Review a contract, How it works.
 - Neither uses a warning colour. NotFound is not an error in the product, so it takes no brick tint.
+- Built in FE-6 (17.6, BF). Expired, NotFound and the error page share `PlainPage`, and Expired is an editorial page like the other two, not a dashed card.
 
 ### 6.7 Development-only controls
 
@@ -650,8 +653,8 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 | | `design-taste-frontend` | FE-3 | Ran at FE-3 as a review lens. Its bans on section-number marks, a serif display and a line under the buttons conflict with the approved direction, which stands (17.3) |
 | | `tailwindcss` | FE-2 | Available, not run yet |
 | | `emil-design-eng` | FE-3, FE-5 | Ran at FE-3. The hero is one explanatory run, not repeated interface motion, so its 300 ms limit does not apply |
-| Motion | `animate` | FE-2, FE-3 | Ran at FE-2 and FE-3 |
-| | `find-animation-opportunities` | FE-5 | Ran at the end of FE-5 over the Reader (17.5). Three overlays that appear instantly were found, none changed |
+| Motion | `animate` | FE-2, FE-3, FE-6 | Ran at FE-2, FE-3 and FE-6 (the overlay enters, 17.6 BC) |
+| | `find-animation-opportunities` | FE-5 | Ran at the end of FE-5 over the Reader (17.5). Three overlays that appear instantly were found, and FE-6 built them (17.6 BC) |
 | | `improve-animations`, `optimize-web-animations` | FE-R | Available, not run yet |
 | | `animation-vocabulary` | As needed | Reference only |
 | | `gsap`, `gsap-scrolltrigger-storytelling`, `cinematic-gsap-lenis-motion-system`, `animation-on-scroll`, `threejs` | Not used | Each adds a dependency or a banned pattern (scroll-jacking, decorative parallax) |
@@ -660,8 +663,8 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 | | `gstack-design-review`, `gstack-qa`, `gstack-qa-only` | FE-R | Not run yet |
 | | `gstack-benchmark` | FE-R | Not run yet |
 | | `gstack-design-shotgun`, `gstack-design-html` | Not used | They generate variants and files outside the allowed folders |
-| Marketing, conversion, psychology | `copywriting` | FE-1, FE-3, FE-4, FE-5, FE-6 | Ran at FE-1 and FE-3, and at the end of FE-4 and FE-5 over each part's strings (17.4 AO, 17.5 BA) |
-| | `copy-editing`, `stop-slop` | Every part with prose | `stop-slop` ran on this file, on the FE-4 and FE-5 strings and again on their copy edits. `copy-editing` ran at FE-3, FE-4 and FE-5 |
+| Marketing, conversion, psychology | `copywriting` | FE-1, FE-3, FE-4, FE-5, FE-6 | Ran at FE-1 and FE-3, and at the end of FE-4, FE-5 and FE-6 over each part's strings (17.4 AO, 17.5 BA, 17.6 BI) |
+| | `copy-editing`, `stop-slop` | Every part with prose | `stop-slop` ran on this file, on the FE-4, FE-5 and FE-6 strings and again on their copy edits. `copy-editing` ran at FE-3 to FE-6 |
 | | `cro` | FE-1, FE-3 | Ran |
 | | `signup` | FE-1, FE-4 | Ran at FE-1 (applied to the start flow, which has no account). Not run as a pass at FE-4 |
 | | `onboarding` | FE-1, FE-5 | Ran (applied to the first run of the reader) |
@@ -670,7 +673,7 @@ The installed set was listed at the start of FE-1 (the user skills folder and th
 | | `seo-audit` | FE-R | Titles, descriptions and headings only |
 | | `analytics`, `ab-testing` | Not used | The product collects nothing by design |
 | Prose | `stop-slop` on every user-facing string and doc | Every part | See above |
-| Code quality | `ponytail` (always on) and `/ponytail:ponytail-review` | Every part | Ran at the end of FE-1 to FE-5 |
+| Code quality | `ponytail` (always on) and `/ponytail:ponytail-review` | Every part | Ran at the end of FE-1 to FE-6 |
 | | `superpowers:test-driven-development` | FE-2 (reveal, tokens), FE-3 (fixture), FE-4 (reducer) | Ran at FE-2 and FE-3 (the fixture test, seen failing first), and at FE-4 (the reducer tests, red while the module did not exist, then green, with six mutation checks that each fail at least one test) |
 | | `superpowers:verification-before-completion` | Every part | Applied |
 | | `superpowers:systematic-debugging` | When a test fails | Not needed yet |
@@ -761,6 +764,8 @@ The runner is `node --test` (11.2). Tests sit next to the file they cover as `*.
 | FE-5 | `lib/authority.test.ts` | 3 tests. Each known status maps to its own fixed phrase. A value the card does not know (an empty string, `superseded`, `REVIEWED`, `not-reviewed`, `reviewed ` with a space) gets the unknown phrase and never reads as checked. No phrase is the bare word "Reviewed", and no two phrases match |
 | FE-5 | `lib/reader.test.ts` | 7 tests. `nearestMark`: a click on a tick picks it, the closer of two ticks wins and a tie takes the first, a click past 12 px from every tick picks none (the 12 and 13 px edge), and no ticks or a zero-height strip pick none. `freshDelays`: nothing new gives no delays, new ids step 0, 1, 2 in order with known ids skipped, and the stagger stops at the cap |
 | FE-5 | `tokens.test.ts`, two tests added | `--measure` is defined in px and sits in 572 to 673. The Reader and the hero sheet both read `var(--measure)` |
+| FE-6 | `tokens.test.ts`, four tests added | Two for plain status text: the five status foregrounds reach 4.5 on `paper-sunken`, `anchor-100` and `paper-sheet`, one test per theme, 30 pairs (17.6, BB). Two for motion: each overlay enter class (`.ca-dialog`, `.ca-menu`, `.ca-toast`) reads a `--dur-*` token and `--ease-out` and its component names it, and the one reduced-motion rule still selects `*` and zeroes duration and delay (17.6, BC) |
+| FE-6 | Browser probes, not unit tests | The computed animation of each overlay with motion on and under emulated reduced motion, the Credits and contents links (scroll position and focus), and an audit script: horizontal overflow, text under 12 px, `h1` count and title on five routes at five widths in both themes (17.6) |
 | FE-5 | A measurement script, not a unit test | The full-line average at 768, 1023, 1024, 1280, 1440, 1920 and 375 (17.5, AR), and the long tasks on a 500,000 code point document (AV) |
 
 What these cannot cover is the `.tsx` layer. That is checked by the headless run, the screenshots, axe and the keyboard run at FE-R.
@@ -828,6 +833,10 @@ Each is deliberate and needs Aryan's sign-off through the decisions above.
 16. **The root is out of the panel transition,** so the page behind the panel is not captured. (17.5, AU)
 17. **The bottom sheet's header shows no title and no Close,** only Peek or Open. The panel's own heading and Close do those jobs. (17.5, AS)
 18. **The hero sheet is capped by the reading measure,** which 17.4 had left to FE-R. (17.5, AR)
+19. **The Accuracy table stays in the main column and does not span into the aside.** At 1280 px the main column is 672 px, and the six columns fit at their 88 px minimum, so the aside holds the glossary beside the table. (17.6, BD)
+20. **The Credits link target is a search parameter,** `?at=credits`, and not router state. A parameter survives a reload and a pasted link, and `Link` needs no `state` prop. (17.6, BE)
+21. **The menu enters over `--dur-press` (120 ms),** not the 150 ms the animation sweep named, because the brief for the part said to use the existing tokens. (17.6, BC)
+22. **Expired drops its dashed card,** so the three plain pages read alike. The two variant headings and lines are unchanged. (17.6, BF)
 
 ---
 
@@ -1103,3 +1112,52 @@ Run again at the end of the part, on the final code:
 | Contrast of the plain status on sunken and `anchor-100` surfaces, added to `tokens.test.ts` | FE-R |
 | The hero ruler wrapper that stretches its child (`[&>div]:flex-1` in `HeroDemo.tsx`), not examined | FE-R |
 | Enter motion for `ConfirmDialog`, `DropdownMenu` and `Toast`, from the animation sweep above. About 15 lines of CSS, if Aryan asks | FE-6 |
+
+### 17.6 FE-6: the secondary pages, and the overlay enters
+
+**Built.** How it works, Accuracy, Expired and NotFound are recomposed on the margin grid (BD to BF). Two additions came with the `next` for this part: the plain status contrast pairs (BB) and the three overlay enters from the 17.5 sweep (BC). The 4 px rule leaves `ErrorCard`, `Toast` and `PerformanceTableRow` (BG). Audit rows A9, A10 and B7 are closed, and A2 is closed for Expired and NotFound.
+
+**Amendments**
+
+| ID | Change | Sections touched |
+|---|---|---|
+| BB | Plain status contrast. The five plain status foregrounds (`status-found-fg`, `-review-fg`, `-unvalidated-fg`, `-absent-fg`, `-unavailable-fg`) are computed on the three surfaces a `CategoryRow` puts them on: `paper-sunken` (the sidebar), `anchor-100` (the selected row) and `paper-sheet` (the hovered row), in both themes, 30 pairs. None is under 4.5, so no token changed and there was nothing for a hue-preserving fix to do. Ratios on sunken, `anchor-100` and sheet. Light: found 7.99, 7.95 and 9.35, review 4.98, 4.95 and 5.82, unvalidated 5.10, 5.08 and 5.97, absent 4.57, 4.55 and 5.35, unavailable 6.35, 6.32 and 7.43. Dark: found 10.48, 7.64 and 9.34, review 11.13, 8.11 and 9.92, unvalidated 7.43, 5.42 and 6.63, absent 6.32, 4.61 and 5.63, unavailable 8.77, 6.39 and 7.82. The thinnest margin is light absent on `anchor-100`, 0.05 over the bar, so a later edit to `--status-absent-fg` or `--anchor-100` fails the test. The two tests passed on their first run, so a mutation check set light `--status-absent-fg` to `#7A7F85`, saw the plain status test fail, and restored the value. This closes the open item of 17.5 | 5.4, 13, DesignSystem.md 3.1 |
+| BC | Overlay enters, built from the 17.5 sweep with the existing tokens and no new one. The delete confirmation: its backdrop is the `.ca-enter` fade over `--dur-state` (the class needs no step, so its delay is 0), and the card is `.ca-dialog`, opacity and scale from 0.97 to rest over `--dur-state` with `--ease-out`, from its centre. The menu is `.ca-menu`: the same `ca-pop` keyframes from 0.96, `transform-origin` at the top right where the trigger is, over `--dur-press` (120 ms, not the sweep's 150 ms, which is no token, deviation 21). The toast is `.ca-toast`: the existing `ca-rise` over `--dur-state`. Each leaves at once, and only opacity and transform move. One keyframe, `ca-pop`, serves the dialog and the menu through `--pop-from`. The toast is a mount keyframe and not a transition because each toast is its own element and nothing reverses it. The reduced-motion path is the one global rule of 7.4, which sets every animation duration and delay to near zero, so the three need no guard of their own. A test fails if that rule loses `*`. Measured in the browser: the menu runs `ca-pop` for 120 ms with its origin at `220px 0px`, the card `ca-pop` for 200 ms with its origin at its centre, the backdrop `ca-fade` for 200 ms with no delay, the toast `ca-rise` for 200 ms, and under emulated reduced motion each computed duration is 0.01 ms with no animation running. "Keep it" removes the dialog at once (within 50 ms). The Gallery's static dialog and its forced-open menu play the enter once on load | 7.3, 7.4, DesignSystem.md 3.5 and 6 |
+| BD | Accuracy. The page is two grids. The first holds the `h1`, the sentence, the review-scope notice and, directly under it while `is_example` is true, a dashed banner (the same border as before, 15 px text, `role="note"`, the same words). The second holds the controls and the table in the main column and the glossary in the aside, sticky from 1280 px. The mono "§ Accuracy" kicker is gone (3.4). Rows are ledger rows with a hairline below, not boxed rows, and a weak row takes the `status/review/bg` tint and its label instead of the 4 px rule. From 768 px there are six columns and a sticky header. Below 768 each category is a block: the name, the support, then Precision, Recall, Silent miss and Abstention two by two. The column header is hidden below 768 because each cell carries its label, and the cell labels are visually hidden from 768, where the header names the columns, and stay in the accessibility tree. Each measure sits in a `role="cell"` wrapper, because a `row` with no cell children is an ARIA error that the baseline had. The cells no longer repeat "n = 38" under every value, a figure the Support column already gives. Silent miss is set at weight 500. The summary line read "marked with an ochre rule" and now says "marked Weak because their recall or precision is low". `PerformanceTableRow` takes `metrics` always, and the 35 line branch with hard-coded numbers that only the Gallery used is deleted. Measured: no horizontal overflow and nothing under 12 px at 375, 768, 1024, 1280 and 1440 in both themes. The page is 11,525 px tall at 375, which is 46 blocks of about 230 px. The baseline's 5,779 px was short because its columns clipped, so the two heights are not comparable. This closes B7 | 6.5 |
+| BE | How it works. The page is two grids: the heading block, then the contents list in the margin column (sticky from 1024 px, 44 px links, "§ n" beside each entry, `aria-hidden`) beside the seven sections and Credits. Below 1024 the list sits under the notice and above the first section, so the `h1` is never pushed down. The § mark beside each heading sits outside the `h2`, so the heading text is the title alone (A9). Fragments are real components that show what the text says: three status chips beside "Saying how sure it is", the five polarity labels beside "Reading from your side" and a statute tag beside "Indian law review and case law". They are inert and hidden from assistive technology, because the words beside them say the same, and each rises once through `useReveal`. The `Specimen` wrapper moved from `Landing.tsx` to `components/Specimen.tsx`, two callers. The fragments hang in the third column from 1280 px by absolute positioning inside each section (`left: 100%`, 32 px gap, 320 px wide) and stack under the text below that. The `MarginGrid` aside slot could not hold them, because it is one block per grid and one grid per page is what lets the contents list stick. The footer's "Data sources and credits" link opens `#/how-it-works?at=credits`, and the page scrolls to the Credits heading and moves focus there (A10). It waits one frame, because `Root` resets scroll and focus after the page mounts. Checked in the browser: from the landing page, from the page itself, from a pasted address, and from a contents entry, the heading is in view and holds focus. After a contents click on a page opened with `?at=credits` the address keeps the parameter, so a reload goes to Credits. The text change is in BI. This closes A9, A10 and T | 6.4 |
+| BF | Expired, NotFound and the error page. `PlainPage` in `components/Layout.tsx` is a 560 px column with an `h1` in `t-display-md`, a line in `t-prose-lg` and one action. The three pages use it, which removes the three-line heading style that NotFound and `RootError` each carried. Expired drops its dashed `EmptyState` card and file icon, and its action is the "Review a contract" button, the product's one primary action. The variant headings and lines are unchanged. `EmptyState` loses `headingAs`, whose only caller was Expired. Its `no-document` variant has no production caller now and stays, for the Gallery and for the rule that every component keeps its API and states. `h1` and title were already on both pages from FE-2, so A2 is closed for them | 6.6 |
+| BG | The 4 px rule is gone from `ErrorCard` (the full 1 px border takes the `status/unavailable` border colour, and the icon and the title carry the meaning), `Toast` and `PerformanceTableRow`. The rule now marks notices, rule-flag cards and judgment cards only, which is what 3.3 decided. The toast's variant colour sat on the rule and on the icon, so the icon keeps it. The info toast's icon was `rule/strong`, under 2:1 on the sheet in both themes, and is now `ink/tertiary`, 5.44 on the light sheet and 4.64 on the dark. The field was named `rule` and is now `tone` | 3.3, DesignSystem.md 3.5 |
+| BH | Closed with no change: tabular numerals on `MetricCell`. Every value and the support are set in IBM Plex Mono, whose digits share one width, so the property would change nothing. 17.5 listed it for FE-6 and `DesignSystem.md` 3.4 now says so | 5.8, DesignSystem.md 3.4 |
+| BI | Copy. Two strings are new in this part, and both went through `copywriting`, `copy-editing` and `stop-slop`. How it works, the second paragraph of "Reading the contract" was "Scanned images and password-protected files are refused at upload, because there is no reliable text to point to." and is now "ClauseAnchor refuses a file at upload if it is scanned throughout or password protected, because there is no reliable text to point to. If only some pages are scanned, ClauseAnchor reads the rest and tells you in the reader that it could not read part of the document." That matches the parser, which refuses a file only when every page is scanned (the FAQ on the landing page says the same), and it matches the reader's notice (17.5, AQ). `stop-slop` asked for one edit, the passive "that part of the document could not be read", which became the active "it could not read part of the document". The Accuracy summary line is in BD: "46 categories. 10 are marked Weak because their recall or precision is low." Nothing else changed in wording: the banner, the glossary, the contents label, both Expired lines, both NotFound lines and the button | 8.3 |
+
+**Rules for the next parts.** A new overlay that appears on a user action takes `ca-pop` or `ca-rise` over a motion token and leaves at once. It needs no reduced-motion code, and `tokens.test.ts` fails if the global rule stops selecting `*`. A plain page uses `PlainPage`. A component that sits beside text and takes no input uses `Specimen`. A table whose rows must fit a phone stacks below 768 and keeps its cell labels in the accessibility tree.
+
+**What was checked.** Measured in this part in headless Edge over the DevTools protocol against the dev server, extensions disabled, with an audit script and probes that live outside the repo.
+
+- Five routes (How it works, Accuracy, Expired in both variants, NotFound) at 375, 768, 1024, 1280 and 1440 px in both themes: one `h1`, a distinct title, no horizontal overflow, no text node under 12 px, and an empty console. 50 captures.
+- The overlays, with motion on and under emulated reduced motion (BC). The Credits and contents links (BE).
+- The three overlays at rest in the Reader at 1280 px, light and dark, to check the toast without its rule.
+- The production build holds no Preview controls and no Gallery chunk.
+- Captures: `frontend/.screens/FE-6/`, gitignored. `how-it-works-`, `accuracy-`, `expired-`, `expired-deleted-` and `notfound-` at the five widths in both themes, two 375 px crops (`crop-accuracy-375-top` and `crop-how-375-top`) and six `overlay-` captures.
+- `/ponytail:ponytail-review` over the full FE-6 diff. No P1. Fixed, two: `ConfirmDialog`'s `Panel` took a `className` prop so that one of its two callers could pass `ca-dialog`, and the class now sits on the panel always. `.ca-backdrop` repeated `.ca-enter` under another name and is gone, with its test row. About 7 lines out. Kept, six: the `Toast` field rename from `rule` to `tone` (the old name would lie). `EmptyState`'s `no-document` variant and its `action` and `onAction`, which have no production caller and stay for the rule that every component keeps its API and states (about 12 lines if Aryan wants them gone). `PerformanceTableRow`'s `variant`, where `strong` and `not-measured` render alike and only `weak` changes the row, for the same rule. `PERF_COLUMNS`, one string shared by the header and the row. The overlay class test, which reads CSS text and is kept like the FE-5 measure test. `MetricCell`'s `emphasis` and `PlainPage`'s `role`, one caller each.
+
+Run again at the end of the part, on the final code:
+
+- `pnpm typecheck` exit 0, `pnpm test` 53 of 53 (7 reveal, 14 tokens, 5 hero fixture, 17 start flow, 3 authority, 7 reader) and `pnpm build` 169 modules with no warnings. The How it works chunk is 7.47 kB (3.02 kB gzipped), the Accuracy chunk 7.93 kB (2.98 kB gzipped), Expired and NotFound under 1 kB each, the Reader chunk 51.45 kB (15.12 kB gzipped, from 50.16 and 14.85 at FE-5), the index chunk 236.68 kB (72.28 gzipped) and the stylesheet 31.93 kB (7.90 gzipped).
+
+**Open, not measured.** LCP and CLS for `/` (FE-R). Lighthouse and axe on every route (FE-R): the cell roles in BD fix a structural error that axe would flag, and that is reasoned from the ARIA rules and not run. A screen-reader pass, which no reader was available for. The 40 px shift when the Reader's progress line leaves (17.5, AX). How the Accuracy blocks read at 375 px with real numbers, since the page is 46 blocks tall and a long list may want a way to jump or filter.
+
+**Deferred, with the owner**
+
+| Item | Owner |
+|---|---|
+| LCP and CLS for `/` | FE-R |
+| The words and the colours of the authority status, and its definition in the contract | Tanishq, then Aryan |
+| Parser warning wording and codes (17.5, AQ) | 2-E (API.md) |
+| Whether the real API accepts a sample id while uploads are on (D8) | 4-C |
+| The `/gallery` overflow at 1280 and 375 px, development only | FE-R |
+| The hero ruler wrapper that stretches its child (`[&>div]:flex-1` in `HeroDemo.tsx`), not examined | FE-R |
+| The hero quote column, 25.9 characters a line at 1280 and 1440 px beside a 320 px panel | FE-R |
+| The `no-document` empty state, kept with no production caller (BF) | Aryan |
+| The `?at=credits` parameter staying in the address after a contents click (BE) | Aryan |
+| Lighthouse, axe, the keyboard run and the quality-bar figures | FE-R |
