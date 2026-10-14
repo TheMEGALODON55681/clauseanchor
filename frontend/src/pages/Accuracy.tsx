@@ -71,15 +71,6 @@ export default function Accuracy() {
             <div className="mt-6">
               <NoticeBanner variant="review-scope" />
             </div>
-            {data?.is_example && (
-              <p
-                role="note"
-                className="mt-4 text-[15px] leading-[22px]"
-                style={{ color: "var(--ink-primary)", background: "var(--paper-sheet)", border: "1px dashed var(--status-unvalidated-border)", borderRadius: "var(--radius-sm)", padding: "12px 16px" }}
-              >
-                Example numbers for layout. Real results appear after evaluation.
-              </p>
-            )}
           </MarginGrid>
         </Container>
       </section>
@@ -109,43 +100,61 @@ export default function Accuracy() {
           ) : (
             <section aria-labelledby="table-title">
               <h2 id="table-title" className="sr-only">Results by category</h2>
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                {data ? <Tabs label="Evaluation set" items={data.sets.map((s) => s.label)} value={set?.label} onChange={setTab} /> : <Skeleton />}
-                <div className="flex items-center gap-3">
-                  <span className="text-[13px]" style={{ color: "var(--ink-tertiary)" }}>Sort by</span>
-                  <SegmentedFilter label="Sort by" items={["Category", "Recall", "Silent miss"]} value={sort} onChange={(v) => setSort(v as SortKey)} />
-                </div>
-              </div>
-
-              {set && (
-                <p className="mt-4 text-[14px] leading-[21px]" style={{ color: "var(--ink-secondary)" }}>
-                  {rows.length} categories. {weak} are marked Weak because their recall or precision is low.
-                </p>
-              )}
-
-              <div className="mt-4" role="table" aria-label={`${set?.label ?? "Evaluation"} results`}>
-                <div
-                  role="row"
-                  className={`z-10 hidden gap-3 border-b px-3 py-2 text-[12px] font-semibold md:sticky md:top-0 md:grid ${PERF_COLUMNS}`}
-                  style={{ color: "var(--ink-secondary)", background: "var(--paper-base)", borderColor: "var(--rule-strong)" }}
-                >
-                  {COLS.map((c) => (
-                    <span role="columnheader" key={c}>{c}</span>
-                  ))}
-                </div>
-                {!data &&
-                  Array.from({ length: 6 }, (_, i) => (
+              {!data && (
+                /* A screen tall, so the glossary and the footer are below the fold before and after the data lands, and nothing in view moves. */
+                <div className="min-h-dvh" aria-hidden>
+                  {Array.from({ length: 6 }, (_, i) => (
                     <div key={i} className="px-3 py-3"><Skeleton /></div>
                   ))}
-                {rows.map((r) => (
-                  <PerformanceTableRow
-                    key={r.category_id}
-                    category={CATEGORY_BY_ID[r.category_id]?.label ?? r.category_id}
-                    variant={r.recall === null ? "not-measured" : r.weak ? "weak" : "strong"}
-                    metrics={{ support: r.support, precision: r.precision, recall: r.recall, silentMiss: r.silent_miss, abstention: r.abstention }}
-                  />
-                ))}
-              </div>
+                </div>
+              )}
+              {data && (
+                <>
+                  <div className="flex flex-wrap items-end justify-between gap-4">
+                    <Tabs label="Evaluation set" items={data.sets.map((s) => s.label)} value={set?.label} onChange={setTab} />
+                    <div className="flex items-center gap-3">
+                      <span className="text-[13px]" style={{ color: "var(--ink-tertiary)" }}>Sort by</span>
+                      <SegmentedFilter label="Sort by" items={["Category", "Recall", "Silent miss"]} value={sort} onChange={(v) => setSort(v as SortKey)} />
+                    </div>
+                  </div>
+
+                  {data.is_example && (
+                    <p
+                      role="note"
+                      className="mt-4 text-[15px] leading-[22px]"
+                      style={{ color: "var(--ink-primary)", background: "var(--paper-sheet)", border: "1px dashed var(--status-unvalidated-border)", borderRadius: "var(--radius-sm)", padding: "12px 16px" }}
+                    >
+                      Example numbers for layout. Real results appear after evaluation.
+                    </p>
+                  )}
+
+                  {set && (
+                    <p className="mt-4 text-[14px] leading-[21px]" style={{ color: "var(--ink-secondary)" }}>
+                      {rows.length} categories. {weak} are marked Weak because their recall or precision is low.
+                    </p>
+                  )}
+
+                  <div className="mt-4" role="table" aria-label={`${set?.label ?? "Evaluation"} results`}>
+                    <div
+                      role="row"
+                      className={`z-10 hidden gap-3 border-b px-3 py-2 text-[12px] font-semibold md:sticky md:top-0 md:grid ${PERF_COLUMNS}`}
+                      style={{ color: "var(--ink-secondary)", background: "var(--paper-base)", borderColor: "var(--rule-strong)" }}
+                    >
+                      {COLS.map((c) => (
+                        <span role="columnheader" key={c}>{c}</span>
+                      ))}
+                    </div>
+                    {rows.map((r) => (
+                      <PerformanceTableRow
+                        key={r.category_id}
+                        category={CATEGORY_BY_ID[r.category_id]?.label ?? r.category_id}
+                        variant={r.recall === null ? "not-measured" : r.weak ? "weak" : "strong"}
+                        metrics={{ support: r.support, precision: r.precision, recall: r.recall, silentMiss: r.silent_miss, abstention: r.abstention }}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </section>
           )}
         </MarginGrid>

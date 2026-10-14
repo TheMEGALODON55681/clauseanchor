@@ -2,7 +2,7 @@
 
 The plan for rebuilding the ClauseAnchor frontend on top of the imported baseline. It follows `DesignSystem.md`, which stays the source of truth for tokens and voice, and it extends that file where this one says so. FE-1 wrote it. FE-2 to FE-R build to it and keep it true to what was built.
 
-Status: FE-1 to FE-6 are built and their amendments are in section 17. FE-R is next.
+Status: FE-1 to FE-6 are built and their amendments are in section 17. FE-R is in step 2, and its fixes are in 17.7.
 
 ---
 
@@ -453,7 +453,7 @@ The sheet is the text column plus 48 px of padding on each side and a 1 px edge.
 - From 768 px the table spans the main and aside columns, with a sticky header. Below 768 each category becomes a stacked block: the name, the support, then Precision, Recall, Silent miss and Abstention as a two-by-two grid of `MetricCell`. Nothing clips and nothing is below 12 px.
 - The glossary moves beside the table in the aside from 1024 px, as marginal notes.
 - Silent miss keeps its emphasis, because it is the number that matters: misses with no warning.
-- Built in FE-6 (17.6, BD). The table stays in the main column, so the aside holds the glossary beside it, and the example banner sits directly under the review-scope notice.
+- Built in FE-6 (17.6, BD). The table stays in the main column, so the aside holds the glossary beside it, and the example banner sat directly under the review-scope notice. FE-R moved it into the results block, between the controls and the count (17.7, BM).
 
 ### 6.6 Expired and NotFound
 
@@ -1161,3 +1161,47 @@ Run again at the end of the part, on the final code:
 | The `no-document` empty state, kept with no production caller (BF) | Aryan |
 | The `?at=credits` parameter staying in the address after a contents click (BE) | Aryan |
 | Lighthouse, axe, the keyboard run and the quality-bar figures | FE-R |
+
+### 17.7 FE-R: fixes after the phase review
+
+**Built.** FE-R step 2 fixes the findings of the review (`BuildLog.md`, 2026-10-14, R1 to R22) in six commits, one per theme. Commit 1 closed the accessibility findings (R2 to R9, R11, R18). Commit 2 is performance: R1, and R12, which belonged to no theme. The later commits add rows to this table.
+
+**Amendments**
+
+| ID | Change | Sections touched |
+|---|---|---|
+| BJ | Tabs and SegmentedFilter are groups of toggle buttons (R8, accepted by Aryan). Each is a `role="group"` with an accessible name and one `aria-pressed` button per item. Neither is an ARIA tablist, because neither has a panel of its own: Tabs picks the evaluation set shown in the same table, and SegmentedFilter sorts that table or filters the manual-review list. A tablist would promise a `tabpanel`, `aria-controls` and arrow keys that nothing implements. Each button is a tab stop, as in any group of buttons | 12 (4.1.2) |
+| BK | Five font files load after first paint (R1). `index.css` declares the two Latin files that `index.html` preloads (Source Serif 4 normal and IBM Plex Sans 400), the five Latin-extended faces and the three fallbacks. The other five Latin faces (Source Serif 4 italic, IBM Plex Sans 500 and 600, IBM Plex Mono 400 and 500) are in `fonts-late.css`, which `main.tsx` imports once the browser reports first contentful paint, or at once where it has no paint timing. Until they arrive, weights 500 and 600 of Plex Sans set in the loaded 400 face and mono sets in its fallback. The swap moves nothing measurable: CLS stays 0 on `/`. The two preloads stay, so the headline and the hero paragraph still paint in Source Serif 4. Why: the Lighthouse mobile simulation counts every request that finished before first paint, and on `/` three faces found through the stylesheet (Plex Sans 500 and 600 and Plex Mono 400, 63 KB) sat on the longest chain beside about 124 KB of script. `fonts.test.ts` fails if a Latin face returns to `index.css`, or if a Latin file is declared in neither sheet or in both. In the browser the late sheet is requested 7 ms after first contentful paint and its three files finish within 25 ms | 11.1, DesignSystem.md 3.4 |
+| BL | The mock adapter loads on the first call (R1). `client` in `api/client.ts` forwards each of the 12 `ApiClient` methods to `import("./mock")`, and the six mock switches moved from `mock.ts` into `client.ts`, so `session.tsx` no longer pulls the adapter and the sample contract into the landing page's first request set. The adapter and the contract are 27 KB (10.4 KB gzipped) and load when the first call is made. The entry grew 1.6 KB gzipped, from the catalogue, which the landing page lists, and the forwarder. The set of files preloaded by `index.html` went from 122.3 to 114.5 KB gzipped (Vite's figures). The swap to the HTTP adapter at 4-C replaces the forwarder and removes the switches with the mock | 7.1, 7.2 (Architecture.md) |
+| BM | The Accuracy results block lands in place (R12). The block under the heading is one piece: while the request runs it is a skeleton a screen tall, and when the data arrives it is replaced by the controls, the example banner, the count and the table. Nothing in view changes position. On a phone the glossary and the footer sit below the fold before and after, and from 1280 px the glossary stays beside the table. The example banner moved from the first grid (BD) into the results block, between the controls and the count, because inserting it above the table moved everything under it. Its text and its style are unchanged. In a real timeline at 412 px the shift was 0.4205 in each of three runs (first paint at 108 to 116 ms, first contentful paint at 180 ms, data at 552 to 606 ms). Lighthouse reported it in one of its three runs. The cause is the same in every run, and why only one showed it is not established. Now 0.0000 at 375, 412, 768, 1280 and 1440 px, and 0 in three Lighthouse runs | 6.5, DesignSystem.md 6 |
+| BN | Tried and not taken. `content-visibility: auto` on the landing sections below the hero cut the first layout from 66 to 46 ms in the browser, and the simulated first and largest contentful paint did not move (2.26 and 2.71 s before and after), so it is not applied. Removing the two font preloads made it worse (first paint 2.26 to 2.71 s, score 94 to 92). Loading every font after first paint with no preloads gave 98 and an LCP of 1.8 s, and was not taken because the headline and the hero paragraph would then paint in the fallback face on every visit | 1.3 |
+
+**Rules for the next parts.** A font face the first screen does not use goes in `fonts-late.css`. A file the shell imports at load must not import the mock, because the adapter loads on the first call. A block that fills from a request holds its place: it is replaced as one piece, and its loading state is tall enough that nothing in view moves when the data arrives.
+
+**What was checked.** Lighthouse 13.5.0, mobile, simulated throttling, headless Edge against `vite preview` on `localhost`, three runs each. Before is `dc3fc46`, after is the final code of this part.
+
+| Route | Performance | FCP | LCP | TBT | CLS |
+|---|---|---|---|---|---|
+| `/` before | 94, 94, 89 | 2.27, 2.27, 2.34 s | 2.72, 2.72, 2.64 s | 46, 23, 262 ms | 0 |
+| `/` after | 97, 97, 97 | 1.82, 1.81, 1.82 s | 2.27, 2.26, 2.27 s | 54, 53, 33 ms | 0 |
+| `/accuracy` before | 73, 93, 93 | 2.30, 2.22, 2.29 s | 2.88, 2.94, 2.86 s | 70, 21, 55 ms | 0.421, 0, 0 |
+| `/accuracy` after | 94, 94, 94 | 2.07, 2.07, 2.08 s | 2.79, 2.79, 2.80 s | 12, 11, 9 ms | 0 |
+
+- Accessibility 100 and Best Practices 100 on both routes in every run. SEO is 91 on both, because the preview server answers `/robots.txt` with `index.html`. That is unchanged, and the security commit adds no `robots.txt`.
+- The review measured `/` at 90, 88 and 88 on `f24d382`. The same page measured 94, 94 and 89 on `dc3fc46`. LCP was 2.7 s in both, and the spread is mostly TBT.
+- `/accuracy` is not a named bar and its LCP is still 2.7 to 2.8 s, because the page chunk is requested after the entry script.
+- Request set on `/` after: HTML, one stylesheet, eight scripts, two preloaded fonts, then the late sheet and three fonts after first contentful paint. One origin.
+- An axe and structure sweep over seven routes at 375, 768, 1024, 1280 and 1440 px in both themes, 70 combinations: no axe violation, one `h1` each, no horizontal overflow, no text under 12 px, an empty console, one origin (`localhost`). axe lists `color-contrast` as incomplete, not failed, on `.ca-ink`, the animated mark.
+- `pnpm typecheck` exit 0, `pnpm test` 55 of 55 (7 reveal, 15 tokens, 1 font loading, 5 hero fixture, 17 start flow, 3 authority, 7 reader) and `pnpm build` 171 modules with no warnings. A mutation check put a late face back into `index.css`, saw the font test fail, and restored it.
+- Build sizes (Vite, gzipped): entry 73.9 KB, runtime chunk 34.2 KB, stylesheet 7.9 KB, late font sheet 0.3 KB, mock adapter 7.1 KB and sample contract 3.3 KB (both on the first call), Accuracy 3.0 KB.
+- `/ponytail:ponytail-review` over the full diff. No P1. One P2 fixed: the six mock switches had a file of their own (`mockSettings.ts`, one more chunk and one more request), and now sit in `client.ts`. Three P3 fixed: the `typeof PerformanceObserver` guard, the empty `catch` on the late import and the second font test, which became one test with three asserts. Kept: the 12 forwarding lines in `client` (a `Proxy` is 3 lines and loses the type check, and the file is replaced at 4-C), the `else` branch for a browser with no paint timing (3 lines that keep the fonts loading), and the six skeleton rows, which are the baseline's.
+
+**Open, not measured.** A real mobile device and a real network: the Lighthouse figures are simulated, on one machine, over HTTP/1.1 with no TLS, so a deployment with HTTP/2 and compression differs. How weights 500 and 600 look in the first frame on a slow network: it was captured at 1280 and 375 px with the late files blocked and read by eye, and button labels and the overline set at 400 until the files arrive. `/start` and `/how-it-works` were not re-measured. A screen reader on the Accuracy page, where the skeleton is hidden from assistive technology and the block appears whole.
+
+**Deferred, with the owner**
+
+| Item | Owner |
+|---|---|
+| SEO 91, from the preview server answering `/robots.txt` with `index.html` (no `robots.txt` is added) | FE-R commit 4 |
+| Reader behaviour (R14 to R17) and the party name (R19) | FE-R commit 3 |
+| Dead code and the gallery-only components | FE-R commit 5 |

@@ -146,7 +146,7 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 1. `Start` is three steps, and the step lives in `?step=`. Step 1 creates a session, uploads a file (or a sample id in sample mode) and polls the parse job until the document is ready. Step 2 can open while parsing still runs. `lib/startFlow.ts` holds the state as a pure reducer and says which step it allows. `pages/start/useStartFlow.ts` holds the upload, the polling and the calls to `client`.
 2. In step 2 the user picks a role and a party, or "None of these". Neither is preselected. Step 3 sets the scope. `Start` then sets the party binding, starts the analysis job and navigates to `/review/:documentId`.
 3. `Reader` polls the job and fetches the analysis as categories resolve, then the manual-review list. It also handles re-binding the party, cancel, retry, report download and delete.
-4. Every call goes through `client` in `src/api/client.ts`. Nothing else imports the mock. Today `client` is the in-memory mock adapter. The swap to an HTTP adapter is one line, planned for 4-C, and the adapter follows API.md.
+4. Every call goes through `client` in `src/api/client.ts`. Nothing else imports the mock. Today `client` forwards each call to the in-memory mock adapter, which loads on the first call so that the landing page does not carry it. The swap to an HTTP adapter replaces that forwarder, planned for 4-C, and the adapter follows API.md.
 
 ### 7.2 Key decisions
 
@@ -158,14 +158,14 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Offsets | `lib/offsets.ts` builds a code point to UTF-16 table once per text. Every slice of contract text goes through `sliceCp` | Backend offsets are code points and JavaScript strings index UTF-16 code units |
 | Routing | `createHashRouter`: `/`, `/start`, `/review/:documentId`, `/how-it-works`, `/accuracy`, `/expired` and a catch-all that shows `NotFound`. Every page except `/` loads on demand. A failing page shows `RootError` inside the shell. `/gallery` is registered only in development, outside the shell | Works on any static host with no rewrite rules. The landing page does not carry the reader, and a bad address is not an expired session. A production build holds no gallery and no preview controls |
 | Theming | Tokens are CSS custom properties in `src/index.css`, dark values under `.dark`. The first load follows `prefers-color-scheme` | One set of tokens for every component. DesignSystem.md lists them |
-| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono, twelve files in `public/fonts/` (seven Latin and five Latin-extended), with `@font-face` rules, `unicode-range` and metric-matched fallbacks in `index.css` | No request leaves for a third party, which keeps the privacy promise. The rupee sign comes from the Latin-extended files, which the browser fetches only on a page that holds a character in that range (the landing page requests none). Other scripts fall back to a system font (`FrontendDesign.md` 17.2, S, and 17.3, X) |
+| Fonts | Source Serif 4, IBM Plex Sans and IBM Plex Mono, twelve files in `public/fonts/` (seven Latin and five Latin-extended), with `@font-face` rules, `unicode-range` and metric-matched fallbacks. The two Latin files the first screen needs are preloaded and declared in `index.css`, and the other five Latin faces are in `fonts-late.css`, which `main.tsx` loads after first paint | No request leaves for a third party, which keeps the privacy promise. The rupee sign comes from the Latin-extended files, which the browser fetches only on a page that holds a character in that range (the landing page requests none). Other scripts fall back to a system font (`FrontendDesign.md` 17.2, S, and 17.3, X). Loading five faces after first paint takes 63 KB off the landing page's request chain (17.7, BK) |
 | Motion and widths | Tokens in `index.css` (`--ease-out`, `--dur-*`, `--w-*`), one reduced-motion block, route changes through the View Transitions API | One set of values for every part. `DesignSystem.md` 3.5 lists them |
 | Start flow | A pure reducer in `lib/startFlow.ts`, a hook for the side effects in `pages/start/useStartFlow.ts`, and the step in the address (`?step=`) | The rules are testable without a DOM. The address owns the step because a second copy in state raced on browser Back. Each upload carries a `seq`, so a late answer for a replaced file changes nothing (`FrontendDesign.md` 6.2 and 17.4, AD) |
 | Reader selection | One `choose` function in `pages/Reader.tsx` takes the pick kind (`pointer`, `step`, `activate`). Only a pointer pick runs through `lib/panelTransition.ts`, a view transition of `.reader-panel` with the root left out | Keyboard stepping stays instant and keeps focus on the mark, and the page behind the panel is never captured (`FrontendDesign.md` 17.5, AT and AU) |
 | Large documents | `DocumentText` and `TextBlock` are memoised. The findings per block are worked out once, the selected and hovered ids reach only the blocks that hold them, and the pick callback has one identity | A pick or a scroll no longer renders every paragraph. No windowing was needed up to 500,000 code points (17.5, AV) |
 | Overlay enters | `.ca-dialog`, `.ca-menu` and `.ca-toast` in `index.css`, with `ca-pop` and `ca-rise` keyframes over the motion tokens. The dialog backdrop is `.ca-enter`. The overlays leave at once, and the one reduced-motion block is their only guard | No motion library and no per-component guard. A test fails if the global rule stops selecting `*` (`FrontendDesign.md` 17.6, BC) |
 | Plain pages | `PlainPage` in `components/Layout.tsx` for Expired, NotFound and the error page | One column and one heading style for the three pages that carry no warning colour (17.6, BF) |
-| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 54 tests: 7 reveal, 15 tokens (11 colour, 2 reading measure, 2 overlay motion), 5 hero fixture, 17 start flow, 3 authority, 7 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 55 tests: 7 reveal, 15 tokens (11 colour, 2 reading measure, 2 overlay motion), 1 font loading, 5 hero fixture, 17 start flow, 3 authority, 7 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
@@ -181,12 +181,14 @@ frontend/
     favicon.svg             # the logomark, with a dark-mode variant
     fonts/                  # twelve woff2 files and the three OFL licence texts
   src/
-    main.tsx                # mounts App
+    main.tsx                # mounts App, loads fonts-late.css after first paint
     App.tsx                 # ThemeProvider, SessionProvider, RouterProvider
     index.css               # fonts, design tokens (light, dark, motion, widths), global focus rule, layout and type classes, reveal, ink-in and hero keyframes, reduced-motion CSS
+    fonts-late.css          # the five Latin font faces the first screen can do without, loaded after first paint
     tokens.test.ts          # asserts the contrast pairs of DesignSystem.md 3.1 and the reading measure token against index.css
+    fonts.test.ts           # asserts index.css declares only the preloaded Latin faces and fonts-late.css the rest
     api/
-      client.ts             # ApiClient interface and the exported client (mock adapter today)
+      client.ts             # ApiClient interface and the exported client (forwards to the mock adapter, which loads on the first call) and the six mock switches
       types.ts              # API types; offsets are code points
       mock.ts               # in-memory adapter: sessions, job timeline, analysis
       contract.ts           # fictional sample agreement text for the mock

@@ -1,7 +1,7 @@
 /* Mock adapter. Simulates the backend in memory so the UI can be built and
    reviewed before the real API exists. Swap it for the HTTP adapter in client.ts. */
 
-import type { ApiClient, MockSettings } from "./client";
+import { settings, type ApiClient } from "./client";
 import { CATALOGUE } from "./catalogue";
 import { SAMPLE_CONTRACT, SAMPLE_FILENAME } from "./contract";
 import {
@@ -26,20 +26,7 @@ import {
 import { buildOffsetIndex, sliceCp, toCodePoint } from "../lib/offsets";
 
 /* ------------------------------------------------------------------ */
-/* Settings                                                            */
-/* ------------------------------------------------------------------ */
-
-export const settings: MockSettings = {
-  sampleMode: false,
-  partialRun: false,
-  failAnalysis: false,
-  failParse: false,
-  failNextRequest: false,
-  shortSession: false,
-};
-
-/* ------------------------------------------------------------------ */
-/* Text, hashing and spans                                             */
+/* Text, hashing and spans                                            */
 /* ------------------------------------------------------------------ */
 
 const TEXT = SAMPLE_CONTRACT;

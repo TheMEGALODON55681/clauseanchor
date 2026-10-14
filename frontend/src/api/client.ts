@@ -1,8 +1,7 @@
 /* The one data interface for the app. Components never import the mock directly.
-   To connect the FastAPI backend, replace `mockAdapter` below with an HTTP adapter. */
+   To connect the FastAPI backend, replace `adapter` below with an HTTP adapter. */
 
 import type { Analysis, Document, Evaluations, Job, ManualReview, Role, Session, UploadInput } from "./types";
-import { mockAdapter, settings } from "./mock";
 
 export type PartyBinding = { role: Role; party_node_id: string | null };
 
@@ -31,7 +30,33 @@ export type MockSettings = {
   shortSession: boolean;
 };
 
-export const client: ApiClient = mockAdapter;
+/* The switches the mock reads. They sit here, and not in the mock, so the shell can read them without loading it. */
+export const settings: MockSettings = {
+  sampleMode: false,
+  partialRun: false,
+  failAnalysis: false,
+  failParse: false,
+  failNextRequest: false,
+  shortSession: false,
+};
+
+/* The adapter loads on the first call, so the landing page does not carry it. */
+const adapter = () => import("./mock").then((m) => m.mockAdapter);
+
+export const client: ApiClient = {
+  createSession: async () => (await adapter()).createSession(),
+  uploadDocument: async (...a) => (await adapter()).uploadDocument(...a),
+  getDocument: async (...a) => (await adapter()).getDocument(...a),
+  setParty: async (...a) => (await adapter()).setParty(...a),
+  startAnalysis: async (...a) => (await adapter()).startAnalysis(...a),
+  getJob: async (...a) => (await adapter()).getJob(...a),
+  getAnalysis: async (...a) => (await adapter()).getAnalysis(...a),
+  getManualReview: async (...a) => (await adapter()).getManualReview(...a),
+  cancelJob: async (...a) => (await adapter()).cancelJob(...a),
+  deleteDocument: async (...a) => (await adapter()).deleteDocument(...a),
+  downloadReport: async (...a) => (await adapter()).downloadReport(...a),
+  getEvaluations: async () => (await adapter()).getEvaluations(),
+};
 
 /** Null once a real adapter is connected. */
 export const mockSettings: MockSettings | null = settings;
