@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { clampStep, flowReducer, initialFlow, maxReachableStep, nextBlocker, parseStep, suggestedParty, type FlowAction, type FlowState } from "./startFlow.ts";
+import { clampStep, flowReducer, initialFlow, maxReachableStep, nextBlocker, parseStep, partyName, suggestedParty, type FlowAction, type FlowState } from "./startFlow.ts";
+import { buildOffsetIndex } from "./offsets.ts";
+import type { DocNode } from "../api/types.ts";
 
 const run = (...actions: FlowAction[]): FlowState => actions.reduce(flowReducer, initialFlow);
 
@@ -142,4 +144,27 @@ test("Next names what is missing on each step, in order", () => {
   assert.equal(nextBlocker(run(...UPLOAD, PARSED, ROLE, PARTY), 2), null);
   assert.equal(nextBlocker(run(...UPLOAD, PARSED, ROLE, { type: "set-party-none" }), 2), null);
   assert.equal(nextBlocker(initialFlow, 3), null, "the last step has no Next to block");
+});
+
+// The first character is outside the BMP: two UTF-16 units, one code point. The offsets only land if they are read as code points.
+const AGREEMENT = "\u{1D538} This Agreement is made between ABC Technologies, Inc., a Delaware corporation, and Example Ltd.";
+const NAME = "ABC Technologies, Inc.";
+const NODE_START = [...AGREEMENT.slice(0, AGREEMENT.indexOf(NAME))].length;
+const ABC: DocNode = {
+  id: "n_party",
+  parent_id: null,
+  kind: "party",
+  start: NODE_START,
+  end: NODE_START + [...`${NAME}, a Delaware corporation`].length,
+  page: 1,
+  name_span: { start: NODE_START, end: NODE_START + [...NAME].length },
+};
+
+test("a party's name is its own name span, so a comma inside the name stays", () => {
+  assert.equal(partyName(AGREEMENT, buildOffsetIndex(AGREEMENT), ABC), "ABC Technologies, Inc.");
+});
+
+test("a party node with no name span reads as its whole text and is never cut at a comma", () => {
+  const { name_span: _unused, ...bare } = ABC;
+  assert.equal(partyName(AGREEMENT, buildOffsetIndex(AGREEMENT), bare), "ABC Technologies, Inc., a Delaware corporation");
 });

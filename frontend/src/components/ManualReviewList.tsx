@@ -48,7 +48,7 @@ function Preview({ text, marks = [] }: { text: string; marks?: [number, number][
         overflow: "hidden",
       }}
     >
-      {parts.map((p, i) => (p.m ? <span key={i} style={markStyle("found", false)}>{p.t}</span> : <span key={i}>{p.t}</span>))}
+      {parts.map((p, i) => (p.m ? <span key={i} style={markStyle("found")}>{p.t}</span> : <span key={i}>{p.t}</span>))}
     </p>
   );
 }

@@ -62,7 +62,7 @@ function FindingFragment() {
   return (
     <div className="flex flex-col gap-3 p-4" style={{ background: "var(--paper-sheet)", border: "1px solid var(--rule-default)", borderRadius: "var(--radius-lg)" }}>
       <p style={{ fontFamily: "var(--font-serif)", fontSize: 17, lineHeight: "30px", color: "var(--ink-primary)" }}>
-        <mark className="ca-mark" style={{ ...markStyle("found", false), color: "inherit", paddingBottom: 3 }}>{e.quote}</mark>
+        <mark className="ca-mark" style={{ ...markStyle("found"), color: "inherit", paddingBottom: 3 }}>{e.quote}</mark>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip status="found" size="s" />

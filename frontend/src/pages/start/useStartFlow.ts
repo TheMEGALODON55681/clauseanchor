@@ -6,7 +6,7 @@ import { ApiError, type Document, type Role, type UploadInput } from "../../api/
 import { useSession } from "../../app/session";
 import type { PartyChoice } from "../../components/PartyBindingField";
 import { buildOffsetIndex, sliceCp } from "../../lib/offsets";
-import { flowReducer, initialFlow, type RoleKey, type UploadErrorCode } from "../../lib/startFlow";
+import { flowReducer, initialFlow, partyName, type RoleKey, type UploadErrorCode } from "../../lib/startFlow";
 
 /* The side effects of the /start flow: the upload, the parse polling and the calls to
    `client`. The reducer in lib/startFlow.ts holds the state and this hook reports to it.
@@ -52,7 +52,7 @@ export function useStartFlow() {
       .filter((n) => n.kind === "party")
       .map((n) => {
         const text = sliceCp(doc.source_text ?? "", index, n.start, n.end);
-        return { id: n.id, name: text.split(",")[0], quote: `“${text}”`, start: n.start, end: n.end };
+        return { id: n.id, name: partyName(doc.source_text ?? "", index, n), quote: `“${text}”`, start: n.start, end: n.end };
       });
   }, [doc]);
 

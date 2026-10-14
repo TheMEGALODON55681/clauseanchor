@@ -81,7 +81,7 @@ export default function HeroDemo() {
               </span>
               <mark
                 className="ca-mark ca-ink"
-                style={{ ...markStyle(e.status, false), color: "inherit", paddingBottom: 3 }}
+                style={{ ...markStyle(e.status), color: "inherit", paddingBottom: 3 }}
               >
                 {mark}
               </mark>

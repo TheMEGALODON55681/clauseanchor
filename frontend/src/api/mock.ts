@@ -429,8 +429,10 @@ function buildNodes(): DocNode[] {
   }));
   const company = locate("Sample Traders Pvt. Ltd., a company incorporated under the Companies Act, 2013, having its registered office at 14 Example Road");
   const provider = locate("Example Industries Ltd., a company incorporated under the Companies Act, 2013, having its registered office at Plot 7");
-  nodes.push({ id: "party_company", parent_id: null, kind: "party", ...company, page: 1 });
-  nodes.push({ id: "party_provider", parent_id: null, kind: "party", ...provider, page: 1 });
+  // Each party's text opens with its name, so the name span starts where the node does. The names are ASCII.
+  const named = (node: { start: number; end: number }, name: string) => ({ ...node, name_span: { start: node.start, end: node.start + name.length } });
+  nodes.push({ id: "party_company", parent_id: null, kind: "party", ...named(company, "Sample Traders Pvt. Ltd."), page: 1 });
+  nodes.push({ id: "party_provider", parent_id: null, kind: "party", ...named(provider, "Example Industries Ltd."), page: 1 });
   return nodes;
 }
 

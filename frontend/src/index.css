@@ -561,6 +561,20 @@ html {
 .ca-ink {
   animation: ca-ink var(--dur-ink) var(--ease-out) var(--ink-delay, 0ms) backwards;
 }
+
+/* A mark you can pick tints under the pointer. The layers that carry the tint sit in the
+   element's inline style (markStyle), so the hover redefines the two tint tokens and the
+   layers follow. A found mark takes the selected tint. A review mark keeps its amber and
+   deepens it. Only where hover exists, so a tap leaves nothing stuck. */
+.ca-pick {
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .ca-pick:hover {
+    --mark-found-tint: var(--mark-focused-tint);
+    --mark-review-tint: color-mix(in srgb, var(--mark-review-line) 22%, transparent);
+  }
+}
 @keyframes ca-fade {
   from { opacity: 0; }
 }

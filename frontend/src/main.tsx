@@ -11,8 +11,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 /* Five font files the first screen can do without load once it has painted, so they do not
    compete with the script and style that paint it. The text sets in the fallback faces until
-   they arrive. A browser with no paint timing loads them at once. */
-const loadLateFonts = () => import('./fonts-late.css')
+   they arrive. A browser with no paint timing loads them at once. A failed load changes
+   nothing on screen, because the fallback faces stay. The catch only keeps the console clean. */
+const loadLateFonts = () => import('./fonts-late.css').catch(() => {})
 if (PerformanceObserver.supportedEntryTypes?.includes('paint')) {
   new PerformanceObserver((list, observer) => {
     if (!list.getEntriesByName('first-contentful-paint').length) return

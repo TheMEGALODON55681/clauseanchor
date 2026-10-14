@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Button from "./Button";
 import { InfoIcon, AnchorIcon, PersonWithDocIcon, CloseIcon } from "./icons";
+import { sessionEndsIn } from "../lib/reader";
 
 export type NoticeVariant = "legal-scope" | "privacy" | "sample-mode" | "session-expiry" | "review-scope" | "read-partial";
 
@@ -17,7 +18,8 @@ const FIXED: Record<NoticeVariant, string> = {
     "Not legal advice. ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires.",
   privacy: "Your contract is processed in memory and deleted within 60 minutes.",
   "sample-mode": "Sample mode: showing a prepared example. Uploads are turned off.",
-  "session-expiry": "This session ends in 8 minutes. Download your report before it closes.",
+  // The Reader passes the real minutes left as `text`. This is the sample the Gallery shows.
+  "session-expiry": sessionEndsIn(8),
   "review-scope":
     "This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment.",
   // Interim wording. It waits for the parser warning codes in API.md (FrontendDesign.md 17.5, AQ).

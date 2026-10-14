@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { freshDelays, nearestMark } from "./reader.ts";
+import { freshDelays, nearestMark, sessionEndsIn } from "./reader.ts";
 
 test("nearestMark: a click on a tick picks it", () => {
   assert.equal(nearestMark([0.1, 0.5, 0.9], 0.5, 500), 1);
@@ -38,4 +38,16 @@ test("freshDelays: the stagger stops at the cap, so later rows share the last st
   const ids = Array.from({ length: 10 }, (_, i) => `r${i}`);
   const d = freshDelays(new Set(), ids, 6);
   assert.deepEqual([...d.values()], [0, 1, 2, 3, 4, 5, 5, 5, 5, 5]);
+});
+
+test("sessionEndsIn: names the whole minutes left, rounded down so it never promises more time than there is", () => {
+  assert.equal(sessionEndsIn(10), "This session ends in 10 minutes. Download your report before it closes.");
+  assert.match(sessionEndsIn(8.99), /ends in 8 minutes\./);
+  assert.match(sessionEndsIn(2.2), /ends in 2 minutes\./);
+});
+
+test("sessionEndsIn: one minute is singular, and under a minute says so", () => {
+  assert.match(sessionEndsIn(1.9), /ends in 1 minute\./);
+  assert.match(sessionEndsIn(0.4), /ends in less than a minute\./);
+  assert.match(sessionEndsIn(-3), /ends in less than a minute\./, "a clock that ran past the expiry still reads sensibly");
 });

@@ -6,7 +6,7 @@ import { ApiError, type Analysis, type Category, type Clause, type Document, typ
 import { CATALOGUE, CATALOGUE_VERSION, CATEGORY_BY_ID, GROUP_ORDER } from "../api/catalogue";
 import { buildOffsetIndex, sliceCp, toUtf16, type OffsetIndex } from "../lib/offsets";
 import { authorityOf } from "../lib/authority";
-import { freshDelays } from "../lib/reader";
+import { freshDelays, sessionEndsIn } from "../lib/reader";
 import { panelTransition } from "../lib/panelTransition";
 import { useMedia, useReducedMotion } from "../lib/useMedia";
 import { useSession } from "../app/session";
@@ -98,7 +98,6 @@ export default function Reader() {
   const [netError, setNetError] = useState(false);
   const [pollKey, setPollKey] = useState(0);
   const [selection, setSelection] = useState<Selection>(null);
-  const [hoverKey, setHoverKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -109,6 +108,8 @@ export default function Reader() {
   const content = useRef<HTMLDivElement>(null);
   const panelFocus = useRef(false);
   const seen = useRef(new Set<string>());
+  // The newest role change wins: an answer for an older one is dropped, whatever order the answers arrive in.
+  const roleSeq = useRef(0);
 
   const goExpired = useCallback(() => navigate("/expired?reason=expired", { replace: true, viewTransition: true }), [navigate]);
 
@@ -134,7 +135,9 @@ export default function Reader() {
         setDocument(d);
         setIndex(buildOffsetIndex(d.source_text ?? ""));
       })
-      .catch(handleError);
+      .catch((e) => {
+        if (live) handleError(e);
+      });
     return () => {
       live = false;
     };
@@ -410,14 +413,18 @@ export default function Reader() {
 
   async function changeRole(r: (typeof ROLES)[number]) {
     if (!token) return;
+    const mine = ++roleSeq.current;
     try {
       const party = r.party ?? meta?.partyNodeId ?? null;
       await client.setParty(token, documentId, { role: r.role, party_node_id: party });
+      if (mine !== roleSeq.current) return;
       setDoc(documentId, { role: r.role, partyNodeId: party });
-      setAnalysis(await client.getAnalysis(token, documentId));
+      const next = await client.getAnalysis(token, documentId);
+      if (mine !== roleSeq.current) return;
+      setAnalysis(next);
       toast("success", "Your role was updated");
     } catch (e) {
-      handleError(e);
+      if (mine === roleSeq.current) handleError(e);
     }
   }
 
@@ -736,7 +743,7 @@ export default function Reader() {
 
         {(minutesLeft <= 10 || netError || job?.status === "failed") && (
           <div className="flex flex-col gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--rule-default)", background: "var(--paper-base)" }}>
-            {minutesLeft <= 10 && <NoticeBanner variant="session-expiry" onAction={download} />}
+            {minutesLeft <= 10 && <NoticeBanner variant="session-expiry" text={sessionEndsIn(minutesLeft)} onAction={download} />}
             {netError && (
               <ErrorCard
                 message="Could not reach the server. Your contract is still open here."
@@ -833,8 +840,6 @@ export default function Reader() {
                         findings={findings}
                         inkSteps={fresh}
                         selectedId={selectedFinding?.clause.id ?? null}
-                        hoverId={hoverKey}
-                        onHover={setHoverKey}
                         onPick={pickFinding}
                       />
                     ) : (
@@ -953,10 +958,8 @@ type TextBlockProps = {
   /** The findings whose first piece of text is in this block. Their id sits on that piece. */
   first: Set<string>;
   inkSteps: Map<string, number>;
-  /** Null unless the selected or hovered finding touches this block, so no other block is rendered again. */
+  /** Null unless the selected finding touches this block, so no other block is rendered again. */
   selectedId: string | null;
-  hoverId: string | null;
-  onHover: (id: string | null) => void;
   onPick: (f: Finding, how: Pick) => void;
 };
 
@@ -967,8 +970,6 @@ const DocumentText = memo(function DocumentText({
   findings,
   inkSteps,
   selectedId,
-  hoverId,
-  onHover,
   onPick,
 }: {
   doc: Document;
@@ -977,8 +978,6 @@ const DocumentText = memo(function DocumentText({
   /** Stagger steps for categories that resolved while the review ran, keyed by category id. */
   inkSteps: Map<string, number>;
   selectedId: string | null;
-  hoverId: string | null;
-  onHover: (id: string | null) => void;
   onPick: (f: Finding, how: Pick) => void;
 }) {
   const text = doc.source_text ?? "";
@@ -990,7 +989,7 @@ const DocumentText = memo(function DocumentText({
         .map((n) => ({ id: n.id.replace(/^n_/, ""), kind: n.kind, a: toUtf16(index, n.start), b: toUtf16(index, n.end) })),
     [doc, index]
   );
-  /* Which findings touch each block, worked out once per set of findings. A selection or a hover then renders
+  /* Which findings touch each block, worked out once per set of findings. A selection then renders
      only the blocks it touches, not every paragraph of a long contract. */
   const plan = useMemo(() => {
     const seen = new Set<string>();
@@ -1016,8 +1015,6 @@ const DocumentText = memo(function DocumentText({
           text={text}
           inkSteps={inkSteps}
           selectedId={p.inside.some((f) => f.clause.id === selectedId) ? selectedId : null}
-          hoverId={p.inside.some((f) => f.clause.id === hoverId) ? hoverId : null}
-          onHover={onHover}
           onPick={onPick}
         />
       ))}
@@ -1025,7 +1022,7 @@ const DocumentText = memo(function DocumentText({
   );
 });
 
-const TextBlock = memo(function TextBlock({ blk, bi, text, inside, first, inkSteps, selectedId, hoverId, onHover, onPick }: TextBlockProps) {
+const TextBlock = memo(function TextBlock({ blk, bi, text, inside, first, inkSteps, selectedId, onPick }: TextBlockProps) {
   const cuts = new Set<number>([blk.a, blk.b]);
   for (const f of inside) {
     cuts.add(Math.max(blk.a, f.s16));
@@ -1043,7 +1040,6 @@ const TextBlock = memo(function TextBlock({ blk, bi, text, inside, first, inkSte
       continue;
     }
     const sel = active.find((f) => f.clause.id === selectedId);
-    const hovered = active.some((f) => f.clause.id === hoverId);
     const kind: SpanKind = sel ? "focused" : active.length >= 3 ? "overlap3" : active.length === 2 ? "overlap2" : active[0].kind;
     /* The innermost finding owns clicks on stacked text. */
     const owner = [...active].sort((x, y) => x.e16 - x.s16 - (y.e16 - y.s16))[0];
@@ -1082,14 +1078,12 @@ const TextBlock = memo(function TextBlock({ blk, bi, text, inside, first, inkSte
               onPick(anchor ?? owner, "activate");
             }
           }}
-          onMouseEnter={() => onHover(owner.clause.id)}
-          onMouseLeave={() => onHover(null)}
           // One finding on its own text inks in when it first draws. The class stays when it is selected, so a
-          // selection never replays the sweep.
-          className={active.length === 1 ? "ca-mark ca-ink cursor-pointer" : "ca-mark cursor-pointer"}
+          // selection never replays the sweep. `ca-pick` tints the mark under the pointer (index.css).
+          className={active.length === 1 ? "ca-mark ca-pick ca-ink" : "ca-mark ca-pick"}
           style={
             {
-              ...markStyle(kind, hovered && !sel),
+              ...markStyle(kind),
               borderRadius: 1,
               "--ink-delay": `calc(${inkSteps.get(active[0].categoryId) ?? 0} * var(--stagger))`,
             } as CSSProperties

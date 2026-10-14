@@ -1,4 +1,4 @@
-/* Pure helpers for the Reader. Both are tested without a DOM (reader.test.ts). */
+/* Pure helpers for the Reader. All are tested without a DOM (reader.test.ts). */
 
 /** Which tick a click at `y` means. `ats` are tick positions and `y` a click, both 0 to 1 down
  *  the strip, and `stripPx` is the strip's height. The nearest tick wins, so neighbours never
@@ -24,4 +24,11 @@ export function freshDelays(seen: ReadonlySet<string>, ids: Iterable<string>, ca
   const out = new Map<string, number>();
   for (const id of ids) if (!seen.has(id)) out.set(id, Math.min(out.size, cap - 1));
   return out;
+}
+
+/** The session banner's line for `minutesLeft`. Whole minutes, rounded down, so it never promises more time than there is. */
+export function sessionEndsIn(minutesLeft: number): string {
+  const m = Math.floor(minutesLeft);
+  const when = m < 1 ? "less than a minute" : `${m} ${m === 1 ? "minute" : "minutes"}`;
+  return `This session ends in ${when}. Download your report before it closes.`;
 }

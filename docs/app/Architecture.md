@@ -165,7 +165,7 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Large documents | `DocumentText` and `TextBlock` are memoised. The findings per block are worked out once, the selected and hovered ids reach only the blocks that hold them, and the pick callback has one identity | A pick or a scroll no longer renders every paragraph. No windowing was needed up to 500,000 code points (17.5, AV) |
 | Overlay enters | `.ca-dialog`, `.ca-menu` and `.ca-toast` in `index.css`, with `ca-pop` and `ca-rise` keyframes over the motion tokens. The dialog backdrop is `.ca-enter`. The overlays leave at once, and the one reduced-motion block is their only guard | No motion library and no per-component guard. A test fails if the global rule stops selecting `*` (`FrontendDesign.md` 17.6, BC) |
 | Plain pages | `PlainPage` in `components/Layout.tsx` for Expired, NotFound and the error page | One column and one heading style for the three pages that carry no warning colour (17.6, BF) |
-| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 55 tests: 7 reveal, 15 tokens (11 colour, 2 reading measure, 2 overlay motion), 1 font loading, 5 hero fixture, 17 start flow, 3 authority, 7 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 59 tests: 7 reveal, 15 tokens (11 colour, 2 reading measure, 2 overlay motion), 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 9 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
@@ -205,11 +205,11 @@ frontend/
       reveal.ts             # scroll reveal core: pure, takes the observer as an argument
       reveal.test.ts
       useReveal.ts          # the hook around reveal.ts
-      startFlow.ts          # the /start flow as a pure reducer, plus maxReachableStep, clampStep, nextBlocker, parseStep, suggestedParty
+      startFlow.ts          # the /start flow as a pure reducer, plus maxReachableStep, clampStep, nextBlocker, parseStep, suggestedParty, partyName
       startFlow.test.ts
       authority.ts          # the one phrase per passage authority status, and the mapping from a free string
       authority.test.ts
-      reader.ts             # nearestMark (ruler hit test) and freshDelays (row stagger), pure
+      reader.ts             # nearestMark (ruler hit test), freshDelays (row stagger) and sessionEndsIn (the session banner line), pure
       reader.test.ts
       panelTransition.ts    # runs a state update in a view transition of the detail panel only
     pages/

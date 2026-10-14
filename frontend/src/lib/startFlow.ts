@@ -5,6 +5,9 @@
    The current step is not part of the state. It lives in the address (`?step=`),
    and `clampStep` says which step the state allows. */
 
+import type { DocNode } from "../api/types.ts";
+import { sliceCp, type OffsetIndex } from "./offsets.ts";
+
 export type RoleKey = "buyer" | "supplier" | "employer" | "employee" | "licensor" | "licensee" | "other";
 export type Step = 1 | 2 | 3;
 export type UploadErrorCode = "unsupported_type" | "too_large" | "scanned" | "protected" | "network";
@@ -83,6 +86,13 @@ const SUGGESTED_INDEX: Partial<Record<RoleKey, number>> = { buyer: 0, employer: 
 export function suggestedParty(role: RoleKey | null, count: number): number | null {
   const i = role === null ? undefined : SUGGESTED_INDEX[role];
   return i !== undefined && i < count ? i : null;
+}
+
+/** What a party card calls the party: the node's own name span, or the node's whole text when it has none.
+ *  It is never cut at a comma, because "ABC Technologies, Inc." is one name. */
+export function partyName(source: string, index: OffsetIndex, node: DocNode): string {
+  const { start, end } = node.name_span ?? node;
+  return sliceCp(source, index, start, end);
 }
 
 export function flowReducer(s: FlowState, a: FlowAction): FlowState {

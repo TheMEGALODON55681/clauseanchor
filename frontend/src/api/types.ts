@@ -120,6 +120,8 @@ export type DocNode = {
   start: number;
   end: number;
   page: number;
+  /** A party node only: the code point span of the party's name inside `start` to `end`. */
+  name_span?: { start: number; end: number };
 };
 
 export type Document = {

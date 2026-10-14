@@ -647,3 +647,37 @@ Blockers: none for step 2. Aryan's calls, in order of effect:
 Already approved for step 2: the category list below 768 px on `/accuracy` grouped into the seven catalogue groups as `details`, first open, like the landing page, and `?at=credits` kept as it is.
 
 Next action: reply with the fixes you want in step 2. P1 R1 to R5 and P2 R6 to R15 are proposed as the default set, one commit per theme (accessibility, performance, Reader behaviour, dead code).
+
+## 2026-10-14: Part FE-R, step 2, commit 3, Reader behaviour
+
+Part: FE-R, step 2, commit 3 of 6 (theme: Reader behaviour). Starts from `22f2294`. Part 1-B stays paused. No dependency was added.
+
+Files changed:
+- `frontend/src/pages/Reader.tsx`: the hover path removed (R15), the document fetch's catch guarded by `live` (R16), `changeRole` versioned with a ref (R17), the banner passed `sessionEndsIn(minutesLeft)` (R14).
+- `frontend/src/lib/reader.ts` and `reader.test.ts`: `sessionEndsIn`, with 2 tests.
+- `frontend/src/components/NoticeBanner.tsx`: the Gallery's session line is `sessionEndsIn(8)`.
+- `frontend/src/components/SpanHighlight.tsx`, `ManualReviewList.tsx`, `pages/Landing.tsx`, `pages/landing/HeroDemo.tsx`: `markStyle(kind)` without the `hovered` flag.
+- `frontend/src/index.css`: `.ca-pick` and its hover rule.
+- `frontend/src/lib/startFlow.ts` and `startFlow.test.ts`: `partyName`, with 2 tests. `frontend/src/api/types.ts`: optional `name_span` on `DocNode`. `frontend/src/api/mock.ts`: the span on both parties. `frontend/src/pages/start/useStartFlow.ts`: reads the name through `partyName` (R19).
+- `frontend/src/main.tsx`: a catch on the late font import.
+- Docs: `FrontendDesign.md` (17.7, rows BO to BS, and two rows of section 13), `Architecture.md` (test count and two file notes), this entry.
+
+Amendments BO to BS are in `FrontendDesign.md` 17.7, with the figures. Short form:
+- R14: the banner reads the real minutes left, whole minutes rounded down.
+- R15: marks tint under the pointer in CSS through the two tint tokens, and the hover state, props and handlers are gone.
+- R16 and R17: a late fetch failure and an older role change are dropped.
+- R19: the party name is the node's `name_span`, and a node without one reads whole. This is an assumption about the parser's party node (BR).
+- The late font import has a catch, with a comment that the fallback faces stay.
+
+Checks:
+- `pnpm typecheck`: exit 0. `pnpm test`: 59 of 59 pass (7 reveal, 15 tokens, 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 9 reader), 0 failed, 0 skipped. `pnpm build`: 171 modules, exit 0, no warning.
+- Test first: the four new tests failed on the missing exports (`sessionEndsIn`, `partyName`) before the code was written, and passed after.
+- Browser, headless Edge, dev server, light and dark: hover tint with a real pointer (R15), two out of order role changes (R17) and the banner minutes and their countdown (R14). Figures are in 17.7.
+- `/ponytail:ponytail-review`: no P1, no P2.
+- Copy passes on the banner lines: no wording changed.
+
+Not run: R16 in a provoked failure. The dev server's hover in the browser pane (its pointer does not set `:hover`).
+
+Housekeeping: two headless Edge instances launched and closed (light, dark), and the dev server on 5173 stopped.
+
+Next action: commit this part, then commit 4 of 6, security (https-only scheme allowlist and `noopener,noreferrer` on `window.open`, R10 "Open source" disabled with no URL, the referrer meta, and the mock staying in the build with the 4-C removal recorded in `Architecture.md`).

@@ -18,7 +18,7 @@ const underline = (paint: string) => `${paint} left bottom / 100% 2px no-repeat`
 
 /* An inline mark: underline + faint tint, never a filled box.
    Text stays fully legible. */
-export function markStyle(kind: SpanKind, hovered: boolean): CSSProperties {
+export function markStyle(kind: SpanKind): CSSProperties {
   switch (kind) {
     case "found":
       return {
@@ -49,10 +49,10 @@ export function markStyle(kind: SpanKind, hovered: boolean): CSSProperties {
           "inset 0 -2px 0 var(--mark-found-line), inset 0 -6px 0 -2px var(--mark-review-line), inset 0 -10px 0 -4px var(--status-found-fg)",
       };
     case "hover":
+      // The look at rest. A mark with `ca-pick` takes its hover tint from CSS (index.css).
       return {
-        background: hovered ? "var(--mark-focused-tint)" : "var(--mark-found-tint)",
+        background: "var(--mark-found-tint)",
         boxShadow: "inset 0 -2px 0 var(--mark-found-line)",
-        cursor: "pointer",
       };
     case "keyboard":
       return {
@@ -96,12 +96,12 @@ function Mark({
         </span>
       )}
       <span
-        className="ca-mark"
+        className={kind === "hover" ? "ca-mark ca-pick" : "ca-mark"}
         tabIndex={kind === "keyboard" || kind === "hover" ? 0 : undefined}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          ...markStyle(kind, hovered),
+          ...markStyle(kind),
           paddingBottom: 3,
           transition: "background var(--dur-press) var(--ease-out)",
         }}
