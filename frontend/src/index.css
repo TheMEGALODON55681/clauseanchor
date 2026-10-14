@@ -201,7 +201,7 @@
   --paper-sunken: #0f1214;
   --ink-primary: #ece7dd;
   --ink-secondary: #b4aea3;
-  --ink-tertiary: #8b867f;
+  --ink-tertiary: #9a958d;
   --rule-default: #2c3137;
   --rule-strong: #3e444b;
   --control-border: #6a6e72;
@@ -524,6 +524,13 @@ html {
   }
   .link-prose:hover {
     color: var(--anchor-700);
+  }
+  /* The footer's credits link sits in a 12 px sentence. Padding gives it a 44 px target, and the
+     negative margin takes the padding back, so the line does not move. */
+  .app-footer .link-prose {
+    display: inline-block;
+    padding-block: 15px;
+    margin-block: -15px;
   }
 
   /* Disclosure: a native details element. */

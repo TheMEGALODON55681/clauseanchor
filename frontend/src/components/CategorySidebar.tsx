@@ -102,7 +102,7 @@ export default function CategorySidebar({
         </div>
         <SearchField state={state === "filtered-empty" && query === undefined ? "no-results" : "empty"} value={query} onChange={onQuery} />
         <div style={{ overflowX: "auto", maxWidth: "100%" }}>
-          <SegmentedFilter value={filter} onChange={onFilter} />
+          <SegmentedFilter label="Filter categories" value={filter} onChange={onFilter} />
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import Link from "./Link";
 export default function AppFooter({ sampleMode = false, creditsHref = "#" }: { sampleMode?: boolean; creditsHref?: string }) {
   return (
     <footer
+      className="app-footer"
       style={{
         display: "flex",
         flexDirection: "column",

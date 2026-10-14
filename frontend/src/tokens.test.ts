@@ -53,6 +53,16 @@ test("dark: tertiary ink reaches 4.5 on every surface", () => {
   check(dark, "dark", on("ink-tertiary", surfaces, 4.5));
 });
 
+/* Tertiary ink also sits on tinted fills: the selected row, a status chip, a metric on a weak row.
+   Every token whose name ends in -bg, plus anchor-100, is a fill that text can land on. */
+test("tertiary ink reaches 4.5 on every tinted fill in both themes", () => {
+  for (const [label, theme] of [["light", light], ["dark", dark]] as const) {
+    const fills = Object.keys(theme).filter((k) => k.endsWith("-bg") || k === "anchor-100");
+    assert.ok(fills.length >= 9, `${label}: found ${fills.length} fills`);
+    check(theme, label, on("ink-tertiary", fills, 4.5));
+  }
+});
+
 test("light: absent, neutral and unresolved text reach 4.5 on their chips", () => {
   check(light, "light", [
     ...on("status-absent-fg", ["status-absent-bg", "paper-sheet"], 4.5),

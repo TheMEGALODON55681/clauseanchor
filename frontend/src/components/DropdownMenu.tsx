@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { DotsIcon, DownloadIcon, BracketPairIcon } from "./icons";
 
@@ -21,18 +21,57 @@ const DEFAULT_ITEMS: MenuItem[] = [
 export default function DropdownMenu({ items = DEFAULT_ITEMS, open, focusIndex, label = "Report actions" }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(open ?? false);
   const show = open ?? isOpen;
+  const trigger = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const live = () => [...(list.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([aria-disabled])') ?? [])];
+
+  /* Opening moves focus into the menu: the checked item, else the first. */
+  useEffect(() => {
+    if (!isOpen) return;
+    const els = live();
+    (els.find((el) => el.getAttribute("aria-checked") === "true") ?? els[0])?.focus();
+  }, [isOpen]);
+
+  /* Closing gives focus back to the trigger first, so a pick that opens a dialog hands that dialog the trigger. */
+  const close = () => {
+    setIsOpen(false);
+    trigger.current?.focus();
+  };
+  const pick = (it: MenuItem) => {
+    if (it.disabled) return;
+    close();
+    it.onSelect?.();
+  };
 
   return (
     <div
       style={{ position: "relative", display: "inline-block" }}
       onKeyDown={(e) => {
-        if (e.key === "Escape") setIsOpen(false);
+        if (e.key === "Escape" && show) {
+          // The menu takes the key, so the Reader does not also close its detail panel.
+          e.stopPropagation();
+          close();
+          return;
+        }
+        if (e.key === "ArrowDown" && !show) {
+          e.preventDefault();
+          setIsOpen(true);
+          return;
+        }
+        if (!show) return;
+        const els = live();
+        const at = els.indexOf(document.activeElement as HTMLElement);
+        const to = e.key === "ArrowDown" ? at + 1 : e.key === "ArrowUp" ? (at < 0 ? -1 : at - 1) : e.key === "Home" ? 0 : e.key === "End" ? els.length - 1 : null;
+        if (to === null || !els.length) return;
+        e.preventDefault();
+        els[(to + els.length) % els.length].focus();
       }}
       onBlur={(e) => {
         if (open === undefined && !e.currentTarget.contains(e.relatedTarget as Node | null)) setIsOpen(false);
       }}
     >
       <button
+        ref={trigger}
         type="button"
         aria-haspopup="menu"
         aria-expanded={show}
@@ -56,6 +95,7 @@ export default function DropdownMenu({ items = DEFAULT_ITEMS, open, focusIndex, 
       </button>
       {show && (
         <ul
+          ref={list}
           role="menu"
           className="ca-menu"
           style={{
@@ -76,20 +116,15 @@ export default function DropdownMenu({ items = DEFAULT_ITEMS, open, focusIndex, 
           {items.map((it, i) => (
             <li
               key={it.label}
-              role="menuitem"
+              role={it.checked === undefined ? "menuitem" : "menuitemradio"}
               aria-disabled={it.disabled || undefined}
               tabIndex={it.disabled ? -1 : 0}
               aria-checked={it.checked}
-              onClick={() => {
-                if (it.disabled) return;
-                it.onSelect?.();
-                setIsOpen(false);
-              }}
+              onClick={() => pick(it)}
               onKeyDown={(e) => {
-                if ((e.key === "Enter" || e.key === " ") && !it.disabled) {
+                if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  it.onSelect?.();
-                  setIsOpen(false);
+                  pick(it);
                 }
               }}
               style={{

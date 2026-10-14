@@ -1,11 +1,15 @@
 import { useState } from "react";
 
-/* Paper-tab look. Selected segment lifts onto a sheet. */
+/* Paper-tab look. Selected segment lifts onto a sheet. It filters or sorts a list that stays on
+   the page, so it is a group of toggle buttons, one pressed, not an ARIA tablist. */
 export default function SegmentedFilter({
+  label,
   items = ["All", "Found", "Needs a lawyer", "Not found"],
   value,
   onChange,
 }: {
+  /** What the control chooses, for the group's accessible name. */
+  label: string;
   items?: string[];
   value?: string;
   onChange?: (v: string) => void;
@@ -14,7 +18,8 @@ export default function SegmentedFilter({
   const active = value ?? internal;
   return (
     <div
-      role="tablist"
+      role="group"
+      aria-label={label}
       style={{
         display: "inline-flex",
         gap: 2,
@@ -29,8 +34,8 @@ export default function SegmentedFilter({
         return (
           <button
             key={it}
-            role="tab"
-            aria-selected={isActive}
+            type="button"
+            aria-pressed={isActive}
             onClick={() => {
               setInternal(it);
               onChange?.(it);

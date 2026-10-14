@@ -154,8 +154,9 @@ export default function ManualReviewList({
         </div>
       ) : (
         <>
-          <div style={{ overflowX: "auto" }}>
-            <SegmentedFilter items={["All", "No findings", "Partly highlighted"]} value={filter} onChange={setFilter} />
+          {/* The padding keeps the 44 px hit area of each segment inside the scroll box, which would clip it. */}
+          <div style={{ overflowX: "auto", paddingBlock: 3 }}>
+            <SegmentedFilter label="Filter passages" items={["All", "No findings", "Partly highlighted"]} value={filter} onChange={setFilter} />
           </div>
           {state === "loading" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

@@ -47,7 +47,7 @@ Every component references these tokens, never raw hex values. Each token has a 
 | `paper/sunken` | `#EFEBE2` | `#0F1214` | Sidebars, wells, input backgrounds |
 | `ink/primary` | `#1B1F24` | `#ECE7DD` | Body text, headings |
 | `ink/secondary` | `#4E545B` | `#B4AEA3` | Supporting text |
-| `ink/tertiary` | `#646970` | `#8B867F` | Captions, placeholders |
+| `ink/tertiary` | `#646970` | `#9A958D` | Captions, placeholders |
 | `rule/default` | `#E2DCD0` | `#2C3137` | Borders, dividers |
 | `rule/strong` | `#C9C1B2` | `#3E444B` | Dividers and emphasis rules. Not for controls |
 | `control-border` | `#85817A` | `#6A6E72` | Outline of every input, radio, checkbox, switch, select and dropzone |
@@ -63,7 +63,7 @@ Every component references these tokens, never raw hex values. Each token has a 
 | Token | Mode | Old | New | Ratio, new (old) | Why |
 |---|---|---|---|---|---|
 | `ink/tertiary` | Light | `#7A7F85` | `#646970` | 4.99 base, 5.44 sheet, 4.65 sunken (3.64, 3.97, 3.39) | Captions and placeholders failed AA |
-| `ink/tertiary` | Dark | `#858079` | `#8B867F` | 5.03 base, 4.64 sheet, 5.21 sunken (4.28 on sheet) | Failed AA on the sheet |
+| `ink/tertiary` | Dark | `#858079` | `#9A958D` | 6.10 base, 5.63 sheet, 6.32 sunken, 4.61 on the lowest tinted fill (4.28 on sheet) | Failed AA on the sheet. The first fix, `#8B867F`, still read 4.01 on the review fill and 3.79 on the selected row (FE-R, R2), so it moved again |
 | `status/absent` text, `polarity/neutral` text, `polarity/unresolved` text | Light | `#6E7278` | `#666A70` | 4.65 on `#EFEDE8`, 5.35 on sheet (4.13, 4.76) | One shared value failed on the tinted chip. The three stay equal |
 | `control-border` (new) | Light | `rule/strong` `#C9C1B2` | `#85817A` | 3.50 base, 3.81 sheet, 3.26 sunken (1.50 to 1.76) | Form outlines need 3:1 |
 | `control-border` (new) | Dark | `rule/strong` `#3E444B` | `#6A6E72` | 3.53 base, 3.26 sheet, 3.66 sunken (1.70 to 1.91) | Same |
@@ -261,7 +261,7 @@ Buttons use verb-first sentence case: "Upload contract", "Start review", "Downlo
 | Reader sheet | `.reader-sheet` in `index.css`: `calc(var(--measure) + 98px)`, with `max-width: 100%`. The band above it takes the same class, and from 768px a 28px spacer beside the band stands for the ruler, so the two share a left edge |
 | Reader rail | A 64px column from 1280 to 1439px, one button with a list icon over the 12px label "Categories", on the sunken paper. It opens the category list in the left drawer. From 1440px the list is docked at 264px and the rail is gone |
 | Bottom sheet | `MobileDrawer` with `side="bottom"`, below 1280px, at most 720px wide and centred. It stays mounted, slides on `transform` over `--dur-panel` in and `--dur-state` out, and holds its content while it leaves. It peeks at 168px and opens to 78dvh. The handle row holds a grip and, at the right, one Peek or Open button. The panel's own heading and Close are the sheet's title and close |
-| Left drawer | `MobileDrawer` with `side="left"`, for the categories. It is modal: a backdrop that closes on click, the page behind it `inert`, focus moved in on open and back to the opener on close |
+| Left drawer | `MobileDrawer` with `side="left"`, for the categories. It is modal: a backdrop that closes on click, the page behind it `inert`, Tab and Shift+Tab kept inside it, focus moved in on open and back to the opener on close |
 | Panel transition | `lib/panelTransition.ts`. A pointer pick runs its update inside a view transition of `.reader-panel` alone. `html[data-vt='panel']` takes the root out of the transition for its length, so the page is not captured and stays live. Reduced motion, a step and an activate run the update at once |
 | Row entering | `.ca-enter` in `index.css`: opacity over `--dur-state`, delayed by `--enter-step` times `--stagger`. `freshDelays` in `lib/reader.ts` gives each new row the next step, up to five, and a finished or reopened review gives none |
 | Band | The strip above the Reader sheet: the compact progress line with Cancel, the read-partial notice, or the zero-findings line. It sits on the sunken paper with no left rule |

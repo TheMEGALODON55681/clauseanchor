@@ -261,7 +261,7 @@ Every change keeps the hue, so the identity stays. Ratios are WCAG relative lumi
 | Token | Mode | Old | New | Ratios, new (old) | Reason |
 |---|---|---|---|---|---|
 | `ink/tertiary` | Light | `#7A7F85` | `#646970` | 4.99 base, 5.44 sheet, 4.65 sunken (3.64, 3.97, 3.39) | Captions and placeholders fail AA |
-| `ink/tertiary` | Dark | `#858079` | `#8B867F` | 5.03 base, 4.64 sheet, 5.21 sunken (4.28 on sheet) | Fails AA on the sheet |
+| `ink/tertiary` | Dark | `#858079` | `#9A958D` | 6.10 base, 5.63 sheet, 6.32 sunken, 4.61 on the lowest tinted fill (4.28 on sheet) | Fails AA on the sheet. The first fix, `#8B867F`, still read 4.01 on the review fill and 3.79 on the selected row (FE-R, R2), so it moved again |
 | `status/absent` text, `polarity/neutral` text, `polarity/unresolved` text | Light | `#6E7278` | `#666A70` | 4.65 on `#EFEDE8`, 5.35 on sheet (4.13, 4.76) | One shared value fails on the tinted chip. The three stay equal |
 | `control-border` (new) | Light | `rule/strong` `#C9C1B2` | `#85817A` | 3.50 base, 3.81 sheet, 3.26 sunken (1.50 to 1.76) | Input, radio, checkbox and switch outlines need 3:1 |
 | `control-border` (new) | Dark | `rule/strong` `#3E444B` | `#6A6E72` | 3.53 base, 3.26 sheet, 3.66 sunken (1.70 to 1.91) | Same |
@@ -738,7 +738,7 @@ Run through `npx` from a scratch folder outside the repo, against the production
 | 2.4.7, 2.4.11 | One global 2 px focus rule, and `scroll-padding-top` under sticky bars |
 | 2.5.8 | 44 px hit areas, 8 px between neighbours. The project bar is above the AA minimum of 24 px |
 | 3.3.2, 3.3.7 | Visible labels. Step data is kept when the user goes back, so nothing is asked twice |
-| 4.1.2 | Role cards become a radio group built on native `<input type="radio">`, so arrow keys and the single tab stop come from the browser. The menu button has `aria-expanded` and `aria-controls`. Tabs and drawers keep their roles |
+| 4.1.2 | Role cards become a radio group built on native `<input type="radio">`, so arrow keys and the single tab stop come from the browser. The menu button has `aria-expanded` and `aria-controls`. Tabs and the list filters are groups of toggle buttons (`aria-pressed`, with a name), because none has a panel of its own. The role menu uses `menuitemradio`, takes focus on open, moves with the arrow keys and gives focus back to its button. The delete dialog and the left drawer keep Tab inside them and give focus back |
 | 1.4.11 in forced colours | Backgrounds are removed in Windows high contrast, which would erase every mark. Under `@media (forced-colors: active)` marks use a `text-decoration` underline in `LinkText` and the focused mark a `Highlight` outline. Checked at FE-R with forced-colours emulation (amendment J) |
 | 3.3.2 | Every input has a programmatic label. A placeholder is never the only label. The category filter has an `aria-label` today and keeps it |
 | 2.5.7 | Uploading has a single-pointer path: the Choose file button. Drag and drop is an extra |

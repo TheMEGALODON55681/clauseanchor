@@ -633,8 +633,8 @@ function Library({ mode }: { mode: Mode }) {
 
       <Group label="Tabs · segmented filter · section path">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <Labeled label="tabs"><Tabs items={["Findings", "Case law", "Accuracy"]} value="Findings" disabledItems={["Accuracy"]} /></Labeled>
-          <Labeled label="segmented filter"><SegmentedFilter /></Labeled>
+          <Labeled label="tabs"><Tabs label="Panel section" items={["Findings", "Case law", "Accuracy"]} value="Findings" disabledItems={["Accuracy"]} /></Labeled>
+          <Labeled label="segmented filter"><SegmentedFilter label="Filter categories" /></Labeled>
           <Labeled label="section path"><SectionPath /></Labeled>
         </div>
       </Group>

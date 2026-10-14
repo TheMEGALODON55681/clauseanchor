@@ -29,9 +29,11 @@ export function markStyle(kind: SpanKind, hovered: boolean): CSSProperties {
         background: `${underline("repeating-linear-gradient(to right, var(--mark-review-line) 0 6px, transparent 6px 10px)")}, ${tint("var(--mark-review-tint)")}`,
       };
     case "focused":
+      /* The selected edge is a shadow, not an outline, so a keyboard focus ring (2 px, from
+         `:focus-visible`) is never beaten by an inline declaration. */
       return {
         background: "var(--mark-focused-tint)",
-        outline: "1px solid var(--status-found-fg)",
+        boxShadow: "0 0 0 1px var(--status-found-fg)",
         borderRadius: 2,
       };
     case "overlap2":

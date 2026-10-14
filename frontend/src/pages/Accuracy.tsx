@@ -110,10 +110,10 @@ export default function Accuracy() {
             <section aria-labelledby="table-title">
               <h2 id="table-title" className="sr-only">Results by category</h2>
               <div className="flex flex-wrap items-end justify-between gap-4">
-                {data ? <Tabs items={data.sets.map((s) => s.label)} value={set?.label} onChange={setTab} /> : <Skeleton />}
+                {data ? <Tabs label="Evaluation set" items={data.sets.map((s) => s.label)} value={set?.label} onChange={setTab} /> : <Skeleton />}
                 <div className="flex items-center gap-3">
                   <span className="text-[13px]" style={{ color: "var(--ink-tertiary)" }}>Sort by</span>
-                  <SegmentedFilter items={["Category", "Recall", "Silent miss"]} value={sort} onChange={(v) => setSort(v as SortKey)} />
+                  <SegmentedFilter label="Sort by" items={["Category", "Recall", "Silent miss"]} value={sort} onChange={(v) => setSort(v as SortKey)} />
                 </div>
               </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { DragHandleIcon } from "./icons";
+import { trapTab } from "../lib/focusTrap";
 
 export type DrawerState = "closed" | "peek" | "open";
 export type DrawerSide = "bottom" | "left";
@@ -67,7 +68,11 @@ export default function MobileDrawer({
       : { left: 0, top: 0, bottom: 0, width: size ?? 260, borderTopRightRadius: 14, borderBottomRightRadius: 14 }),
     transform: slide[state],
     visibility: closed ? ("hidden" as const) : ("visible" as const),
-    transition: `transform var(--${closed ? "dur-state" : "dur-panel"}) ${closed ? "var(--ease-exit)" : "var(--ease-out)"}, visibility 0s linear ${closed ? "var(--dur-state)" : "0s"}`,
+    // Visibility waits for the slide-out, and does not transition on open: the reduced-motion rule gives every
+    // transition 0.01 ms, which would leave the drawer hidden when it takes focus.
+    transition: closed
+      ? "transform var(--dur-state) var(--ease-exit), visibility 0s linear var(--dur-state)"
+      : "transform var(--dur-panel) var(--ease-out)",
     display: "flex",
     flexDirection: "column" as const,
   };
@@ -88,6 +93,7 @@ export default function MobileDrawer({
       aria-modal={modal ? true : undefined}
       aria-hidden={fixed && closed ? true : undefined}
       tabIndex={modal ? -1 : undefined}
+      onKeyDown={modal && !closed ? (e) => trapTab(e, dialog.current) : undefined}
       style={{
         position: "absolute",
         ...(fixed ? fixedStyle : framedStyle),
@@ -99,10 +105,21 @@ export default function MobileDrawer({
       }}
     >
       {bottom && (
-        <div style={{ position: "relative", display: "flex", justifyContent: "center", padding: "8px 0 4px", color: "var(--ink-tertiary)" }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "8px 0 4px",
+            // Tall enough to hold the controls' 44 px hit area, which the sheet's overflow would clip.
+            minHeight: fixed && actions ? 44 : undefined,
+            color: "var(--ink-tertiary)",
+          }}
+        >
           <DragHandleIcon size={20} />
           {/* A bottom sheet holds a panel that already heads itself, so its title is only the dialog name and its controls share the handle row. */}
-          {fixed && actions && <div style={{ position: "absolute", right: 12, top: 0 }}>{actions}</div>}
+          {fixed && actions && <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}>{actions}</div>}
         </div>
       )}
       {fixed ? (

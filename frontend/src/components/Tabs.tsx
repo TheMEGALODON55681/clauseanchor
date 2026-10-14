@@ -1,26 +1,30 @@
 import { useState } from "react";
 
+/* Switches the view of the content below it. No item has a panel of its own, so this is a group of
+   toggle buttons, one pressed, not an ARIA tablist. */
 type TabsProps = {
+  /** What the control chooses, for the group's accessible name. */
+  label: string;
   items: string[];
   value?: string;
   onChange?: (v: string) => void;
   disabledItems?: string[];
 };
 
-export default function Tabs({ items, value, onChange, disabledItems = [] }: TabsProps) {
+export default function Tabs({ label, items, value, onChange, disabledItems = [] }: TabsProps) {
   const [internal, setInternal] = useState(value ?? items[0]);
   const active = value ?? internal;
 
   return (
-    <div role="tablist" style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--rule-default)" }}>
+    <div role="group" aria-label={label} style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--rule-default)" }}>
       {items.map((it) => {
         const isActive = it === active;
         const disabled = disabledItems.includes(it);
         return (
           <button
             key={it}
-            role="tab"
-            aria-selected={isActive}
+            type="button"
+            aria-pressed={isActive}
             disabled={disabled}
             onClick={() => {
               setInternal(it);

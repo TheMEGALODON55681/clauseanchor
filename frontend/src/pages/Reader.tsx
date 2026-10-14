@@ -283,8 +283,9 @@ export default function Reader() {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // The delete dialog owns every key while it is open.
+      if (confirmDelete) return;
       if (e.key === "Escape") {
-        if (confirmDelete) return;
         setSelection(null);
         setSheet("closed");
         setSidebarOpen(false);
@@ -1060,7 +1061,19 @@ const TextBlock = memo(function TextBlock({ blk, bi, text, inside, first, inkSte
           id={anchor ? `f-${anchor.clause.id}` : undefined}
           tabIndex={anchor ? 0 : undefined}
           role={anchor ? "button" : undefined}
-          aria-label={anchor ? `${labelOf(anchor.categoryId)}, ${anchor.status === "review" ? "needs a lawyer" : "found"}${active.length > 1 ? `, overlaps ${active.length - 1} other` : ""}` : undefined}
+          // The visible words come first, so the accessible name holds the label (WCAG 2.5.3).
+          aria-label={
+            anchor
+              ? [
+                  piece.replace(/\s+/g, " ").trim(),
+                  labelOf(anchor.categoryId),
+                  anchor.status === "review" ? "needs a lawyer" : "found",
+                  active.length > 1 ? `overlaps ${active.length - 1} other` : "",
+                ]
+                  .filter(Boolean)
+                  .join(", ")
+              : undefined
+          }
           aria-pressed={anchor ? !!sel : undefined}
           onClick={() => onPick(owner, "pointer")}
           onKeyDown={(e) => {
