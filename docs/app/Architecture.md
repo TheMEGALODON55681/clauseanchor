@@ -125,6 +125,8 @@ class ParsedDocument:
     coverage: Coverage
 ```
 
+Party nodes (a requirement from the frontend, `FrontendDesign.md` 17.7, BR). The party list is built from nodes of kind `party`, and each carries `name_span`: `{start, end}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`, inside that range, covering the party's name alone (`ABC Technologies, Inc.`, not the defining phrase around it). The consumer never cuts a name at a comma, so the parser decides where the name ends. A party node with no span reads as its whole text. Not built: `StructureNode.kind` in `model.py` has no `party` value and no `name_span` field. `ParserContract.md` carries the field once that file exists, and API.md defines it on the document node, tagged `[CONTRACT]` (`Phases.md`, 2-E).
+
 Separators: lines inside a block join with `"\n"`, blocks join with `"\n"`, pages join with `"\n\n"`. Trailing spaces and tabs are stripped from each line before it is appended. CRLF and CR become LF. In PDF text, runs of spaces collapse to one space and U+00A0 becomes U+0020. DOCX text keeps U+00A0.
 
 ## 5. Interface to the core (planned, Phase 2)
@@ -146,7 +148,7 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 1. `Start` is three steps, and the step lives in `?step=`. Step 1 creates a session, uploads a file (or a sample id in sample mode) and polls the parse job until the document is ready. Step 2 can open while parsing still runs. `lib/startFlow.ts` holds the state as a pure reducer and says which step it allows. `pages/start/useStartFlow.ts` holds the upload, the polling and the calls to `client`.
 2. In step 2 the user picks a role and a party, or "None of these". Neither is preselected. Step 3 sets the scope. `Start` then sets the party binding, starts the analysis job and navigates to `/review/:documentId`.
 3. `Reader` polls the job and fetches the analysis as categories resolve, then the manual-review list. It also handles re-binding the party, cancel, retry, report download and delete.
-4. Every call goes through `client` in `src/api/client.ts`. Nothing else imports the mock. Today `client` forwards each call to the in-memory mock adapter, which loads on the first call so that the landing page does not carry it. The swap to an HTTP adapter replaces that forwarder, planned for 4-C, and the adapter follows API.md.
+4. Every call goes through `client` in `src/api/client.ts`. Nothing else imports the mock. Today `client` forwards each call to the in-memory mock adapter, which loads on the first call so that the landing page does not carry it. The swap to an HTTP adapter replaces that forwarder, planned for 4-C, and the adapter follows API.md. The mock stays in the production build until then, and that is a release gate: the build is not releasable on it, because it ignores the upload's content and always returns the one sample contract (`FrontendDesign.md` 17.7, BW). 4-C deletes the adapter and the sample contract with the swap and adds a check that `dist` holds no mock: no `mock-*` chunk, no sample contract text and no `example.org`.
 
 ### 7.2 Key decisions
 
@@ -165,7 +167,8 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Large documents | `DocumentText` and `TextBlock` are memoised. The findings per block are worked out once, the selected and hovered ids reach only the blocks that hold them, and the pick callback has one identity | A pick or a scroll no longer renders every paragraph. No windowing was needed up to 500,000 code points (17.5, AV) |
 | Overlay enters | `.ca-dialog`, `.ca-menu` and `.ca-toast` in `index.css`, with `ca-pop` and `ca-rise` keyframes over the motion tokens. The dialog backdrop is `.ca-enter`. The overlays leave at once, and the one reduced-motion block is their only guard | No motion library and no per-component guard. A test fails if the global rule stops selecting `*` (`FrontendDesign.md` 17.6, BC) |
 | Plain pages | `PlainPage` in `components/Layout.tsx` for Expired, NotFound and the error page | One column and one heading style for the three pages that carry no warning colour (17.6, BF) |
-| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 59 tests: 7 reveal, 15 tokens (11 colour, 2 reading measure, 2 overlay motion), 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 9 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
+| Links that leave the app | `httpsUrl` in `lib/reader.ts` lets only an `https:` address through to `window.open`, which carries `noopener,noreferrer`. External anchors carry `rel="noreferrer"`, which implies `noopener`. `index.html` sets `<meta name="referrer" content="no-referrer">`, and `public/` has no `robots.txt` | A source address comes from a judgment record, so a `javascript:` or `data:` value must not reach `window.open`. No request leaves the origin, so the policy changes nothing on the wire today and covers the links to come (`FrontendDesign.md` 17.7, BT to BV) |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 61 tests: 7 reveal, 15 tokens (11 colour, 2 reading measure, 2 overlay motion), 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 11 reader helpers | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
@@ -175,7 +178,7 @@ frontend/
   pnpm-lock.yaml
   tsconfig.json             # strict; the @ alias points to src
   vite.config.ts            # react(), tailwindcss(), the @ alias; Vite defaults (port 5173)
-  index.html                # shell: lang, title, meta description, favicon, font preloads, noscript line
+  index.html                # shell: lang, title, meta description, referrer policy, favicon, font preloads, noscript line
   .gitignore                # node_modules, dist, .vite, .screens
   public/
     favicon.svg             # the logomark, with a dark-mode variant
@@ -209,7 +212,7 @@ frontend/
       startFlow.test.ts
       authority.ts          # the one phrase per passage authority status, and the mapping from a free string
       authority.test.ts
-      reader.ts             # nearestMark (ruler hit test), freshDelays (row stagger) and sessionEndsIn (the session banner line), pure
+      reader.ts             # nearestMark (ruler hit test), freshDelays (row stagger), sessionEndsIn (the session banner line) and httpsUrl (the only addresses a source link opens), pure
       reader.test.ts
       panelTransition.ts    # runs a state update in a view transition of the detail panel only
     pages/

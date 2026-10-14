@@ -681,3 +681,33 @@ Not run: R16 in a provoked failure. The dev server's hover in the browser pane (
 Housekeeping: two headless Edge instances launched and closed (light, dark), and the dev server on 5173 stopped.
 
 Next action: commit this part, then commit 4 of 6, security (https-only scheme allowlist and `noopener,noreferrer` on `window.open`, R10 "Open source" disabled with no URL, the referrer meta, and the mock staying in the build with the 4-C removal recorded in `Architecture.md`).
+
+## 2026-10-14: Part FE-R, step 2, commit 4, security
+
+Part: FE-R, step 2, commit 4 of 6 (theme: security). Starts from `9802679`. Part 1-B stays paused. No dependency was added.
+
+Files changed:
+- `frontend/src/lib/reader.ts` and `reader.test.ts`: `httpsUrl`, with 2 tests.
+- `frontend/src/components/JudgmentCard.tsx`: "Open source" opens only an address `httpsUrl` accepts, with `noopener,noreferrer`, and is disabled when there is none (R10).
+- `frontend/index.html`: `<meta name="referrer" content="no-referrer">` (R20).
+- Docs: `FrontendDesign.md` (17.7 rows BT to BW and the BR note, 5.8, section 13), `Architecture.md` (section 4 party nodes, 7.1 item 4, one decision row, the test count and two file notes), `Phases.md` (the 2-E note), this entry.
+
+Amendments BT to BW are in `FrontendDesign.md` 17.7, with the figures. Short form:
+- R10: the source link opens only an https address, with `noopener,noreferrer`, and the button is disabled with none.
+- R20: the page sets the referrer policy to `no-referrer`.
+- No `robots.txt` is added, as decided. SEO 91 on the preview server stays.
+- R13: the mock stays in the build as a release gate. `Architecture.md` 7.1 says 4-C removes it and adds a check that `dist` holds no mock.
+- Asked with this commit: `name_span` on party nodes is recorded as a backend requirement in `Architecture.md` section 4 and in the `Phases.md` 2-E note (API.md defines it, tagged `[CONTRACT]`), citing BR.
+
+Checks:
+- `pnpm typecheck`: exit 0. `pnpm test`: 61 of 61 pass (7 reveal, 15 tokens, 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 11 reader), 0 failed, 0 skipped. `pnpm build`: 171 modules, exit 0, no warning.
+- Test first: the two new tests failed on the missing export before the code was written, and passed after.
+- Browser, dev server and the browser pane: the Gallery's 12 "Open source" buttons are disabled. In the Reader the mock's https address opens with `(url, "_blank", "noopener,noreferrer")`. With `javascript:`, `http:` and `data:` addresses patched in through `client.getAnalysis`, both buttons are disabled and `window.open` is not called. The meta is in the dev DOM and in `dist/index.html`.
+- `/ponytail:ponytail-review`: nothing to cut, no P1, no P2.
+- No user-facing string changed, so the copy passes did not run.
+
+Not run: the `Referer` header on a real cross-origin navigation (the dataset links were not followed). R21 (the `style-src` note) is in no theme and is listed under Deferred in 17.7. R10's invented defaults in `JudgmentCard` (lines 23 to 26, 91, 94, 104, 138) stay for commit 5, because they are part of the Gallery-only decision.
+
+Housekeeping: the dev server on 5173 stopped.
+
+Next action: commit this part, then commit 5 of 6, dead code.

@@ -148,6 +148,7 @@ Parts 2-0A and 2-0B hold the annotation work from plan v1.1 Phase 3. Both need o
 - [ ] **2-E** OpenAPI export and API.md
   `docs(api): export OpenAPI schema and document endpoints`
   The frontend mock uses names that plan section 9 does not have: `scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage {resolved, requested}`, `ReviewUnit`, `ManualReview` and `getManualReview`. 2-E fixes the final names in API.md. The frontend adapter follows API.md, and plan section 9 copies from API.md, not the other way round.
+  Party nodes carry a `name_span` (`FrontendDesign.md` 17.7, BR). API.md must define it on a document node of kind `party`, tagged `[CONTRACT]`: `{start, end}` in code points into `source_text`, the same coordinates as the node's own `start` and `end`, inside that range and covering the party's name alone ("ABC Technologies, Inc."), so the frontend never cuts a name at a comma. The parser's output gains the field first (`Architecture.md` section 4). The mock sets it today, and the frontend reads a node with no span as its whole text.
 - [ ] **2-R** Phase review
 
 ## Phase 3: Polarity, reports, remaining endpoints

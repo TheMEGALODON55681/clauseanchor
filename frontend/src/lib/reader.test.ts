@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { freshDelays, nearestMark, sessionEndsIn } from "./reader.ts";
+import { freshDelays, httpsUrl, nearestMark, sessionEndsIn } from "./reader.ts";
 
 test("nearestMark: a click on a tick picks it", () => {
   assert.equal(nearestMark([0.1, 0.5, 0.9], 0.5, 500), 1);
@@ -50,4 +50,15 @@ test("sessionEndsIn: one minute is singular, and under a minute says so", () => 
   assert.match(sessionEndsIn(1.9), /ends in 1 minute\./);
   assert.match(sessionEndsIn(0.4), /ends in less than a minute\./);
   assert.match(sessionEndsIn(-3), /ends in less than a minute\./, "a clock that ran past the expiry still reads sensibly");
+});
+
+test("httpsUrl: an https address comes back normalised, so the string opened is the string checked", () => {
+  assert.equal(httpsUrl("https://example.org/a b"), "https://example.org/a%20b");
+  assert.equal(httpsUrl("  https://example.org/x"), "https://example.org/x");
+});
+
+test("httpsUrl: every other scheme, a relative path and a missing value give undefined", () => {
+  for (const bad of ["http://example.org", "javascript:alert(1)", "data:text/html,x", "ftp://example.org", "//example.org", "/judgment/1", "", undefined]) {
+    assert.equal(httpsUrl(bad), undefined, String(bad));
+  }
 });

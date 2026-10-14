@@ -32,3 +32,15 @@ export function sessionEndsIn(minutesLeft: number): string {
   const when = m < 1 ? "less than a minute" : `${m} ${m === 1 ? "minute" : "minutes"}`;
   return `This session ends in ${when}. Download your report before it closes.`;
 }
+
+/** `raw` as a normalised https address, or undefined for anything else (http, javascript:, data:,
+ *  a relative path, nothing). A source link is quoted from a judgment record, so it is checked
+ *  before the page opens it, and the string returned is the string that was checked. */
+export function httpsUrl(raw: string | undefined): string | undefined {
+  try {
+    const u = new URL(raw ?? "");
+    return u.protocol === "https:" ? u.href : undefined;
+  } catch {
+    return undefined;
+  }
+}

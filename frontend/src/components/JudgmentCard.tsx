@@ -2,6 +2,7 @@ import { useState } from "react";
 import Button from "./Button";
 import { IndexCardIcon, ExternalIcon } from "./icons";
 import { AUTHORITY_PHRASE, type Authority } from "../lib/authority";
+import { httpsUrl } from "../lib/reader";
 
 export type JudgmentState = "collapsed" | "expanded" | "hover" | "focus" | "empty";
 
@@ -29,6 +30,7 @@ export default function JudgmentCard({ state = "collapsed", authority = "unknown
   const [expanded, setExpanded] = useState(state === "expanded");
   const isExpanded = state === "expanded" || expanded;
   const auth = AUTHORITY[authority];
+  const sourceUrl = httpsUrl(passage?.sourceUrl);
 
   if (state === "empty") {
     return (
@@ -173,7 +175,8 @@ export default function JudgmentCard({ state = "collapsed", authority = "unknown
               size="s"
               icon="trailing"
               iconNode={<ExternalIcon size={14} />}
-              onClick={passage?.sourceUrl ? () => window.open(passage.sourceUrl, "_blank", "noopener") : undefined}
+              state={sourceUrl ? undefined : "disabled"}
+              onClick={sourceUrl ? () => window.open(sourceUrl, "_blank", "noopener,noreferrer") : undefined}
             >
               Open source
             </Button>
