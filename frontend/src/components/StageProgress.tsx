@@ -6,15 +6,6 @@ export type StepState = "pending" | "active" | "done" | "partial" | "failed";
 
 export type Step = { label: string; state: StepState; detail?: string };
 
-const DEFAULT_STEPS: Step[] = [
-  { label: "Reading document", state: "done" },
-  { label: "Finding clauses", state: "active", detail: "18 of 46 categories" },
-  { label: "Checking confidence", state: "pending" },
-  { label: "Indian law review", state: "pending" },
-  { label: "Finding case law", state: "pending" },
-  { label: "Final checks", state: "pending" },
-];
-
 function Marker({ state }: { state: StepState }) {
   if (state === "active") return <Spinner size={14} />;
   if (state === "done")
@@ -44,18 +35,19 @@ function Marker({ state }: { state: StepState }) {
 }
 
 export default function StageProgress({
-  steps = DEFAULT_STEPS,
+  steps,
   compact = false,
   showCancel = true,
   onCancel,
 }: {
-  steps?: Step[];
+  steps: Step[];
   compact?: boolean;
   showCancel?: boolean;
   onCancel?: () => void;
 }) {
   if (compact) {
     const active = steps.find((s) => s.state === "active") ?? steps[steps.length - 1];
+    if (!active) return null;
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 8 }} aria-live="polite">
         <Marker state={active.state} />

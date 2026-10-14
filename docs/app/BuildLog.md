@@ -752,3 +752,43 @@ Open for Aryan:
 2. The disabled "licence" sample card on the landing page (7 lines, a product call) was not in the approved list and is untouched.
 
 Next action: commit this part, then commit 6 of 6, Accuracy mobile grouping (the 46 categories under the 7 catalogue groups as `details` below 768 px, first open).
+
+## 2026-10-14: Part FE-R, step 2, commit 6, sample defaults
+
+Part: FE-R, step 2, commit 6 of 7 (theme: contract content and review results in component defaults). Starts from `6ba24a8`. Part 1-B stays paused. No dependency was added. 12 files under `frontend/src`, 171 lines added and 405 deleted. The commit before the Accuracy mobile grouping, which is now commit 7. The report of the first round put two calls to Aryan (`MobileDrawer`'s title, and `StageProgress` with `CategorySidebar`), and both are folded in.
+
+Files changed:
+- `components/ClauseDetailPanel.tsx`: the static sample branch, `variant`, `PanelVariant` and the `caseLaw` prop are gone. No data and no custom content draws the skeleton.
+- `components/MarginRuler.tsx`: no fixtures, `marks` defaults to none, `RulerVariant` is `hover`, `selected` or `focus`.
+- `components/PartyBindingField.tsx`: `parties` is required. `components/ReaderToolbar.tsx`: `filename` and `meta` are required, `partialNote` has no default.
+- `components/UploadDropzone.tsx` and `components/SpanHighlight.tsx`: found by the sweep, no file name, size or clause sentence of their own.
+- `components/MobileDrawer.tsx`: `title` is required.
+- `components/StageProgress.tsx`: `steps` is required, and the compact form draws nothing for an empty list. `components/CategorySidebar.tsx`: `groups` and `summary` are required, and the internal selection state is gone.
+- `pages/Start.tsx`: the licence card. `pages/Reader.tsx`: `<ClauseDetailPanel />` for the skeleton, and the toolbar's old partial line as the Reader's own last fallback.
+- `pages/Gallery.tsx`: `PANELS`, `RULERS`, `SAMPLE_PARTIES`, `SAMPLE_STEPS`, `SAMPLE_GROUPS`, `SAMPLE_SUMMARY`, `SAMPLE_FILE` and the clause constants hold what the components lost.
+- Docs: `FrontendDesign.md` (1.2 claims grep, 17.7 rows CE to CK, BZ, a rule, the commit 6 checks, the kept list), this entry.
+
+Amendments CE to CK are in `FrontendDesign.md` 17.7. Short form:
+- A component holds no contract, party, clause, file name or review result as a default. It takes the data it is given, or draws its empty state or skeleton.
+- The Gallery's panel specimens show what the Reader shows (the review note, the absent text), not a second copy of the wording.
+- `UploadDropzone` and `SpanHighlight` were not on the commit 5 list and carried the same kind of content. They are in CI, apart from the rest, so they can be dropped from the commit on their own.
+- `MobileDrawer`'s title is required (CJ). `StageProgress` and `CategorySidebar` take their steps, groups and summary from the caller (CK), which also takes 0.4 KB gzipped out of the Reader chunk, where both fixtures shipped.
+- Not moved: statute text in `RuleFlagCard` and `StatuteTag` (real law), `ScopePanel`'s catalogue constants, and plain labels such as the drawer's two placeholder lines.
+- One behaviour in the Gallery changed: a click on a sidebar row calls `onSelect` and no longer moves the highlight, because the component's own selection state is gone. The Reader never used it.
+
+Checks:
+- `pnpm typecheck`: exit 0. `pnpm test`: 61 of 61 pass (7 reveal, 15 tokens, 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 11 reader), 0 failed, 0 skipped. `pnpm build`: 171 modules, exit 0, no warning. Entry 73.6 KB gzipped (74.4 at commit 5), Reader chunk 15.1 KB (15.5).
+- Test count unchanged. No new test: the change deletes defaults and makes props required, which the typechecker covers, and the Reader's rendering was compared against a build of `6ba24a8` instead.
+- Reader against `6ba24a8`, two production builds and one scripted run: the sidebar's HTML hash, the summary, the panel text and the toolbar file name are identical, before and after a category is selected, and the progress band shows the same stages.
+- Browser: the Gallery with an empty console and the counts in 17.7, and `/start` in sample mode with one card.
+- Claims grep with the new patterns (29 matches on `6ba24a8`'s `src`, none now), the old calibration grep, the Evidence gate, the Rules section 1 scrub, the tool-name grep over `frontend/` and README and the dash scan (control file detected, two lines): all print nothing.
+- `/ponytail:ponytail-review`, two rounds: no P1. One P2 (`"default"` left `RulerVariant`) and one P3 (the `Row` alias) fixed. Kept and listed in 17.7.
+- No user-facing string was added or changed, so the copy passes did not run.
+
+Not run: Lighthouse on `/`, the dark theme and 375 px captures of the Gallery, and the before and after pairs, which wait for the end of step 2. A screen reader on the Gallery or the Reader. A pointer click on a sidebar row in the Reader (the selected state was compared through "Read the first finding").
+
+Housekeeping: the Vite dev servers (5173, 5174) and the two preview servers (4173, 4174) stopped. A build of `6ba24a8` sat in the session scratchpad for the comparison, with `node_modules` junctioned in. No git write was run.
+
+Open for Aryan: none. The three groups of content left in components are statute text, catalogue constants and plain labels, none of them contract or case content.
+
+Next action: commit this part, then commit 7 of 7, Accuracy mobile grouping (the 46 categories under the 7 catalogue groups as `details` below 768 px, first open).

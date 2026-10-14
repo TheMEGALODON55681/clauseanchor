@@ -23,7 +23,6 @@ const STEP_TITLES = ["Upload the contract", "Say which side you are", "Confirm t
 
 const SAMPLES = [
   { id: "secondment", title: "Services and secondment agreement", description: "Two Indian companies, 14 clauses, about 1,300 words." },
-  { id: "licence", title: "Software licence agreement", description: "Being prepared. Not available yet.", disabled: true },
 ];
 
 const BLOCKED: Record<Blocker, string | null> = {
@@ -83,7 +82,7 @@ export default function Start() {
     if (!id || sampleStarted.current) return;
     sampleStarted.current = true;
     setParams({}, { replace: true });
-    if (SAMPLES.some((x) => x.id === id && !x.disabled)) void upload({ sampleId: id }, () => goTo(2));
+    if (SAMPLES.some((x) => x.id === id)) void upload({ sampleId: id }, () => goTo(2));
   }, []);
 
   const blocker = nextBlocker(flow, step);
@@ -141,7 +140,6 @@ export default function Start() {
                           title={s.title}
                           description={s.description}
                           icon={<FileIcon size={18} />}
-                          state={s.disabled ? "disabled" : undefined}
                           checked={sampleChoice === s.id}
                           onSelect={() => {
                             setSampleChoice(s.id);

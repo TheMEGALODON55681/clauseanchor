@@ -11,47 +11,13 @@ import type { StatusKind } from "./StatusChip";
 export type SidebarState = "loading" | "populated" | "filtered-empty";
 
 export type SidebarRow = { id?: string; name: string; status: StatusKind; count?: number; pending?: boolean; enterStep?: number };
-type Row = SidebarRow;
-export type SidebarGroup = { label: string; summary: string; rows: Row[] };
-type Grp = SidebarGroup;
-
-const GROUPS: Grp[] = [
-  {
-    label: "Restrictions",
-    summary: "2 found, 1 needs a lawyer",
-    rows: [
-      { name: "Non-Compete", status: "found", count: 1 },
-      { name: "No-Solicit of Employees", status: "found", count: 1 },
-      { name: "Exclusivity", status: "review" },
-      { name: "Price Restrictions", status: "absent" },
-    ],
-  },
-  {
-    label: "Money and liability",
-    summary: "2 found, 1 not validated",
-    rows: [
-      { name: "Liquidated Damages", status: "found", count: 1 },
-      { name: "Cap on Liability", status: "found", count: 2 },
-      { name: "Audit Rights", status: "unvalidated" },
-      { name: "Insurance", status: "unavailable" },
-    ],
-  },
-  {
-    label: "India-specific",
-    summary: "1 found, 1 needs a lawyer",
-    rows: [
-      { name: "Arbitration", status: "found", count: 1 },
-      { name: "Stamping and Registration", status: "review" },
-      { name: "Jurisdiction / Forum Selection", status: "absent" },
-    ],
-  },
-];
+export type SidebarGroup = { label: string; summary: string; rows: SidebarRow[] };
 
 export default function CategorySidebar({
   state = "populated",
-  groups = GROUPS,
-  summary = "46 categories: 9 found, 3 need a lawyer, 31 not found, 3 not validated",
-  selected: selectedProp,
+  groups,
+  summary,
+  selected,
   onSelect,
   query,
   onQuery,
@@ -62,8 +28,8 @@ export default function CategorySidebar({
   fill = false,
 }: {
   state?: SidebarState;
-  groups?: SidebarGroup[];
-  summary?: string;
+  groups: SidebarGroup[];
+  summary: string;
   selected?: string | null;
   onSelect?: (row: SidebarRow) => void;
   query?: string;
@@ -76,8 +42,6 @@ export default function CategorySidebar({
   footer?: ReactNode;
   fill?: boolean;
 }) {
-  const [internalSel, setSelected] = useState<string | null>("Non-Compete");
-  const selected = selectedProp !== undefined ? selectedProp : internalSel;
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   return (
@@ -151,10 +115,7 @@ export default function CategorySidebar({
                       count={r.count}
                       enterStep={r.enterStep}
                       state={selected === (r.id ?? r.name) ? "selected" : undefined}
-                      onClick={() => {
-                        setSelected(r.id ?? r.name);
-                        onSelect?.(r);
-                      }}
+                      onClick={() => onSelect?.(r)}
                     />
                   )
                 )}

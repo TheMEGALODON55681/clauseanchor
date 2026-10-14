@@ -2,13 +2,8 @@ import { useRef, useState } from "react";
 import type { StatusKind } from "./StatusChip";
 import { nearestMark } from "../lib/reader";
 
-export type RulerVariant =
-  | "default"
-  | "hover"
-  | "grouped"
-  | "selected"
-  | "focus"
-  | "empty";
+/* Forced states for the gallery. The marks are the caller's: with none the ruler is empty. */
+export type RulerVariant = "hover" | "selected" | "focus";
 
 export type RulerMark = Mark;
 type Mark = {
@@ -42,28 +37,13 @@ const MARK_COLOR: Record<StatusKind, string> = {
   unavailable: "var(--status-unavailable-fg)",
 };
 
-const DEFAULT_MARKS: Mark[] = [
-  { at: 0.08, status: "found", label: "Definitions, clause 1.2" },
-  { at: 0.22, status: "review", label: "Indemnity, clause 7.1" },
-  { at: 0.4, status: "found", label: "Confidentiality, clause 9.4" },
-  { at: 0.58, status: "found", label: "Non-compete, clause 11.3" },
-  { at: 0.74, status: "unvalidated", label: "Assignment, clause 14.2" },
-  { at: 0.9, status: "found", label: "Governing law, clause 18.1" },
-];
-
-const GROUPED_MARKS: Mark[] = [
-  { at: 0.2, status: "found", label: "3 findings near clause 7", count: 3 },
-  { at: 0.55, status: "review", label: "2 findings near clause 11", count: 2 },
-  { at: 0.85, status: "found", label: "Governing law, clause 18.1" },
-];
-
 /* The strip is a ledger rule with a tick for each finding. With onSelect it is a pointer
    overview: the nearest tick within 12 px of a click is picked, so neighbouring ticks never
    share a hit area, and the click zone is 44 px wide around the 28 px strip. */
 export default function MarginRuler({
-  variant = "default",
+  variant,
   height = 320,
-  marks: marksProp,
+  marks = [],
   selected,
   onSelect,
   viewport,
@@ -71,7 +51,6 @@ export default function MarginRuler({
 }: MarginRulerProps) {
   const [hovered, setHovered] = useState<number | null>(variant === "hover" ? 3 : null);
   const strip = useRef<HTMLDivElement>(null);
-  const marks = marksProp ?? (variant === "empty" ? [] : variant === "grouped" ? GROUPED_MARKS : DEFAULT_MARKS);
   const selectedIndex = selected !== undefined ? selected : variant === "selected" ? 3 : null;
   const fill = typeof height === "string";
 
@@ -176,7 +155,7 @@ export default function MarginRuler({
       {caption !== "" && (
         // The caption is as wide as the strip and its words spill evenly to both sides, so it never widens the column.
         <p style={{ width: 28, display: "flex", justifyContent: "center", whiteSpace: "nowrap", fontSize: 12, lineHeight: "15px", color: "var(--ink-tertiary)" }}>
-          {caption ?? (variant === "empty" || marks.length === 0 ? "No findings yet." : "Mark size does not mean severity.")}
+          {caption ?? (marks.length === 0 ? "No findings yet." : "Mark size does not mean severity.")}
         </p>
       )}
     </div>

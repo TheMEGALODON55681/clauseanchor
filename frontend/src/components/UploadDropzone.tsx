@@ -23,7 +23,7 @@ const ERROR_MESSAGE: Record<string, string> = {
 
 export default function UploadDropzone({
   state = "idle",
-  fileName = "employment-agreement.pdf",
+  fileName,
   fileMeta,
   onChoose,
   onReplace,
@@ -54,7 +54,7 @@ export default function UploadDropzone({
         <div style={{ marginTop: 8, fontSize: 15, fontWeight: 500, color: "var(--ink-primary)", overflowWrap: "anywhere" }}>
           {fileName}
         </div>
-        <div style={{ fontSize: 13, color: "var(--ink-secondary)" }}>{fileMeta ?? "1.2 MB, 8 pages"}</div>
+        <div style={{ fontSize: 13, color: "var(--ink-secondary)" }}>{fileMeta}</div>
         <div style={{ marginTop: 12 }}>
           <Button variant="tertiary" size="s" onClick={onReplace}>Replace</Button>
         </div>

@@ -19,9 +19,9 @@ function FileName({ name }: { name: string }) {
 
 export default function ReaderToolbar({
   variant = "complete",
-  filename = "employment-agreement.pdf",
-  meta = "8 pages",
-  partialNote = "Some categories could not be finished. They are listed as Unavailable.",
+  filename,
+  meta,
+  partialNote,
   menu,
   leading,
   showDelete = true,
@@ -29,8 +29,9 @@ export default function ReaderToolbar({
   onDelete,
 }: {
   variant?: ToolbarVariant;
-  filename?: string;
-  meta?: string;
+  filename: string;
+  meta: string;
+  /** Shown beside the file in the partial variant. */
   partialNote?: string;
   /** Overflow menu override. */
   menu?: ReactNode;
@@ -75,7 +76,7 @@ export default function ReaderToolbar({
         )}
       </div>
 
-      {variant === "partial" && (
+      {variant === "partial" && partialNote && (
         <span style={{ flex: 1, minWidth: 200, fontSize: 13, color: "var(--status-review-fg)" }}>
           {partialNote}
         </span>

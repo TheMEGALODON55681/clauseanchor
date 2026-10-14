@@ -510,7 +510,7 @@ export default function Reader() {
         if (finished) {
           return <ClauseDetailPanel fill={fill} onClose={() => setSelection(null)} data={{ title, status: "unavailable", emptyTitle: "This part of the review did not finish", emptyBody: "This category was not reached before the review stopped." }} />;
         }
-        return <ClauseDetailPanel variant="loading" fill={fill} onClose={() => setSelection(null)} />;
+        return <ClauseDetailPanel fill={fill} onClose={() => setSelection(null)} />;
       }
       const clause = cat.clauses[selection.clause] ?? cat.clauses[0];
       let data: PanelData;
@@ -684,7 +684,7 @@ export default function Reader() {
         ? "The review stopped early. Categories not reached are listed as Unavailable."
         : unavailableNames.length
           ? `Partial result. Not finished: ${unavailableNames.join(", ")}.`
-          : undefined;
+          : "Some categories could not be finished. They are listed as Unavailable.";
 
   const roleItems: MenuItem[] = ROLES.map((r) => ({ label: r.title, checked: meta?.role === r.role, onSelect: () => void changeRole(r.role) }));
   // On a phone Delete leaves the toolbar, so Download report keeps its line, and joins the role list.

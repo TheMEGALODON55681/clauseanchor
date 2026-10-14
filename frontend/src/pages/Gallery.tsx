@@ -6,9 +6,9 @@ import StatusChip, { type StatusKind, type ChipSize } from "../components/Status
 import PolarityBadge, { type PolarityKind } from "../components/PolarityBadge";
 import ConfidenceBand from "../components/ConfidenceBand";
 import JudgmentCard, { type JudgmentPassage } from "../components/JudgmentCard";
-import MarginRuler from "../components/MarginRuler";
+import MarginRuler, { type RulerMark, type RulerVariant } from "../components/MarginRuler";
 import SpanHighlight from "../components/SpanHighlight";
-import ClauseDetailPanel from "../components/ClauseDetailPanel";
+import ClauseDetailPanel, { REVIEW_CANDIDATE_NOTE, type PanelData } from "../components/ClauseDetailPanel";
 
 // Atoms
 import RadioCard from "../components/RadioCard";
@@ -24,11 +24,11 @@ import Skeleton from "../components/Skeleton";
 // Molecules
 import UploadDropzone from "../components/UploadDropzone";
 import RoleSelector from "../components/RoleSelector";
-import PartyBindingField from "../components/PartyBindingField";
+import PartyBindingField, { type PartyChoice } from "../components/PartyBindingField";
 import NoticeBanner from "../components/NoticeBanner";
 import CategoryRow from "../components/CategoryRow";
 import CategoryGroupHeader from "../components/CategoryGroupHeader";
-import StageProgress from "../components/StageProgress";
+import StageProgress, { type Step } from "../components/StageProgress";
 import RuleFlagCard from "../components/RuleFlagCard";
 import SearchField from "../components/SearchField";
 import Tabs from "../components/Tabs";
@@ -41,7 +41,7 @@ import MetricCell from "../components/MetricCell";
 import DropdownMenu from "../components/DropdownMenu";
 
 // Organisms
-import CategorySidebar from "../components/CategorySidebar";
+import CategorySidebar, { type SidebarGroup } from "../components/CategorySidebar";
 import ReaderToolbar from "../components/ReaderToolbar";
 import PerformanceTableRow from "../components/PerformanceTableRow";
 import AppHeader from "../components/AppHeader";
@@ -102,6 +102,100 @@ const SAMPLE_LONG: JudgmentPassage = {
 const SAMPLE_CASES = [
   <JudgmentCard key="reviewed" authority="reviewed" passage={SAMPLE_PASSAGE} />,
   <JudgmentCard key="overruled" authority="overruled" passage={SAMPLE_PASSAGE} />,
+];
+
+/* The sample contract the specimens share. Like the case above, it is invented and lives here, so no component ships one. */
+const SAMPLE_FILE = "employment-agreement.pdf";
+const CLAUSE_BEFORE = "During the Term and for a period of two (2) years thereafter, the Employee shall not,";
+const CLAUSE_MARKED = "directly or indirectly, engage in any business that competes";
+const CLAUSE_AFTER = "with the Company within India.";
+
+const FOUND_PANEL: PanelData = {
+  title: "Non-compete",
+  status: "found",
+  sectionPath: "Clause 11 › 11.3 › (b)",
+  offsets: { start: 4210, end: 4488 },
+  quote: `${CLAUSE_BEFORE} ${CLAUSE_MARKED} ${CLAUSE_AFTER}`,
+  polarity: "exposure",
+  confidence: "higher",
+  ruleFlags: <RuleFlagCard variant="standard" />,
+  caseLaw: SAMPLE_CASES,
+  caseLawCount: SAMPLE_CASES.length,
+};
+const PANELS = {
+  found: FOUND_PANEL,
+  review: { ...FOUND_PANEL, status: "review", confidence: "review", reviewNote: REVIEW_CANDIDATE_NOTE, ruleFlags: <RuleFlagCard variant="verify" /> },
+  absent: { title: "Non-compete", status: "absent", emptyTitle: "No clause found at the validated threshold", emptyBody: "This category was checked. Nothing was confirmed here." },
+} satisfies Record<string, PanelData>;
+
+const RULER_MARKS: RulerMark[] = [
+  { at: 0.08, status: "found", label: "Definitions, clause 1.2" },
+  { at: 0.22, status: "review", label: "Indemnity, clause 7.1" },
+  { at: 0.4, status: "found", label: "Confidentiality, clause 9.4" },
+  { at: 0.58, status: "found", label: "Non-compete, clause 11.3" },
+  { at: 0.74, status: "unvalidated", label: "Assignment, clause 14.2" },
+  { at: 0.9, status: "found", label: "Governing law, clause 18.1" },
+];
+const RULERS: { label: string; variant?: RulerVariant; marks: RulerMark[] }[] = [
+  { label: "default", marks: RULER_MARKS },
+  { label: "hover", variant: "hover", marks: RULER_MARKS },
+  {
+    label: "grouped",
+    marks: [
+      { at: 0.2, status: "found", label: "3 findings near clause 7", count: 3 },
+      { at: 0.55, status: "review", label: "2 findings near clause 11", count: 2 },
+      { at: 0.85, status: "found", label: "Governing law, clause 18.1" },
+    ],
+  },
+  { label: "selected", variant: "selected", marks: RULER_MARKS },
+  { label: "empty", marks: [] },
+];
+
+const SAMPLE_STEPS: Step[] = [
+  { label: "Reading document", state: "done" },
+  { label: "Finding clauses", state: "active", detail: "18 of 46 categories" },
+  { label: "Checking confidence", state: "pending" },
+  { label: "Indian law review", state: "pending" },
+  { label: "Finding case law", state: "pending" },
+  { label: "Final checks", state: "pending" },
+];
+
+const SAMPLE_SUMMARY = "46 categories: 9 found, 3 need a lawyer, 31 not found, 3 not validated";
+const SAMPLE_GROUPS: SidebarGroup[] = [
+  {
+    label: "Restrictions",
+    summary: "2 found, 1 needs a lawyer",
+    rows: [
+      { name: "Non-Compete", status: "found", count: 1 },
+      { name: "No-Solicit of Employees", status: "found", count: 1 },
+      { name: "Exclusivity", status: "review" },
+      { name: "Price Restrictions", status: "absent" },
+    ],
+  },
+  {
+    label: "Money and liability",
+    summary: "2 found, 1 not validated",
+    rows: [
+      { name: "Liquidated Damages", status: "found", count: 1 },
+      { name: "Cap on Liability", status: "found", count: 2 },
+      { name: "Audit Rights", status: "unvalidated" },
+      { name: "Insurance", status: "unavailable" },
+    ],
+  },
+  {
+    label: "India-specific",
+    summary: "1 found, 1 needs a lawyer",
+    rows: [
+      { name: "Arbitration", status: "found", count: 1 },
+      { name: "Stamping and Registration", status: "review" },
+      { name: "Jurisdiction / Forum Selection", status: "absent" },
+    ],
+  },
+];
+
+const SAMPLE_PARTIES: PartyChoice[] = [
+  { id: "p1", name: "Sample Traders Pvt. Ltd.", quote: "“Sample Traders Pvt. Ltd., a company incorporated under the Companies Act”", start: 120, end: 210 },
+  { id: "p2", name: "Example Industries Ltd.", quote: "“Example Industries Ltd., having its registered office at New Delhi”", start: 240, end: 322 },
 ];
 
 const TYPE_SPECIMENS: { style: string; family: string; note: string; el: ReactNode }[] = [
@@ -404,7 +498,13 @@ function Library({ mode }: { mode: Mode }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 14, background: "var(--paper-sheet)", border: "1px solid var(--rule-default)", borderRadius: "var(--radius-md)", padding: "16px 16px 16px 24px" }}>
           {(["found", "review", "focused", "overlap2", "overlap3", "hover", "keyboard"] as const).map((k) => (
             <div key={k}>
-              <SpanHighlight kind={k} />
+              <SpanHighlight
+                kind={k}
+                before={<><span style={{ fontWeight: 600, marginRight: 8 }}>11.3</span>{CLAUSE_BEFORE}</>}
+                text={CLAUSE_MARKED}
+                after={CLAUSE_AFTER}
+                tooltip={k === "hover" ? "Non-compete" : undefined}
+              />
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-tertiary)", marginTop: 2, marginLeft: 16 }}>{k}</div>
             </div>
           ))}
@@ -413,10 +513,10 @@ function Library({ mode }: { mode: Mode }) {
 
       <Group label="Margin ruler · a ledger margin, not a heatmap">
         <div style={{ display: "flex", gap: 32, alignItems: "flex-start", flexWrap: "wrap" }}>
-          {(["default", "hover", "grouped", "selected", "empty"] as const).map((v) => (
-            <div key={v} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-              <MarginRuler variant={v} height={260} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-tertiary)" }}>{v}</span>
+          {RULERS.map(({ label, variant, marks }) => (
+            <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <MarginRuler variant={variant} marks={marks} height={260} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-tertiary)" }}>{label}</span>
             </div>
           ))}
         </div>
@@ -443,7 +543,7 @@ function Library({ mode }: { mode: Mode }) {
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
           {(["found", "review", "absent", "loading"] as const).map((v) => (
             <div key={v} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <ClauseDetailPanel variant={v} caseLaw={SAMPLE_CASES} />
+              <ClauseDetailPanel data={v === "loading" ? undefined : PANELS[v]} titleAs="p" />
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-tertiary)" }}>{v}</span>
             </div>
           ))}
@@ -530,7 +630,7 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Upload dropzone · states and the four error messages">
         <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 460 }}>
           {(["idle", "hover", "drag-over", "validating", "uploaded", "error-type", "error-size", "error-scanned", "error-protected"] as const).map((st) => (
-            <Labeled key={st} label={st} width="100%"><UploadDropzone state={st} /></Labeled>
+            <Labeled key={st} label={st} width="100%"><UploadDropzone state={st} fileName={SAMPLE_FILE} fileMeta="1.2 MB, 8 pages" /></Labeled>
           ))}
         </div>
       </Group>
@@ -542,7 +642,7 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Party binding field">
         <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 460 }}>
           {(["loading", "choices", "selected", "unresolved"] as const).map((st) => (
-            <Labeled key={st} label={st} width="100%"><PartyBindingField state={st} /></Labeled>
+            <Labeled key={st} label={st} width="100%"><PartyBindingField state={st} parties={SAMPLE_PARTIES} /></Labeled>
           ))}
         </div>
       </Group>
@@ -559,8 +659,8 @@ function Library({ mode }: { mode: Mode }) {
 
       <Group label="Stage progress · full and compact, no percentage bar">
         <div style={{ display: "flex", gap: 32, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <Labeled label="full" width={280}><StageProgress /></Labeled>
-          <Labeled label="compact"><StageProgress compact /></Labeled>
+          <Labeled label="full" width={280}><StageProgress steps={SAMPLE_STEPS} /></Labeled>
+          <Labeled label="compact"><StageProgress compact steps={SAMPLE_STEPS} /></Labeled>
         </div>
       </Group>
 
@@ -645,7 +745,7 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Reader toolbar">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {(["complete", "partial", "sample-mode"] as const).map((v) => (
-            <Labeled key={v} label={v} width="100%"><ReaderToolbar variant={v} /></Labeled>
+            <Labeled key={v} label={v} width="100%"><ReaderToolbar variant={v} filename={SAMPLE_FILE} meta="8 pages" partialNote="Some categories could not be finished. They are listed as Unavailable." /></Labeled>
           ))}
         </div>
       </Group>
@@ -653,7 +753,7 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Category sidebar · 280px">
         <Row>
           {(["loading", "populated", "filtered-empty"] as const).map((st) => (
-            <Labeled key={st} label={st}><CategorySidebar state={st} /></Labeled>
+            <Labeled key={st} label={st}><CategorySidebar state={st} groups={SAMPLE_GROUPS} summary={SAMPLE_SUMMARY} selected="Non-Compete" /></Labeled>
           ))}
         </Row>
       </Group>
@@ -668,10 +768,10 @@ function Library({ mode }: { mode: Mode }) {
 
       <Group label="Mobile drawer · bottom sheet and left drawer">
         <Row>
-          <Labeled label="bottom · peek"><MobileDrawer side="bottom" state="peek" /></Labeled>
-          <Labeled label="bottom · open"><MobileDrawer side="bottom" state="open" /></Labeled>
-          <Labeled label="left · open"><MobileDrawer side="left" state="open" /></Labeled>
-          <Labeled label="closed"><MobileDrawer side="bottom" state="closed" /></Labeled>
+          <Labeled label="bottom · peek"><MobileDrawer side="bottom" state="peek" title="Non-compete" /></Labeled>
+          <Labeled label="bottom · open"><MobileDrawer side="bottom" state="open" title="Non-compete" /></Labeled>
+          <Labeled label="left · open"><MobileDrawer side="left" state="open" title="Non-compete" /></Labeled>
+          <Labeled label="closed"><MobileDrawer side="bottom" state="closed" title="Non-compete" /></Labeled>
         </Row>
       </Group>
 

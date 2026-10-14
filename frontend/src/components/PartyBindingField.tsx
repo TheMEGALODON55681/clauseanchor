@@ -7,11 +7,6 @@ export type PartyBindingState = "loading" | "choices" | "selected" | "unresolved
 
 export type PartyChoice = { id: string; name: string; quote: string; start: number; end: number };
 
-const PARTIES: PartyChoice[] = [
-  { id: "p1", name: "Sample Traders Pvt. Ltd.", quote: "“Sample Traders Pvt. Ltd., a company incorporated under the Companies Act”", start: 120, end: 210 },
-  { id: "p2", name: "Example Industries Ltd.", quote: "“Example Industries Ltd., having its registered office at New Delhi”", start: 240, end: 322 },
-];
-
 const UNCLEAR = "We will mark party-specific clauses as Party unclear.";
 
 /* The party the user is, as a radio group with "None of these" as its last option. Nothing
@@ -19,7 +14,7 @@ const UNCLEAR = "We will mark party-specific clauses as Party unclear.";
    The party that fits the role best is listed first and carries the tag "Suggested". */
 export default function PartyBindingField({
   state = "choices",
-  parties = PARTIES,
+  parties,
   value,
   none = false,
   suggested = null,
@@ -27,7 +22,7 @@ export default function PartyBindingField({
   onNone,
 }: {
   state?: PartyBindingState;
-  parties?: PartyChoice[];
+  parties: PartyChoice[];
   /** The id of the chosen party. Controlled when given (null means no party yet). */
   value?: string | null;
   none?: boolean;
@@ -37,7 +32,7 @@ export default function PartyBindingField({
   onNone?: () => void;
 }) {
   const label = useId();
-  const [internal, setInternal] = useState<string | null>(state === "selected" ? PARTIES[0].id : null);
+  const [internal, setInternal] = useState<string | null>(state === "selected" ? (parties[0]?.id ?? null) : null);
   const selected = value !== undefined ? value : internal;
 
   return (

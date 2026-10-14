@@ -154,8 +154,8 @@ function Mark({
   );
 }
 
-/** A paragraph of contract text with one demonstrated highlight kind. */
-export default function SpanHighlight({ kind }: { kind: SpanKind }) {
+/** A line of text with one demonstrated highlight kind. The words are the caller's. */
+export default function SpanHighlight({ kind, before, text, after, tooltip }: { kind: SpanKind; before: ReactNode; text: string; after: string; tooltip?: string }) {
   return (
     <p
       style={{
@@ -167,45 +167,11 @@ export default function SpanHighlight({ kind }: { kind: SpanKind }) {
         marginLeft: 16,
       }}
     >
-      <span
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontWeight: 600,
-          marginRight: 8,
-        }}
-      >
-        11.3
-      </span>
-      During the Term and for a period of two (2) years thereafter, the Employee
-      shall not,{" "}
-      {kind === "found" && (
-        <Mark kind="found">directly or indirectly, engage in any business that competes</Mark>
-      )}
-      {kind === "review" && (
-        <Mark kind="review">directly or indirectly, engage in any business that competes</Mark>
-      )}
-      {kind === "focused" && (
-        <Mark kind="focused" bracket>
-          directly or indirectly, engage in any business that competes
-        </Mark>
-      )}
-      {kind === "overlap2" && (
-        <Mark kind="overlap2">directly or indirectly, engage in any business that competes</Mark>
-      )}
-      {kind === "overlap3" && (
-        <Mark kind="overlap3" marginMarker="+2">
-          directly or indirectly, engage in any business that competes
-        </Mark>
-      )}
-      {kind === "hover" && (
-        <Mark kind="hover" tooltip="Non-compete">
-          directly or indirectly, engage in any business that competes
-        </Mark>
-      )}
-      {kind === "keyboard" && (
-        <Mark kind="keyboard">directly or indirectly, engage in any business that competes</Mark>
-      )}{" "}
-      with the Company within India.
+      {before}{" "}
+      <Mark kind={kind} bracket={kind === "focused"} marginMarker={kind === "overlap3" ? "+2" : undefined} tooltip={tooltip}>
+        {text}
+      </Mark>{" "}
+      {after}
     </p>
   );
 }

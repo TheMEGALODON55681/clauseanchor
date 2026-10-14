@@ -1,21 +1,13 @@
-import { Children, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import StatusChip, { type StatusKind } from "./StatusChip";
 import PolarityBadge, { type PolarityKind } from "./PolarityBadge";
 import ConfidenceBand, { type CalibrationScope, type ConfidenceVariant } from "./ConfidenceBand";
 import JudgmentCard from "./JudgmentCard";
-import RuleFlagCard from "./RuleFlagCard";
 import Button from "./Button";
 import { Bar } from "./Skeleton";
 import { CloseIcon } from "./icons";
 
-export type PanelVariant =
-  | "found"
-  | "review"
-  | "absent"
-  | "unavailable"
-  | "loading";
-
-/** Live data for the reader. When omitted, the gallery sample renders. */
+/** What the panel shows. With no data and no custom content it draws its skeleton. */
 export type PanelData = {
   title: string;
   status: StatusKind;
@@ -41,7 +33,6 @@ export const REVIEW_CANDIDATE_NOTE =
   "This passage may be the clause, but the evidence did not reach the validated threshold. A lawyer should read it with the surrounding text.";
 
 type ClauseDetailPanelProps = {
-  variant?: PanelVariant;
   data?: PanelData;
   onClose?: () => void;
   /** Fill the parent instead of the fixed 400px card. */
@@ -50,24 +41,7 @@ type ClauseDetailPanelProps = {
   custom?: { title: string; content: ReactNode };
   /** The title is a heading in the reader. A page that only shows the panel as an example sets "p". */
   titleAs?: "h2" | "p";
-  /** Case law cards for the static sample variants. The Gallery supplies them, so the panel holds no sample passage. */
-  caseLaw?: ReactNode;
 };
-
-const STATUS_FOR: Record<Exclude<PanelVariant, "loading">, StatusKind> = {
-  found: "found",
-  review: "review",
-  absent: "absent",
-  unavailable: "unavailable",
-};
-
-const CONFIDENCE_FOR: Record<"found" | "review", ConfidenceVariant> = {
-  found: "higher",
-  review: "review",
-};
-
-const CLAUSE_TEXT =
-  "During the Term and for a period of two (2) years thereafter, the Employee shall not, directly or indirectly, engage in any business that competes with the Company within India.";
 
 function Shell({ children, fill = false }: { children: ReactNode; fill?: boolean }) {
   return (
@@ -113,7 +87,7 @@ function PanelHeader({ title, chip, onClose, titleAs = "h2" }: { title: string; 
   );
 }
 
-export default function ClauseDetailPanel({ variant = "found", data, onClose, fill = false, custom, titleAs, caseLaw }: ClauseDetailPanelProps) {
+export default function ClauseDetailPanel({ data, onClose, fill = false, custom, titleAs }: ClauseDetailPanelProps) {
   if (custom) {
     return (
       <Shell fill={fill}>
@@ -123,217 +97,17 @@ export default function ClauseDetailPanel({ variant = "found", data, onClose, fi
     );
   }
   if (data) return <LivePanel data={data} onClose={onClose} fill={fill} titleAs={titleAs} />;
-  if (variant === "loading") {
-    return (
-      <Shell fill={fill}>
-        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-          <Bar w={180} h={20} />
-          <Bar w={120} />
-          <Bar w="100%" h={72} />
-          <div className="flex gap-2">
-            <Bar w={110} h={24} />
-            <Bar w={120} h={24} />
-          </div>
-          <Bar w="100%" h={90} />
-        </div>
-      </Shell>
-    );
-  }
-
-  const status = STATUS_FOR[variant];
-  const found = variant === "found" || variant === "review";
-
   return (
-    <Shell>
-      {/* Header */}
-      <div
-        className="flex items-start justify-between gap-3"
-        style={{ padding: "16px 20px", borderBottom: "1px solid var(--rule-default)" }}
-      >
-        <div className="flex flex-col gap-2">
-          <h3
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontWeight: 600,
-              fontSize: 22,
-              lineHeight: "30px",
-              color: "var(--ink-primary)",
-            }}
-          >
-            Non-compete
-          </h3>
-          <StatusChip status={status} size="s" />
-        </div>
-        <Button variant="secondary" size="s" icon="icon-only" aria-label="Close panel" iconNode={<CloseIcon size={18} />} />
-      </div>
-
+    <Shell fill={fill}>
       <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Review notice */}
-        {variant === "review" && (
-          <div
-            style={{
-              border: "1px solid var(--status-review-border)",
-              background: "var(--status-review-bg)",
-              borderRadius: "var(--radius-md)",
-              padding: "10px 12px",
-              fontSize: 13,
-              lineHeight: "20px",
-              color: "var(--status-review-fg)",
-            }}
-          >
-            ClauseAnchor could not confirm this clause with enough confidence. A lawyer should read it.
-          </div>
-        )}
-
-        {/* Breadcrumb + offset */}
-        <div className="flex items-center justify-between gap-2">
-          <span
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontWeight: 600,
-              fontSize: 14,
-              color: "var(--ink-secondary)",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            Clause 11 › 11.3 › (b)
-          </span>
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 12,
-              color: "var(--ink-tertiary)",
-            }}
-          >
-            chars 4210 to 4488
-          </span>
+        <Bar w={180} h={20} />
+        <Bar w={120} />
+        <Bar w="100%" h={72} />
+        <div className="flex gap-2">
+          <Bar w={110} h={24} />
+          <Bar w={120} h={24} />
         </div>
-
-        {found ? (
-          <>
-            {/* Quoted clause */}
-            <div>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--ink-tertiary)",
-                  marginBottom: 6,
-                }}
-              >
-                From your contract
-              </div>
-              <div
-                style={{
-                  position: "relative",
-                  background: "var(--paper-sheet)",
-                  border: "1px solid var(--rule-default)",
-                  borderRadius: "var(--radius-md)",
-                  padding: "14px 22px",
-                }}
-              >
-                <span
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    left: 6,
-                    top: 10,
-                    color: "var(--status-found-fg)",
-                    fontFamily: "var(--font-serif)",
-                  }}
-                >
-                  &#10214;
-                </span>
-                <p
-                  style={{
-                    fontFamily: "var(--font-serif)",
-                    fontSize: 17,
-                    lineHeight: "30px",
-                    color: "var(--ink-primary)",
-                  }}
-                >
-                  {CLAUSE_TEXT}
-                </p>
-                <span
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    right: 6,
-                    bottom: 10,
-                    color: "var(--status-found-fg)",
-                    fontFamily: "var(--font-serif)",
-                  }}
-                >
-                  &#10215;
-                </span>
-              </div>
-            </div>
-
-            {/* Polarity + confidence */}
-            <div className="flex flex-wrap items-center gap-3">
-              <PolarityBadge polarity="exposure" />
-              <ConfidenceBand variant={CONFIDENCE_FOR[variant as "found" | "review"]} size="full" />
-            </div>
-
-            {/* Rule flag (wired to the RuleFlagCard component) */}
-            <RuleFlagCard variant={variant === "review" ? "verify" : "standard"} />
-
-            {/* Case law */}
-            <div>
-              <div
-                className="flex items-center gap-2"
-                style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-primary)", marginBottom: 10 }}
-              >
-                Case law
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 12,
-                    color: "var(--ink-tertiary)",
-                    fontWeight: 400,
-                  }}
-                >
-                  {Children.count(caseLaw)}
-                </span>
-              </div>
-              <div className="flex flex-col gap-3">{caseLaw ?? <JudgmentCard state="empty" />}</div>
-            </div>
-          </>
-        ) : (
-          <div
-            style={{
-              background: "var(--paper-sheet)",
-              border: "1px solid var(--rule-default)",
-              borderRadius: "var(--radius-md)",
-              padding: 16,
-            }}
-          >
-            <p style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-primary)" }}>
-              {variant === "absent"
-                ? "No clause found at the validated threshold"
-                : "This part of the review did not finish"}
-            </p>
-            <p style={{ fontSize: 13, lineHeight: "20px", color: "var(--ink-secondary)", marginTop: 8 }}>
-              {variant === "absent"
-                ? "ClauseAnchor did not locate a non-compete clause with validated confidence. This does not mean the contract has none, only that none was confirmed here."
-                : "Processing did not complete for this category. This is a technical issue, not a legal finding."}
-            </p>
-            {variant === "unavailable" && (
-              <div style={{ marginTop: 12 }}>
-                <Button variant="secondary" size="s">
-                  Try again
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Footer note */}
-        <p style={{ fontSize: 13, lineHeight: "20px", color: "var(--ink-tertiary)", borderTop: "1px solid var(--rule-default)", paddingTop: 12 }}>
-          ClauseAnchor quotes text. It does not decide what the law requires.
-        </p>
+        <Bar w="100%" h={90} />
       </div>
     </Shell>
   );

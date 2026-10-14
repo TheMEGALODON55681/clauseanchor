@@ -9,7 +9,7 @@ export type DrawerSide = "bottom" | "left";
 type MobileDrawerProps = {
   side?: DrawerSide;
   state?: DrawerState;
-  title?: string;
+  title: string;
   children?: ReactNode;
   /** Render inside a positioned frame for the gallery instead of fixed to viewport. */
   framed?: boolean;
@@ -28,7 +28,7 @@ const PEEK_PX = 168;
 export default function MobileDrawer({
   side = "bottom",
   state = "open",
-  title = "Non-compete",
+  title,
   children,
   framed = true,
   size,
