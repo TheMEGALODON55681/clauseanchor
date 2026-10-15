@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 
 from app.parsing.errors import MAX_TEXT_CHARS, ErrorCode, ParseError
 from app.parsing.model import Block, BlockKind, Coverage, ParsedDocument, ParseWarning
@@ -62,6 +62,7 @@ class TextAssembler:
         page_count: int | None,
         warnings: Sequence[ParseWarning] = (),
         partial: bool = False,
+        unreadable_pages: Collection[int] = (),
     ) -> ParsedDocument:
         source_text = "".join(self._pieces)
         try:
@@ -84,7 +85,12 @@ class TextAssembler:
             warnings=tuple(warnings),
             coverage=Coverage(
                 pages_total=page_count,
-                pages_with_text=None if page_count is None else len({b.page for b in blocks}),
+                # A scanned page that carries only a stamp holds a block but no readable text.
+                pages_with_text=(
+                    None
+                    if page_count is None
+                    else len({b.page for b in blocks}.difference(unreadable_pages))
+                ),
                 chars=len(source_text),
                 partial=partial,
             ),

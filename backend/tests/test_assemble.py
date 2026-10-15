@@ -166,6 +166,16 @@ def test_coverage_and_metadata_for_a_pdf() -> None:
     assert (doc.coverage.chars, doc.coverage.partial) == (len(doc.source_text), True)
 
 
+def test_unreadable_pages_do_not_count_as_pages_with_text() -> None:
+    asm = TextAssembler()
+    add(asm, "one", page=1)
+    asm.new_page()
+    add(asm, "ACME 000123", page=2)  # a stamp on a scanned page
+    doc = asm.build(media_type=PDF, page_count=2, unreadable_pages=[2])
+    assert (doc.coverage.pages_total, doc.coverage.pages_with_text) == (2, 1)
+    assert len(doc.blocks) == 2
+
+
 def test_coverage_page_counts_are_none_for_a_docx() -> None:
     asm = TextAssembler()
     add(asm, "body", page=None)

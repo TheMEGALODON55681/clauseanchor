@@ -36,8 +36,9 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
 - [x] **1-B** PDF text extraction in reading order
   `feat(parser): extract ordered text blocks from PDFs`
   Adds `detect.py` and `pdf.py` with the A1 error mapping, A6 to A8 and their fixtures. Deviations and ceilings are listed under the 1-B amendments below.
-- [ ] **1-C** PDF safety: decoration, scanned, encrypted, malformed, limits
+- [x] **1-C** PDF safety: decoration, scanned, encrypted, malformed, limits
   `feat(parser): mark repeated page furniture and reject unreadable PDFs`
+  Adds decoration, the scanned and partial checks, the page limit and the content budget to `pdf.py`, with A9 to A11 and their fixtures. Deviations and ceilings are listed under the 1-C amendments below.
 - [ ] **1-D** DOCX archive safety, body, tables and text boxes
   `feat(parser): extract DOCX body, tables and text boxes safely`
 - [ ] **1-D2** DOCX numbering, headers, footers and footnotes
@@ -91,13 +92,13 @@ Deviations from the 1-B spec, with reasons. Done in 1-B:
 - COLUMN_ORDER_UNCERTAIN `[CONTRACT]` means a line that crosses the gutter sits between two runs of column rows, so the order around it is a guess. One warning per page. A full-width title above the columns or a full-width line below them does not trigger it.
 - Block locator `[CONTRACT]`: `{"page": n, "block": i}`, with both numbers 1-based and `i` counting blocks within the page.
 - `detect_type` returns `"pdf"` for `%PDF-`, `"docx"` for a ZIP that holds `word/document.xml` and no `word/vbaProject.bin`, and `UNSUPPORTED_TYPE` for everything else. A ZIP that cannot be read gives MALFORMED_FILE.
-- `blank_page.pdf` (text, blank, text) is in the registry. 1-C adds the BLANK_PAGE warning to it.
+- `blank_page.pdf` (text, blank, text) is in the registry. 1-C adds the BLANK_PAGE warning to it (done).
 
 Known ceilings of 1-B, none of them silent:
 - Paragraphs with no spacing, no numbering and no indent fuse into one block per page. Nothing in the geometry separates them.
 - First-line indents with no paragraph spacing and no numbering put block boundaries one line late: the next paragraph's indented first line joins the block above, and that paragraph's second line starts a new block. With 6 pt spacing the boundaries are right, except that a page opening on a paragraph start cuts it after its first line (16 blocks for 14 paragraphs on the two-page probe: one paragraph crosses the page break and one is cut).
 - A two-column table is read as two columns, because its geometry matches a two-column page. Tables with three or more columns read row by row.
-- `pdf.pages` builds every page object before 1-C adds the 100-page check and the incremental count (A11).
+- `pdf.pages` builds every page object before 1-C adds the 100-page check and the incremental count (A11). Closed in 1-C.
 - A mutated file with a broken page tree and no pages reports NO_TEXT_FOUND.
 
 #### 1-C
@@ -106,6 +107,30 @@ Known ceilings of 1-B, none of them silent:
 - **A10 Scanned and partial [CONTRACT].** Count characters outside the margin zones. An image-dominant page with fewer than 20 of them is scanned. One with fewer than 200 sets `coverage.partial = True`, because a searchable scan (full-page image, large real text layer) must stay usable. Widget and FreeText annotations with content also set `partial = True`. Fixtures: a scanned page with a Bates stamp, an all-blank PDF (NO_TEXT_FOUND) and an owner-only encrypted PDF (parses).
   Resolution (2 October 2026) `[CONTRACT]`: only `SCANNED_PDF` rejects a file, when every page with content is scanned. If only some pages are scanned, the parser sets `coverage.partial = True`, adds a `PARTIALLY_SCANNED_PDF` warning and parses the rest, so `PARTIALLY_SCANNED_PDF` moves from the error list to the warning list. The under-200 partial rule stays. The `partly_scanned.pdf` fixture now expects a parse with the warning. Reason: executed contracts often end in a scanned signature page. The code lists in `errors.py` follow this from 1-A.
 - **A11 Content budget [CONTRACT].** Before extracting a page, decode its content streams and any Form XObjects incrementally, with Flate read through `zlib.decompressobj` in `max_length` chunks. Stop as soon as the running total passes `MAX_DECODED_CONTENT_BYTES` (8 MiB, kept with the other limits in `errors.py`) and raise TOO_MUCH_TEXT. Never decode a stream fully and measure afterwards. Count pages with `islice(PDFPage.create_pages(doc), 101)` instead of building every Page object. Fixtures: two 16 KB PDFs that decode past the budget, one in the page content and one in a Form XObject. Known ceiling: only Flate is measured. A 16 KB PDF that decodes to 16 MB took 186 s in `extract_words`, so Phase 2 must also add a child-process wall-clock kill.
+
+Deviations from the 1-C spec, with reasons. Done in 1-C:
+- A9 widened `[CONTRACT]`: a page-number-shaped line that is the first or last row of the page is decoration wherever it sits, not only inside the margin zone. Without the rule, a page whose text stops halfway down kept its number as text (32 of 33 pages in one real contract, 13 of 14 in another), and on a two-column page the number joined the left column and was read before the right one. Folding the other margin candidates back into the body flow cut blocks on two files but changed reading order on one, so each candidate keeps its own block.
+- Margin zone: a line whose vertical middle sits in the top or bottom 8 percent of the page. A line there leaves the column and gutter logic and becomes a block of its own. A page lists its top margin lines first, then its body blocks, then its bottom margin lines.
+- A candidate has kind `header` or `footer` when it is page-number-shaped: `3`, `Page 3`, `Page 3 of 10`, `3/10` or `- 3 -`, with one to three digits and a hyphen, en dash or em dash. It has that kind too when the same line recurs in its zone (compared in lowercase, each digit read as `#`) on at least 3 pages and at least half the pages, rounded up. Otherwise its kind is `text`. The 7-page fixtures pin the rounding: 3 of 7 is text, 4 of 7 is decoration.
+- Image share is the sum of the image boxes clipped to the page, over the page area, capped at 1. Above 0.5 is image-dominant.
+- The parser emits `PARTIALLY_SCANNED_PDF` `[CONTRACT]` once per scanned page and sets `page`. A10 does not say how many. A page with neither text nor an image gets `BLANK_PAGE`. "Every page with content is scanned" counts only pages with text or an image.
+- `coverage.pages_with_text` `[CONTRACT]` leaves out scanned pages, because their only blocks are margin stamps. `build()` takes `unreadable_pages` for this.
+- Annotations: a Widget or FreeText annotation whose own `/Contents` or `/V` holds non-blank text sets `partial = True`. A blank field does not.
+- The budget undoes leading ASCII85 and ASCIIHex filters before it measures a Flate stream. A11 says only Flate is measured, but reportlab writes ASCII85 in front of Flate, and without this step a bomb in that form counted its stored length. For an encrypted file it deciphers each stream first (`bomb_encrypted.pdf`).
+- The budget counts each distinct stream once per document, keyed by object id, and walks nested Form XObjects with a work list, so a form that names itself ends. The page count comes from `islice(PDFPage.create_pages(doc), 101)` before any text is read.
+- `MAX_DECODED_CONTENT_BYTES` is in `errors.py`, next to the other limits.
+- Fixtures: `header_footer`, `page_number_one_page`, `furniture_two_pages`, `header_two_of_three`, `header_three_of_seven`, `header_four_of_seven`, `body_in_margin`, `page_numbers_off_margin`, `two_column_page_number`, `scanned`, `scanned_stamp`, `partly_scanned`, `scan_19_chars`, `scan_20_chars`, `scan_199_chars`, `scan_200_chars`, `scanned_most_of_page`, `image_mostly_off_page`, `all_blank`, `owner_only`, `form_field`, `free_text`, `plain_annotations`, `hundred_pages`, `too_many_pages`, `bomb_content`, `bomb_form`, `bomb_encrypted`, `form_cycle`. All are generated at test time with reportlab or raw bytes, and nothing binary is committed.
+
+Known ceilings of 1-C, none of them silent:
+- Only Flate, behind any leading ASCII filter, is measured. LZW and RunLength streams count their stored length, which understates them.
+- A form drawn many times counts once. Font programs, ToUnicode maps and object streams are not budgeted.
+- The budget bounds decoded size, not time. A11 measured 186 s for 16 MB, so a stream just under 8 MiB can take about 90 s in `extract_words`. That is an extrapolation, and 1-C did not measure that size. The Phase 2 wall-clock kill is the real bound.
+- A form chain 3,000 deep makes pdfminer fail, and the file is rejected as `MALFORMED_FILE` with no leak.
+- Annotation values held only on a parent field are not seen, and annotation types other than Widget and FreeText are not checked for text.
+- Overlapping images count twice toward the image share.
+- A bare number that is the first or last row of a page is decoration even when it is a table cell or a list marker on its own line.
+- A page number printed on a line with other text, such as `Agreement 12`, is decoration only when the line repeats on enough pages.
+- A margin line that is neither number-shaped nor repeated stays text, and a page that fills the margins breaks one paragraph into several blocks.
 
 #### 1-D
 

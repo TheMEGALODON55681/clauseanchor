@@ -924,3 +924,84 @@ Verification:
 Blockers: none.
 
 Next action: commit 1-B with `feat(parser): extract ordered text blocks from PDFs`, send the two new `[CONTRACT]` items to Tanishq with the rest, then reply `next` to start 1-C.
+
+## 2026-10-15: Part 1-C, PDF safety: decoration, scanned pages and limits
+
+Part: 1-C. It follows 1-B, committed as 9b2fa01.
+
+Files changed:
+- `backend/app/parsing/pdf.py`: A9, A10 and A11 as built. `_read` now returns the pages and whether an annotation holds text. One comment in 1-B code that carried a tool name was reworded.
+- `backend/app/parsing/errors.py`: `MAX_DECODED_CONTENT_BYTES`.
+- `backend/app/parsing/assemble.py`: `build()` takes `unreadable_pages`.
+- `backend/tests/fixtures/build.py`: 29 registry entries, plus `_raw_pdf`, `_stream` and the bomb builders.
+- `backend/tests/test_pdf.py` and `backend/tests/test_assemble.py`.
+- `docs/app/Phases.md`: 1-C ticked, and the 1-C deviations and ceilings added under A11.
+- `docs/app/Architecture.md`: the decoration row, the content budget row and the locator paragraph in section 4.
+- `docs/app/BuildLog.md`: this entry.
+- Outside the repo: five real contracts from the CUAD set (cc-by-4.0, from huggingface.co/datasets/theatticusproject/cuad) in `data/cuad_smoke/`, for the smoke check below. `data/*` is ignored, so `git status` does not show them. Rules.md says never to touch `data/`, and Aryan's instruction for this check overrode it.
+
+Commands run, from `backend/` in Git Bash with the venv active:
+- `ruff format .`, `ruff check .`, `pytest -q`.
+- One-line mutations of `pdf.py` on copies outside the repo, byte-level sweeps of the fixtures, a before-and-after diff of the parser on the five contracts, and the smoke statistics.
+- A clean install: a fresh virtual environment outside the repo, `pip install -r requirements-dev.txt`, then `ruff` and `pytest` inside it.
+- The Rules section 1 scrub and a dash check over `backend/` and `docs/app/`.
+- Read-only git: `git status`, `git diff`.
+
+Tests: 149 passed, 0 failed, 0 skipped (62 after 1-B). `test_assemble.py` holds 25 (one new), `test_pdf.py` 82 (57 new) and `test_invariants.py` 42 (one per new fixture). The byte-flip test in `test_pdf.py` now runs over `simple.pdf`, `partly_scanned.pdf` and `form_field.pdf`, 300 seeded mutants each.
+
+Pinned versions added: none. `reportlab==5.0.1` and `pillow==12.3.0` have been in `requirements-dev.txt` since 1-A, so the fixtures needed no new dependency. The clean install resolved pdfplumber 0.11.10, pdfminer.six 20260107, python-docx 1.2.0, PyYAML 6.0.3, pytest 9.1.1 and ruff 0.16.10. `sklearn` is not in `sys.modules` after importing the parser.
+
+Decisions:
+- Margin zone and kinds are as listed under the 1-C deviations in `Phases.md`. Each margin candidate is a block of its own, and a candidate that is neither number-shaped nor repeated keeps kind `text`.
+- A9 gains a page-number rule for the first or last row of a page (see Findings). Folding the other margin candidates back into the body flow cut blocks on two files and changed reading order on one, so it stays out.
+- A10: the parser emits `PARTIALLY_SCANNED_PDF` once per scanned page, and `coverage.pages_with_text` leaves out scanned pages. Both go beyond A10's text and carry the `[CONTRACT]` tag.
+- A11: the budget undoes leading ASCII85 and ASCIIHex filters before it measures. A11's text does not say this. reportlab writes ASCII85 in front of Flate, so a bomb in that form would otherwise count its stored length.
+- Fixtures are generated at test time by `build_all`, called from the session fixture in `conftest.py`. Nothing binary is committed.
+- Tests reach three private names: `_PAGE_NUMBER`, `_decoded_length` and `_FLATE_CHUNK`. The page-number shapes are tested directly, and the chunk helpers are tested at boundaries that a fixture could reach only with an 8 MiB file.
+- `bomb_encrypted.pdf` appends its padding through reportlab's private `canvas._code`.
+- `_decoded_length` has no branch for an already-decoded stream. A mutation showed the branch was dead, so it is deleted.
+
+Findings during the part:
+- The page-number miss. On two of the five real contracts the text fills only the top half of the page and the bare page number sits at about 51 percent of the page height, outside the 8 percent zone. Under A9 as written it stayed text on 32 of 33 pages in one file and 13 of 14 in the other. The new rule marks a page-number-shaped first or last row of the page as decoration wherever it sits.
+- Reading order. A first measurement of the rule, combined with folding the margin lines back into the body, showed changed text order on three files. With the rule alone, the text of files 01, 02 and 04 is identical to before, and two pages change order. Both are two-column signature pages, page 33 of file 03 and page 14 of file 05. The number sat in the left half, so it joined the left column and was read before the right one. It now comes last, like the footer it is, and removing the number blocks from both outputs leaves the same blocks in the same order. The earlier change on file 02 came from the margin-folding variant, which is not applied. Its cause is not traced.
+- A9 variants on the five contracts, blocks and decoration:
+
+| Variant | File 01 | File 02 | File 03 | File 04 | File 05 |
+|---|---|---|---|---|---|
+| A9 as written | 174 blocks, 16 footers | 797, 0 | 246, 0 | 614, 44 | 176, 0 |
+| Margin lines folded back (not applied) | 174, 16 | 723, 0 | 246, 0 | 570, 44 | 176, 0 |
+| Folded back, plus the number rule (not applied) | 174, 16 | 723, 2 | 246, 32 | 570, 44 | 176, 13 |
+| Number rule alone (applied) | 174, 16 | 797, 2 | 246, 32 | 614, 44 | 176, 13 |
+
+  The words are the same in every variant. Against A9 as written, the text order changes on file 02 when the margin lines are folded back, on files 02, 03 and 05 when the number rule is added to that, and on one page each of files 03 and 05 with the number rule alone. Folding the margin lines back cut block fragmentation on the two files that fill the page (797 to 723, 614 to 570), so it stays out until 1-E shows that fragmentation matters.
+- A real-file smoke check on five CUAD contracts, picked by era and agreement type from the metadata before any was parsed. All five parse with `partial = False`.
+
+| File | Pages | Blocks | Blocks per page | Longest block (chars) | Clause number after the start | Clause number at a line start | Blocks over 2,000 chars | Footers |
+|---|---|---|---|---|---|---|---|---|
+| 01 Cybergy 2014 | 16 | 174 | 10.9 | 1,210 | 16 | 1 | 0 | 16 |
+| 02 Healthgate 1999 | 33 | 797 | 24.2 | 1,185 | 34 | 1 | 0 | 2 |
+| 03 Athens 2009 | 33 | 246 | 7.5 | 4,428 | 54 | 1 | 8 | 32 |
+| 04 Dova 2018 | 44 | 614 | 14.0 | 2,607 | 123 | 7 | 6 | 44 |
+| 05 Theravance 2020 | 14 | 176 | 12.6 | 1,264 | 10 | 0 | 0 | 13 |
+
+  Definitions. A clause number is a dotted number such as 4.2 or 11.3.1 (one or two digits per part, not preceded by a letter, digit, dollar sign, comma, slash, hyphen or full stop, and not followed by a letter, digit or percent sign), or an enumerator such as (b), (iv) or (12). "After the start" counts blocks with a clause number anywhere past their first character. "At a line start" counts blocks where a second or later line opens with one.
+  Of the 237 blocks with a clause number after the start (11.8 percent of 2,007 blocks in 140 pages), 120 are cross-references, 113 are inline enumerators inside one paragraph and 4 are dates or decimals. The 10 line-start hits are wrapped cross-references or a table of contents, and none is two numbered paragraphs run together.
+  A second check looked for a short line that ends a sentence and is followed by a capitalised line, inside one block. It found 9 blocks (0.45 percent), about 4 of them real fusions: unnumbered UK-style paragraphs in file 05. The 4,428-character block in file 03 was read in full and is one long paragraph.
+  Warnings: file 02 has 2 `COLUMN_ORDER_UNCERTAIN` and 1 `MORE_THAN_TWO_COLUMNS`, file 04 has 1 `MORE_THAN_TWO_COLUMNS`, and file 05 has 3 `COLUMN_ORDER_UNCERTAIN`. Parse time ran from 1.6 s to 18 s per file, one run each, so it is noisy; file 03 (33 pages) took 18 s.
+  Verdict: no fix for fused paragraphs is needed before 1-E. The sample is five files, all in the style of SEC exhibits, so it says little about other layouts.
+
+Verification:
+- `ruff format .`: 12 files left unchanged. `ruff check .`: all checks passed. `pytest -q`: 149 passed in about 9 s.
+- Clean install: Python 3.12.10, a new venv outside the repo, `pip install -r requirements-dev.txt`, then `ruff format --check`, `ruff check` and `pytest -q`: all passed, 149 passed in 8.4 s.
+- Mutations: 60 one-line mutants of `pdf.py` (margin share and zone edges, repetition thresholds, the page-number match, image share, the scanned and partial limits, annotation keys, the page limit, budget order and chunking, filter handling, and the page-number rule: order, each side, the shape test, the body check, the move). 59 failed at least one test. One does not apply, because the branch it targeted was deleted. The run used the code as of its last behaviour edit. Two edits came after it: a reworded comment and two tests merged into one with the same 14 cases.
+- Byte sweeps outside the suite, on the final code: 5,180 mutants of 18 fixtures (byte flips, truncation, deleted ranges), seeds 1 and 2. 2,047 parsed, 2,533 gave `MALFORMED_FILE`, 468 `NO_TEXT_FOUND`, 125 `SCANNED_PDF` and 7 `ENCRYPTED_PDF`. No other exception type, no log record, and the slowest parse took 0.51 s.
+- Attribution scrub (Rules section 1): no output. A grep for tool names over the `backend/` source: no hits. Dash scan over `backend/` and `docs/app/`, with a control file that holds both dashes: the control was found, and 23 files held no en or em dash.
+- No browser, server or background process was started. No git write was run.
+
+Not verified:
+- The bomb fixtures are not in the sweeps. An earlier combined sweep ran for more than 25 minutes and was stopped, so `bomb_form.pdf` and `bomb_content.pdf` were left out, and `bomb_encrypted.pdf` was never added. The guess is that a mutated bomb slips under the budget and pdfminer then spends about 90 s on 8 MiB of whitespace. That guess is unconfirmed. It matches the time ceiling listed under the 1-C ceilings in `Phases.md`.
+- Only five real contracts were parsed. Scanned pages, owner-password files and the page limit were covered by generated fixtures alone.
+
+Blockers: none.
+
+Next action: commit 1-C with `feat(parser): mark repeated page furniture and reject unreadable PDFs`, add the new `[CONTRACT]` items to the Tanishq message (kind `header` and `footer` on PDF blocks and the first-or-last-row page-number rule, the per-page `PARTIALLY_SCANNED_PDF` warning, the `BLANK_PAGE` warning, `pages_with_text` leaving out scanned pages, and the partial triggers: 20 to 199 characters on an image-dominant page, and annotation text), then reply `next` to start 1-D.
