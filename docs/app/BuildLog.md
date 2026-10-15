@@ -1097,3 +1097,69 @@ Not verified:
 Blockers: none.
 
 Next action: commit 1-D with `feat(parser): extract DOCX body, tables and text boxes safely`, add the 1-D `[CONTRACT]` items above to the Tanishq message, then reply `next` to start 1-D2.
+
+
+## 2026-10-15: Part 1-D2, DOCX numbering, headers, footers and notes
+
+Part: 1-D2. It follows 1-D, committed as 0899b03. 1-E is next.
+
+Files changed:
+- `backend/app/parsing/docx.py`: A17 and A18. A `_Numbering` class computes list labels, and `_Walk` gains `part`, `page_parts` and `notes`. The body walk now takes the part's scope and kind from the walk, so tables, text boxes and cells work the same in a header or a note.
+- `backend/requirements.txt`: `lxml` and `pdfminer.six` pinned.
+- `backend/tests/fixtures/build.py`: `related_part` (replaces the two one-off header and footnotes builders), numbering and section helpers, a `section` argument on `build_docx`, and four registry fixtures.
+- `backend/tests/test_docx.py`: 60 new tests.
+- `docs/app/Phases.md`: 1-D2 ticked, with its deviations and ceilings, the 1-D ceilings updated, and the 2-C open item.
+- `docs/app/Architecture.md`: the numbering row, a row for headers, footers and notes, the locator paragraph and the tech stack line.
+- `docs/app/BuildLog.md`: this entry.
+
+Commands run, from `backend/` with the venv interpreter:
+- `ruff format .`, `ruff check .`, `pytest -q`.
+- A clean install: Python 3.12.10, a new venv outside the repo, `pip install -r requirements-dev.txt`, then `ruff format --check`, `ruff check` and `pytest -q`.
+- One-line mutants of `docx.py` on copies of `app/` and `tests/` outside the repo, and an XML mutation sweep of the four new fixtures, also outside the repo.
+- The DOCX smoke check (below): three HTTP downloads with curl, no browser, and one parse script run in isolated mode with each path passed as an argument.
+- The Rules section 1 scrub, a tool-name grep over the added lines, and a dash scan with a control string that holds both dashes.
+- Read-only git: `git status`, `git diff`.
+
+Tests: 323 passed, 0 failed, 0 skipped (259 after 1-D). `test_docx.py` holds 133 (73 before) and `test_invariants.py` 83 (79 before, one per new fixture). The clean install gave the same 323.
+
+Pinned versions added to `requirements.txt`: `lxml==6.1.3` and `pdfminer.six==20260107`. Justification for Rules section 4: both are imported directly (`docx.py` uses `etree.LxmlError`, `pdf.py` the pdfminer errors and parser), and both were already installed as dependencies of python-docx and pdfplumber at those versions. pdfplumber itself requires `pdfminer.six==20260107`. The clean install resolved: pdfplumber 0.11.10, python-docx 1.2.0, PyYAML 6.0.3, pytest 9.1.1, ruff 0.16.10, reportlab 5.0.1, pillow 12.3.0, and the transitive pypdfium2 5.14.0, typing_extensions 4.16.0, cryptography 50.0.2, cffi 2.1.1, charset-normalizer 3.5.2. `sklearn` is not imported.
+
+Decisions (the rest are under the 1-D2 deviations in `Phases.md`):
+- The label travels in the locator as `list_label`, as the handoff and Architecture.md say. A17 left the carrier open. Tagged `[CONTRACT]`.
+- A bullet or `none` level gives no label and no warning. The handoff would have warned on every bullet list.
+- A header or footer block carries `paragraph` as well as A18's three keys, because a part has several paragraphs. Tagged `[CONTRACT]`.
+- Endnotes are read with the footnotes, with kind `footnote` and part `endnotes`. The 1-D ceiling named endnotes as 1-D2 work, and the kind set stays closed.
+- A page part is read once per relationship and dropped when an earlier part of the same kind has the same text. The first rule bounds the work, since a part named by thousands of sections is otherwise read each time. The second is the handoff's "deduplicate".
+- A numbering part is untrusted input that runs once per paragraph, so it is bounded (label and level text 100 code points, 9 digit numbers, 9 levels, a style chain of 32).
+- The review of the diff removed three things before this entry: a `_PAGE_PARTS` constant that a loop over two names replaced, a style cache the 32 step chain does not need, and the `decimalZero` format, which the handoff does not list.
+
+Findings during the part:
+- An empty numbered paragraph still counts. The first heading of the Common Paper template is "2." because an empty Heading 1 paragraph before it holds "1.", which Word shows too. A test pins it.
+- A table, a cell or a text box inside a header needs the header's scope in its locator, and its kind must stay `header` or `footer`, or `decorations` would leave out table cells in a header. Both are tested.
+- Mutation run on the new code of `docx.py`: 49 one-line mutants. The first run killed 40 and let 9 live. Eight were test gaps and are closed: a table or character default style taking over the default paragraph style, the farthest style winning over the nearest, a blank level text, a non-ASCII digit read as a number, counters not resetting per part, a dropped duplicate still using the text budget, notes before page parts, and an over-long level text. One is equivalent (resetting a level's own counter changes nothing unless `lvlRestart` names the level itself, which the schema forbids). One intermediate run was discarded, because a new test of mine failed on the unmutated code and made every mutant look killed. After the review edits the final run killed 46, left the one equivalent mutant, and skipped 2 whose patterns the edits removed. A manual mutant for the footer-before-header order was killed too.
+- XML sweep over the four new fixtures: 40,000 mutants (5,000 per fixture, two seeds, one member damaged and the package repacked with correct checksums, with byte flips, deletions and insertions). 2,767 parsed and 37,233 gave `MALFORMED_FILE`. No other exception type, no warning, no log record, and the slowest parse took 6 ms.
+
+DOCX smoke check, three public templates in `.docx` form. Files are in `data/docx_smoke/<name>/` (gitignored). They were fetched with curl over HTTP, and each parse ran as its own script with `python -I`. Two other sources failed and were replaced: the Australian Government HERC consulting agreement timed out on a HEAD and a GET (60 and 90 s, no bytes), and the California DGS model contract language answered 403.
+
+| File | Source | Bytes | Blocks | Tables | Text boxes | Warnings | partial | Chars | Labelled | Parse |
+|---|---|---|---|---|---|---|---|---|---|---|
+| General conditions for the provision of Services | Buying for Victoria (state government, Word) | 126,722 | 251 (247 text, 4 footer) | 0 | 2 (both in footers) | `TEXT_BOX_CONTENT` | False | 33,584 | 173 | 0.03 s |
+| Cloud Service Agreement template | Common Paper, CC BY 4.0, via the open-agreements repository | 122,037 | 212 (124 text, 82 table_cell, 4 header, 2 footer) | 5 | 0 | none | False | 37,864 | 120 | 0.02 s |
+| Professional Services Agreement template | Bonterms, CC0, via the same repository | 25,553 | 21 (all table_cell) | 5 | 0 | none | False | 1,655 | 0 | 0.01 s |
+
+As a check that no text was lost, the script counted every non-space character in every `w:t` outside `mc:Fallback` in the document, header, footer, footnote and endnote parts, with a separate lxml read, and compared the total with the parser's `source_text`. The differences are all explained: Victoria is +5 (13 no-break hyphens read as `-`, and 8 characters of a duplicate footer part dropped), Common Paper is -75 (two duplicate parts dropped, a 25 character header and a 50 character footer), and Bonterms is exactly 0.
+
+Anything unexpected, none of it a parser fault:
+- Common Paper's labels start at "2." (the empty Heading 1 above). Its footers read "Page  of 5" because the PAGE field has no result in the file.
+- Bonterms is a cover page only. The standard terms are incorporated by reference, and the text holds template markers such as `{IF has_pilot}`.
+- Victoria's contents list is plain text with typed numbers and a tab before the page number (`1.<tab>Term of Agreement<tab>1`, 23 lines). 1-E must treat a tab and a trailing number like a dot leader (A21). Added to the 1-D2 ceilings.
+- No `NUMBERING_NOT_RENDERED`, no `UNSUPPORTED_DOCX_FEATURE`, no tracked changes, and `partial` was False for all three.
+
+Not verified:
+- Label correctness against Word's own rendering. There is no Word here, so the labels were compared by reading, not against a rendered page. The sequence in the Victorian file (`1.`, `(a)`, `(b)`, `2.`, `(a)` to `(d)`, `(i)` to `(iv)`) is what its text implies.
+- What the three files did not exercise: footnotes and endnotes (both parts held no text), `startOverride`, `lvlOverride`, `lvlRestart`, a header list, a first-page or even-page variant with different text. Those are covered by generated packages only. Two of the three files come from one template tool, so only one is native Word output.
+- The dense 8 MiB PDF timing and a DOCX near 100 MiB. Both moved to 2-C as an open item (`Phases.md`, 2-C), with the provisional 120 s kill.
+
+Blockers: none.
+
+Next action: commit 1-D2 with `feat(parser): render DOCX numbering and extract page parts`, send the consolidated `[CONTRACT]` message for 1-B to 1-D2 to Tanishq, then reply `next` to start 1-E.

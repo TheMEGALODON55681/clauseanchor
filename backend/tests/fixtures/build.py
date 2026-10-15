@@ -520,15 +520,79 @@ def _tbl(*rows: str) -> str:
     return f"<w:tbl><w:tblPr/><w:tblGrid/>{''.join(rows)}</w:tbl>"
 
 
-def _header(content: str) -> _Extra:
-    xml = f"{_XML}<w:hdr {_NAMESPACES}>{content}</w:hdr>"
-    return ("word/header1.xml", f"{_WML_TYPE}.header+xml", f"{_OFFICE_DOCUMENT}/header", xml)
+def related_part(kind: str, content: str, n: int = 1) -> _Extra:
+    """A part the document relates to: header, footer, footnotes, endnotes, styles or
+    numbering. Headers and footers are numbered, so one package can hold several."""
+    root = {"header": "hdr", "footer": "ftr"}.get(kind, kind)
+    name = f"{kind}{n}" if kind in ("header", "footer") else kind
+    xml = f"{_XML}<w:{root} {_NAMESPACES}>{content}</w:{root}>"
+    return (f"word/{name}.xml", f"{_WML_TYPE}.{kind}+xml", f"{_OFFICE_DOCUMENT}/{kind}", xml)
 
 
-def _footnotes(content: str) -> _Extra:
-    xml = f"{_XML}<w:footnotes {_NAMESPACES}>{content}</w:footnotes>"
-    kind = f"{_OFFICE_DOCUMENT}/footnotes"
-    return ("word/footnotes.xml", f"{_WML_TYPE}.footnotes+xml", kind, xml)
+def level_xml(index: int, fmt: str, text: str, *, start: int = 1, extra: str = "") -> str:
+    return (
+        f'<w:lvl w:ilvl="{index}"><w:start w:val="{start}"/><w:numFmt w:val="{fmt}"/>'
+        f'{extra}<w:lvlText w:val="{text}"/></w:lvl>'
+    )
+
+
+def abstract_num(abstract_id: int, *levels: str) -> str:
+    return f'<w:abstractNum w:abstractNumId="{abstract_id}">{"".join(levels)}</w:abstractNum>'
+
+
+def num_xml(num_id: int, abstract_id: int, *overrides: str) -> str:
+    return (
+        f'<w:num w:numId="{num_id}"><w:abstractNumId w:val="{abstract_id}"/>'
+        f"{''.join(overrides)}</w:num>"
+    )
+
+
+def override_xml(index: int, *, start: int | None = None, level: str = "") -> str:
+    inner = f'<w:startOverride w:val="{start}"/>' if start is not None else ""
+    return f'<w:lvlOverride w:ilvl="{index}">{inner}{level}</w:lvlOverride>'
+
+
+def style_xml(
+    style_id: str,
+    *,
+    based_on: str | None = None,
+    num_id: int | None = None,
+    level: int | None = None,
+    default: bool = False,
+) -> str:
+    base = f'<w:basedOn w:val="{based_on}"/>' if based_on else ""
+    numbering = ""
+    if num_id is not None or level is not None:
+        ilvl = f'<w:ilvl w:val="{level}"/>' if level is not None else ""
+        numid = f'<w:numId w:val="{num_id}"/>' if num_id is not None else ""
+        numbering = f"<w:pPr><w:numPr>{ilvl}{numid}</w:numPr></w:pPr>"
+    marker = ' w:default="1"' if default else ""
+    return (
+        f'<w:style w:type="paragraph"{marker} w:styleId="{style_id}">'
+        f'<w:name w:val="{style_id}"/>{base}{numbering}</w:style>'
+    )
+
+
+def listed(
+    text: str, *, num_id: int | None = None, level: int | None = None, style: str | None = None
+) -> str:
+    """A paragraph with direct numbering properties, a style, or both."""
+    ilvl = f'<w:ilvl w:val="{level}"/>' if level is not None else ""
+    numid = f'<w:numId w:val="{num_id}"/>' if num_id is not None else ""
+    numbering = f"<w:numPr>{ilvl}{numid}</w:numPr>" if ilvl or numid else ""
+    pstyle = f'<w:pStyle w:val="{style}"/>' if style else ""
+    return f"<w:p><w:pPr>{pstyle}{numbering}</w:pPr>{_run(text)}</w:p>"
+
+
+def reference(kind: str, variant: str, n: int) -> str:
+    """A header or footer reference to relationship rId<n>. build_docx numbers the extras from 1
+    in the order given."""
+    return f'<w:{kind}Reference w:type="{variant}" r:id="rId{n}"/>'
+
+
+def end_section(*references: str) -> str:
+    """An empty paragraph that carries the properties of the section it ends."""
+    return f"<w:p><w:pPr><w:sectPr>{''.join(references)}</w:sectPr></w:pPr></w:p>"
 
 
 def _package(files: dict[str | zipfile.ZipInfo, bytes | str]) -> bytes:
@@ -539,8 +603,11 @@ def _package(files: dict[str | zipfile.ZipInfo, bytes | str]) -> bytes:
     return buffer.getvalue()
 
 
+_PAGE_SIZE = '<w:pgSz w:w="12240" w:h="15840"/>'
+
+
 def _docx_files(
-    body: str, extras: Iterable[_Extra] = (), prolog: str = ""
+    body: str, extras: Iterable[_Extra] = (), prolog: str = "", section: str = _PAGE_SIZE
 ) -> dict[str, bytes | str]:
     extras = list(extras)
     overrides = "".join(
@@ -568,7 +635,7 @@ def _docx_files(
         ),
         "word/document.xml": (
             f"{_XML}{prolog}<w:document {_NAMESPACES}><w:body>{body}"
-            '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>'
+            f"<w:sectPr>{section}</w:sectPr></w:body></w:document>"
         ),
     }
     if extras:
@@ -579,9 +646,12 @@ def _docx_files(
     return files
 
 
-def build_docx(body: str, extras: Iterable[_Extra] = (), prolog: str = "") -> bytes:
-    """A package whose body is the given WordprocessingML, for fixtures and inline tests."""
-    return _package(_docx_files(body, extras, prolog))
+def build_docx(
+    body: str, extras: Iterable[_Extra] = (), prolog: str = "", section: str = _PAGE_SIZE
+) -> bytes:
+    """A package whose body is the given WordprocessingML, for fixtures and inline tests. The
+    body's closing sectPr holds `section`."""
+    return _package(_docx_files(body, extras, prolog, section))
 
 
 def build_zip(member_name: str) -> bytes:
@@ -692,6 +762,102 @@ def _entity_prolog() -> str:
     return "<!DOCTYPE w:document [" + "".join(declared) + "]>"
 
 
+# Numbering (A17) and page parts (A18)
+_MULTILEVEL = abstract_num(
+    0,
+    level_xml(0, "decimal", "%1."),
+    level_xml(1, "decimal", "%1.%2"),
+    level_xml(2, "lowerLetter", "(%3)"),
+    level_xml(3, "lowerRoman", "(%4)"),
+)
+
+
+def _list_number_style() -> bytes:
+    # The paragraphs carry no numPr of their own. The style does.
+    styles = related_part(
+        "styles", style_xml("Normal", default=True) + style_xml("ListNumber", num_id=1)
+    )
+    numbering = related_part(
+        "numbering", abstract_num(0, level_xml(0, "decimal", "%1.")) + num_xml(1, 0)
+    )
+    body = (
+        listed("First item.", style="ListNumber")
+        + _p("Between.")
+        + listed("Second item.", style="ListNumber")
+        + listed("Third item.", style="ListNumber")
+    )
+    return build_docx(body, [styles, numbering])
+
+
+def _numbering_levels() -> bytes:
+    numbering = related_part("numbering", _MULTILEVEL + num_xml(1, 0))
+    items = (
+        (0, "Definitions."),
+        (1, "Clause one."),
+        (1, "Clause two."),
+        (2, "First limb."),
+        (2, "Second limb."),
+        (3, "First part."),
+        (1, "Clause three."),
+        (2, "Restarted limb."),
+        (0, "Term."),
+        (1, "Clause one again."),
+    )
+    return build_docx("".join(listed(t, num_id=1, level=n) for n, t in items), [numbering])
+
+
+def _header_footer() -> bytes:
+    # Section 1 names a default and a first-page header and a default footer. Section 2 names a
+    # second header part with the same text as the first, the footer part again, and an
+    # even-page footer.
+    extras = [
+        related_part("header", _p("ACME SERVICES AGREEMENT"), 1),
+        related_part("header", _p("DRAFT"), 2),
+        related_part("footer", _tbl(_tr(_tc(_p("CONFIDENTIAL")), _tc(_p("Page 1")))), 1),
+        related_part("header", _p("ACME SERVICES AGREEMENT"), 3),
+        related_part("footer", _p("Even page footer."), 2),
+    ]
+    body = _p("Cover.") + end_section(
+        reference("header", "default", 1),
+        reference("header", "first", 2),
+        reference("footer", "default", 3),
+    )
+    final = (
+        reference("header", "default", 4)
+        + reference("footer", "default", 3)
+        + reference("footer", "even", 5)
+        + _PAGE_SIZE
+    )
+    return build_docx(body + _p("Body of the agreement."), extras, section=final)
+
+
+def _notes() -> bytes:
+    # Word's own notes hold no text. These hold some, so a reader that skips them by type, and
+    # not because they happen to be empty, is the one under test.
+    separators = (
+        '<w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r>'
+        f"{_run('Separator text.')}</w:p></w:footnote>"
+        '<w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:r><w:continuationSeparator/>'
+        f"</w:r>{_run('Continuation text.')}</w:p></w:footnote>"
+        '<w:footnote w:type="continuationNotice" w:id="-2">'
+        f"{_p('Notice text.')}</w:footnote>"
+    )
+    footnotes = related_part(
+        "footnotes",
+        separators
+        + f'<w:footnote w:id="1">{_p("First note.")}</w:footnote>'
+        + f'<w:footnote w:id="2">{_p("Second note.")}{_p("Its second paragraph.")}</w:footnote>',
+    )
+    endnotes = related_part(
+        "endnotes",
+        separators.replace("footnote", "endnote")
+        + f'<w:endnote w:id="1">{_p("An endnote.")}</w:endnote>',
+    )
+    reference_run = '<w:r><w:footnoteReference w:id="1"/></w:r>'
+    body = f"<w:p>{_run('Claim.')}{reference_run}</w:p>" + _p("Closing.")
+    return build_docx(body, [footnotes, endnotes])
+
+
 _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "simple.pdf": (_simple_bytes, None),
     "two_column.pdf": (lambda: _pdf(_two_column), None),
@@ -786,7 +952,8 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     ),
     "tracked_in_header.docx": (
         lambda: build_docx(
-            _p("Body."), [_header(f"<w:p><w:ins {_CHANGE}>{_run('Header.')}</w:ins></w:p>")]
+            _p("Body."),
+            [related_part("header", f"<w:p><w:ins {_CHANGE}>{_run('Header.')}</w:ins></w:p>")],
         ),
         ErrorCode.TRACKED_CHANGES_PRESENT,
     ),
@@ -794,9 +961,10 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
         lambda: build_docx(
             _p("Body."),
             [
-                _footnotes(
+                related_part(
+                    "footnotes",
                     f'<w:footnote w:id="1"><w:p><w:del {_CHANGE}><w:r><w:delText>Note.'
-                    "</w:delText></w:r></w:del></w:p></w:footnote>"
+                    "</w:delText></w:r></w:del></w:p></w:footnote>",
                 )
             ],
         ),
@@ -907,6 +1075,12 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
         ),
         None,
     ),
+    # Numbering (A17)
+    "list_number_style.docx": (_list_number_style, None),
+    "numbering_levels.docx": (_numbering_levels, None),
+    # Page parts and notes (A18)
+    "header_footer.docx": (_header_footer, None),
+    "notes.docx": (_notes, None),
 }
 
 NAMES = tuple(_BUILDERS)

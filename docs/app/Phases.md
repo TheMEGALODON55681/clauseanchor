@@ -42,8 +42,9 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
 - [x] **1-D** DOCX archive safety, body, tables and text boxes
   `feat(parser): extract DOCX body, tables and text boxes safely`
   Adds `docx.py` with A12 to A16 and their fixtures. Deviations and ceilings are listed under the 1-D amendments below.
-- [ ] **1-D2** DOCX numbering, headers, footers and footnotes
+- [x] **1-D2** DOCX numbering, headers, footers and footnotes
   `feat(parser): render DOCX numbering and extract page parts`
+  Adds list labels, headers, footers, footnotes and endnotes to `docx.py` with A17, A18 and their fixtures. Deviations and ceilings are listed under the 1-D2 amendments below.
 - [ ] **1-E** Clause structure tree and definitions
   `feat(parser): build clause structure tree and detect definitions`
 - [ ] **1-F** Public entry point, CLI and parser contract
@@ -160,17 +161,38 @@ Deviations from the 1-D spec, with reasons. Done in 1-D:
 Known ceilings of 1-D. The first two bullets are silent: the file parses and nothing says text was left out.
 - Inline math, chart text and SmartArt text are not read and raise no warning. A block-level `m:oMathPara` is skipped with `UNSUPPORTED_DOCX_FEATURE`.
 - Comments are not read and raise no warning. Symbol characters (`w:sym`) and footnote reference marks add nothing.
-- Headers, footers, footnotes and endnotes are not read until 1-D2. They are already searched for tracked changes.
+- Headers, footers, footnotes and endnotes were not read in 1-D, and 1-D2 reads them. They were already searched for tracked changes.
 - A part that no relationship reaches is neither searched for tracked changes nor read.
 - A strict OOXML package, which `detect_type` accepts, is rejected here as `MALFORMED_FILE`.
 - XML nested deeper than 256 levels is `MALFORMED_FILE`.
 - A text box is read at its anchor paragraph, not by where it sits on the page.
-- Nothing is rendered for list numbering (1-D2). Merged cells are not marked.
+- Merged cells are not marked. List numbering was not rendered in 1-D, and 1-D2 does it.
 
 #### 1-D2
 
 - **A17 Numbering.** Resolve `numPr` through the paragraph style and its `basedOn` chain. Honour `numId` 0, `start`, `startOverride`, `lvlOverride` and composite `lvlText` such as `%1.%2`. Anything unresolved gives NUMBERING_NOT_RENDERED once per document. Fixture: `List Number` paragraphs, which carry no direct `numPr`.
 - **A18 Page parts [CONTRACT].** Read the three header and three footer variants per section (default, first page, even page), deduplicated. Locators: `{"part": "header" or "footer", "section": s, "variant": "default" or "first" or "even"}`. Footnotes use `{"part": "footnotes", "id": n, "paragraph": i}`.
+
+Deviations from the 1-D2 spec, with reasons. Done in 1-D2:
+- Label carrier `[CONTRACT]`. A17 does not say where the label goes. The handoff and `Architecture.md` say the block locator, so a numbered paragraph's locator gains `"list_label"`: the level's text with each `%n` replaced by that level's counter, such as `1.`, `1.1`, `(a)` or `ARTICLE I`. The key is absent when the paragraph is not numbered, when its number is not rendered, and for formats with no number. The label is never in `source_text`.
+- A label sits on a body paragraph, a text box paragraph, or a cell block of one paragraph. A cell block that joins several paragraphs gets no label and raises `NUMBERING_NOT_RENDERED`, because one block has no single paragraph to hold it.
+- Counters. Every numbered paragraph advances its counter, empty ones included, in document order. A text box paragraph counts after its anchor. Headers, footers and notes use the same counters as the body.
+- Resolution. `numId` and `ilvl` each come from the paragraph's own `numPr`, then the style chain, nearest style first (32 steps at most). A paragraph with no `pStyle` takes the default paragraph style. `numId` 0 switches numbering off. Nums that share an abstractNum share counters, except a num with a `startOverride`, which counts on its own. A `lvlOverride` with a `lvl` replaces that level. `lvlRestart` and `isLgl` are honoured. An absent `start` is 0, as the schema says.
+- Formats: `decimal`, `lowerLetter`, `upperLetter`, `lowerRoman` and `upperRoman`, the handoff's set. Letters repeat past z (aa, bb) up to 780, and roman numerals stop at 3999. `bullet` and `none` have no number, so they give no label and no warning. The handoff says "anything else" warns, which would have warned on every bullet list. Every other format gives no label and `NUMBERING_NOT_RENDERED`.
+- Bounds. A level's text and a rendered label are at most 100 code points, a number attribute at most 9 digits, a level index below 9. A numbering part can otherwise make the parser build a long label for every paragraph.
+- Page part locators `[CONTRACT]`. A18 names three keys. A part holds several paragraphs, so the blocks would share one locator. Header and footer blocks also carry `paragraph`, and `table`, `row`, `cell`, `segment` or `textbox` as the body does. Tables and text boxes are numbered from 1 within each header, footer or note, and not across the file.
+- Page parts are read after the body: for each section in order, the headers (default, first, even), then the footers. Only references a section names are read, because a section with none shows the previous section's part, which is read where it was named. A part named twice is read once, and a part with the same kind and text as an earlier one is dropped. Blocks have kind `header` or `footer`, table cells and text boxes too, so `decorations` covers them. `titlePg` and `evenAndOddHeaders` are not consulted.
+- Notes `[CONTRACT]`. Footnotes then endnotes follow the page parts. Both have kind `footnote`, and the locator's `part` (`footnotes` or `endnotes`) tells them apart, so the kind set does not change. `separator`, `continuationSeparator` and `continuationNotice` notes are skipped by type.
+- `lxml` and `pdfminer.six` are pinned in `requirements.txt` at the versions that were already resolved, because both are imported directly.
+- Fixtures: `list_number_style`, `numbering_levels`, `header_footer` and `notes` are in the registry. The other cases (styles, overrides, restarts, formats, cells, text boxes, hostile numbering, limits) are built inline in `test_docx.py`.
+
+Known ceilings of 1-D2, none of them silent unless noted:
+- Word's finer restart rules inside one num are not modelled: a `lvlOverride` with no `startOverride`, and a restart in the middle of a list. Nums of one abstractNum simply share counters. This one is silent when a real file depends on it, and a label can be wrong.
+- A level that names a style through `pStyle` is not followed when the style's `numPr` has no `ilvl`. The level defaults to 0.
+- A header list continues the body's count, because the counters are shared.
+- Other formats (ordinal, cardinal text, decimal with leading zero, scripts other than Latin) give no label and a warning.
+- A footnote reference mark adds nothing to the body (a 1-D ceiling), so a note's text carries no marker back to its place.
+- A DOCX table of contents is plain text with typed numbers and a tab before the page number (`1.<tab>Term of Agreement<tab>1`). 1-E must treat the tab and trailing number like a dot leader (A21).
 
 #### 1-E
 
@@ -212,6 +234,7 @@ Parts 2-0A and 2-0B hold the annotation work from plan v1.1 Phase 3. Both need o
   `feat(store): add in-memory document store and expiring sessions`
 - [ ] **2-C** Upload validation, parse jobs, document read and delete
   `feat(api): add document upload with validation and parse jobs`
+  Open item from Phase 1: time the dense case. An 8 MiB Flate stream of operators and text is the largest stream `MAX_DECODED_CONTENT_BYTES` accepts, and it has not been measured (8 MiB of white space took 0.05 s, BuildLog "Checks before 1-D"). Neither has a DOCX whose `document.xml` approaches 100 MiB, which lxml parses whole before the 500,000 character stop. Measure both on the Phase 2 host. Until then the wall-clock kill is provisionally 120 s, one named constant in the 2-C config. That figure is about twice 0.55 s per page for 100 pages, from one run per file in the 1-C smoke check, so it bounds cost and is not a number a bomb was shown to reach. Re-measure before fixing it.
 - [ ] **2-D** Analysis jobs through the core analyzer (stub), progress, cancel, partial results
   `feat(jobs): run analysis jobs through the core analyzer`
   The analysis response carries the scope notice and reports processing completion and decision coverage as separate fields. Cancelled, timed-out or partially parsed work is reported as incomplete, never as absent. No safety or risk-score field (plan v1.1).

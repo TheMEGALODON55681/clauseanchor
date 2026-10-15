@@ -16,7 +16,18 @@ from app.parsing.assemble import TextAssembler
 from app.parsing.docx import parse_docx
 from app.parsing.errors import MAX_TEXT_CHARS, ErrorCode, ParseError, WarningCode
 from app.parsing.model import ParsedDocument
-from tests.fixtures.build import build_docx
+from tests.fixtures.build import (
+    abstract_num,
+    build_docx,
+    end_section,
+    level_xml,
+    listed,
+    num_xml,
+    override_xml,
+    reference,
+    related_part,
+    style_xml,
+)
 
 SWEEP_MUTANTS = 300
 NBSP = "\N{NO-BREAK SPACE}"
@@ -438,6 +449,488 @@ def test_text_before_and_after_a_nested_table_is_flushed_as_separate_blocks(
     ]
 
 
+# A17: numbering
+
+DECIMAL = abstract_num(0, level_xml(0, "decimal", "%1."))
+MULTILEVEL = abstract_num(
+    0,
+    level_xml(0, "decimal", "%1."),
+    level_xml(1, "decimal", "%1.%2"),
+    level_xml(2, "lowerLetter", "(%3)"),
+)
+NUMBERING_WARNING = [(WarningCode.NUMBERING_NOT_RENDERED, None)]
+
+
+def labels(doc: ParsedDocument) -> list[int | str | None]:
+    return [block.locator.get("list_label") for block in doc.blocks]
+
+
+def numbered(body: str, *definitions: str, styles: str = "") -> ParsedDocument:
+    extras = [related_part("numbering", "".join(definitions))]
+    if styles:
+        extras.append(related_part("styles", styles))
+    return parse_docx(build_docx(body, extras))
+
+
+def test_style_linked_numbering_labels_paragraphs_that_carry_no_numpr(
+    fixture_bytes: dict[str, bytes],
+) -> None:
+    doc = parse_docx(fixture_bytes["list_number_style.docx"])
+    assert labels(doc) == ["1.", None, "2.", "3."]
+    # The label is locator data. The text is the file's, so no offset moves.
+    assert doc.source_text == "First item.\nBetween.\nSecond item.\nThird item."
+    assert doc.warnings == ()
+    assert doc.coverage.partial is False
+
+
+def test_composite_labels_and_the_restart_of_deeper_levels(fixture_bytes: dict[str, bytes]) -> None:
+    doc = parse_docx(fixture_bytes["numbering_levels.docx"])
+    assert labels(doc) == ["1.", "1.1", "1.2", "(a)", "(b)", "(i)", "1.3", "(a)", "2.", "2.1"]
+    assert doc.warnings == ()
+    assert locators(doc)[1] == {"part": "document", "paragraph": 2, "list_label": "1.1"}
+
+
+def test_a_style_chain_gives_the_list_and_the_level_from_different_styles() -> None:
+    styles = (
+        style_xml("Normal", default=True)
+        + style_xml("Base", num_id=1)
+        + style_xml("Child", based_on="Base", level=1)
+        + style_xml("Grand", based_on="Child")
+    )
+    styles += style_xml("Other", based_on="Base", num_id=2)  # its own list beats its base's
+    body = (
+        listed("A.", style="Base")
+        + listed("B.", style="Child")
+        + listed("C.", style="Grand")
+        + listed("D.", style="Grand", level=0)  # a direct level beats the one the style gives
+        + listed("E.", style="Other")
+    )
+    nums = num_xml(1, 0) + num_xml(2, 0, override_xml(0, start=9))
+    doc = numbered(body, MULTILEVEL, nums, styles=styles)
+    assert labels(doc) == ["1.", "1.1", "1.2", "2.", "9."]
+
+
+def test_a_paragraph_with_no_style_takes_the_default_paragraph_style() -> None:
+    # A table style can be a default too, and it comes later in the part. It is not the one.
+    table_default = '<w:style w:type="table" w:default="1" w:styleId="TableNormal"/>'
+    styles = style_xml("Normal", default=True, num_id=1) + table_default
+    doc = numbered(paragraph("A.") + paragraph("B."), DECIMAL, num_xml(1, 0), styles=styles)
+    assert labels(doc) == ["1.", "2."]
+
+
+def test_a_level_whose_text_is_blank_gives_no_label() -> None:
+    abstract = abstract_num(0, level_xml(0, "decimal", "   "))
+    doc = numbered(listed("A.", num_id=1, level=0), abstract, num_xml(1, 0))
+    assert labels(doc) == [None]
+    assert doc.warnings == ()
+
+
+def test_numbers_and_levels_are_read_strictly() -> None:
+    for value in ("-1", "+1", "1.5", "", "1" * 10, chr(0x663)):  # the last is Arabic-Indic three
+        with pytest.raises(docx_module._Unrendered):
+            docx_module._number(value)
+    assert docx_module._number("007") == 7
+    assert docx_module._number(None) is None
+    namespace = docx_module.NAMESPACE.WML_MAIN
+    long_text = f'<w:lvl xmlns:w="{namespace}"><w:lvlText w:val="{"x" * 101}"/></w:lvl>'
+    with pytest.raises(docx_module._Unrendered):
+        docx_module._level(docx_module.etree.fromstring(long_text))
+
+
+def test_numid_zero_switches_off_a_list_the_style_gives() -> None:
+    styles = style_xml("Normal", default=True) + style_xml("Item", num_id=1)
+    body = (
+        listed("A.", style="Item")
+        + listed("B.", style="Item", num_id=0)
+        + listed("C.", style="Item")
+    )
+    doc = numbered(body, DECIMAL, num_xml(1, 0), styles=styles)
+    assert labels(doc) == ["1.", None, "2."]
+    assert doc.warnings == ()
+
+
+def test_start_values_and_start_overrides() -> None:
+    abstract = abstract_num(0, level_xml(0, "decimal", "%1.", start=3))
+    nums = num_xml(1, 0) + num_xml(2, 0, override_xml(0, start=7)) + num_xml(3, 0)
+    body = "".join(
+        listed(text, num_id=n, level=0)
+        for text, n in [("a", 1), ("b", 1), ("c", 2), ("d", 2), ("e", 1), ("f", 3)]
+    )
+    # Num 2 counts on its own from 7. Num 3 has no override, so it continues num 1.
+    assert labels(numbered(body, abstract, nums)) == ["3.", "4.", "7.", "8.", "5.", "6."]
+
+
+def test_a_level_with_no_start_begins_at_zero() -> None:
+    abstract = (
+        '<w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:numFmt w:val="decimal"/>'
+        '<w:lvlText w:val="%1."/></w:lvl></w:abstractNum>'
+    )
+    body = listed("A.", num_id=1, level=0) + listed("B.", num_id=1, level=0)
+    assert labels(numbered(body, abstract, num_xml(1, 0))) == ["0.", "1."]
+
+
+def test_a_replacement_level_in_a_num_changes_the_text() -> None:
+    replacement = level_xml(0, "upperLetter", "Part %1")
+    nums = num_xml(1, 0, override_xml(0, level=replacement))
+    doc = numbered(listed("A.", num_id=1, level=0), DECIMAL, nums)
+    assert labels(doc) == ["Part A"]
+
+
+def test_legal_numbering_shows_every_number_as_a_decimal() -> None:
+    abstract = abstract_num(
+        0,
+        level_xml(0, "upperRoman", "ARTICLE %1"),
+        level_xml(1, "decimal", "%1.%2", extra="<w:isLgl/>"),
+        level_xml(2, "decimal", "%1.%2.%3"),
+    )
+    body = "".join(listed("x", num_id=1, level=n) for n in (0, 1, 2))
+    assert labels(numbered(body, abstract, num_xml(1, 0))) == ["ARTICLE I", "1.1", "I.1.1"]
+
+
+def test_lvl_restart_zero_never_restarts_and_a_value_restarts_after_that_level() -> None:
+    never = abstract_num(
+        0,
+        level_xml(0, "decimal", "%1."),
+        level_xml(1, "decimal", "%2.", extra='<w:lvlRestart w:val="0"/>'),
+    )
+    body = "".join(listed("x", num_id=1, level=n) for n in (0, 1, 1, 0, 1))
+    assert labels(numbered(body, never, num_xml(1, 0))) == ["1.", "1.", "2.", "2.", "3."]
+
+    # Level 4 restarts only after a paragraph of level 2 (restart value 2) or a shallower one.
+    after_two = abstract_num(
+        0,
+        level_xml(0, "decimal", "%1."),
+        level_xml(1, "decimal", "%2."),
+        level_xml(2, "decimal", "%3."),
+        level_xml(3, "decimal", "%4.", extra='<w:lvlRestart w:val="2"/>'),
+    )
+    body = "".join(listed("x", num_id=1, level=n) for n in (0, 1, 2, 3, 2, 3, 1, 3))
+    got = labels(numbered(body, after_two, num_xml(1, 0)))
+    assert [got[3], got[5], got[7]] == ["1.", "2.", "1."]
+
+
+@pytest.mark.parametrize(
+    ("fmt", "number", "expected"),
+    [
+        ("decimal", 12, "12"),
+        ("lowerLetter", 1, "a"),
+        ("lowerLetter", 26, "z"),
+        ("lowerLetter", 27, "aa"),
+        ("lowerLetter", 28, "bb"),
+        ("upperLetter", 53, "AAA"),
+        ("lowerRoman", 4, "iv"),
+        ("lowerRoman", 9, "ix"),
+        ("lowerRoman", 1994, "mcmxciv"),
+        ("upperRoman", 3999, "MMMCMXCIX"),
+        ("upperRoman", 14, "XIV"),
+    ],
+)
+def test_number_formats(fmt: str, number: int, expected: str) -> None:
+    assert docx_module._format(number, fmt) == expected
+
+
+@pytest.mark.parametrize(
+    ("fmt", "number"),
+    [
+        ("lowerLetter", 0),
+        ("lowerLetter", 781),
+        ("upperRoman", 0),
+        ("upperRoman", 4000),
+        ("decimalZero", 5),
+        ("japaneseCounting", 1),
+        ("ordinal", 1),
+    ],
+)
+def test_formats_and_values_that_cannot_be_rendered_are_refused(fmt: str, number: int) -> None:
+    with pytest.raises(docx_module._Unrendered):
+        docx_module._format(number, fmt)
+
+
+def test_an_unsupported_format_is_not_rendered_and_warns_once() -> None:
+    abstract = abstract_num(
+        0, level_xml(0, "japaneseCounting", "%1"), level_xml(1, "decimal", "%2.")
+    )
+    body = "".join(listed("x", num_id=1, level=n) for n in (0, 0, 1))
+    doc = numbered(body, abstract, num_xml(1, 0))
+    assert texts(doc) == ["x", "x", "x"]  # the text is read, only the label is missing
+    assert labels(doc) == [None, None, "1."]
+    assert warnings_of(doc) == NUMBERING_WARNING
+    assert doc.coverage.partial is False
+
+
+def test_bullets_have_no_number_to_render_so_no_label_and_no_warning() -> None:
+    abstract = abstract_num(0, level_xml(0, "bullet", "&#8226;"), level_xml(1, "none", ""))
+    body = listed("A.", num_id=1, level=0) + listed("B.", num_id=1, level=1)
+    doc = numbered(body, abstract, num_xml(1, 0))
+    assert labels(doc) == [None, None]
+    assert doc.warnings == ()
+
+
+def unresolved(case: str) -> ParsedDocument:
+    item = listed("A.", num_id=9 if case == "unknown_num" else 1, level=5 if case == "level" else 0)
+    garbage_id = DECIMAL.replace('abstractNumId="0"', 'abstractNumId="x"')
+    garbage_start = abstract_num(0, level_xml(0, "decimal", "%1.", start=1)).replace(
+        'w:start w:val="1"', 'w:start w:val="-3"'
+    )
+    definitions = {
+        "missing_abstract": num_xml(1, 7),
+        "garbage_id": garbage_id + num_xml(1, 0),
+        "garbage_value": garbage_start + num_xml(1, 0),
+    }.get(case, DECIMAL + num_xml(1, 0))
+    if case == "no_part":
+        return parse_docx(build_docx(item))
+    return numbered(item, definitions)
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["no_part", "unknown_num", "level", "missing_abstract", "garbage_id", "garbage_value"],
+)
+def test_a_numbered_paragraph_that_cannot_be_resolved_keeps_its_text_and_warns(case: str) -> None:
+    doc = unresolved(case)
+    assert texts(doc) == ["A."]
+    assert labels(doc) == [None]
+    assert warnings_of(doc) == NUMBERING_WARNING
+
+
+def test_an_empty_numbered_paragraph_still_counts() -> None:
+    empty = '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr></w:p>'
+    body = listed("One.", num_id=1, level=0) + empty + listed("Three.", num_id=1, level=0)
+    assert labels(numbered(body, DECIMAL, num_xml(1, 0))) == ["1.", "3."]
+
+
+def test_a_label_in_a_cell_needs_a_block_of_one_paragraph() -> None:
+    def cell(*content: str) -> str:
+        return f"<w:tc><w:tcPr/>{''.join(content)}</w:tc>"
+
+    only = cell(listed("Only.", num_id=1, level=0))
+    pair = cell(listed("First.", num_id=1, level=0), listed("Second.", num_id=1, level=0))
+    table = f"<w:tbl><w:tblPr/><w:tr>{only}{pair}</w:tr></w:tbl>"
+    doc = numbered(table + listed("After.", num_id=1, level=0), DECIMAL, num_xml(1, 0))
+    assert [(b.text, b.locator.get("list_label")) for b in doc.blocks] == [
+        ("Only.", "1."),
+        ("First.\nSecond.", None),  # two paragraphs, one block, so no single label fits
+        ("After.", "4."),  # the counters counted all four
+    ]
+    assert warnings_of(doc) == NUMBERING_WARNING
+
+
+def test_a_text_box_paragraph_counts_after_its_anchor_and_before_the_next_paragraph() -> None:
+    inner = listed("Boxed.", num_id=1, level=0)
+    box = f"<w:r><w:pict><w:txbxContent>{inner}</w:txbxContent></w:pict></w:r>"
+    anchor = (
+        '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>'
+        f"<w:r><w:t>Anchor.</w:t></w:r>{box}</w:p>"
+    )
+    doc = numbered(anchor + listed("After.", num_id=1, level=0), DECIMAL, num_xml(1, 0))
+    assert [(b.text, b.locator.get("list_label")) for b in doc.blocks] == [
+        ("Anchor.", "1."),
+        ("Boxed.", "2."),
+        ("After.", "3."),
+    ]
+
+
+def test_a_style_cycle_is_not_rendered() -> None:
+    styles = style_xml("A", based_on="B") + style_xml("B", based_on="A")
+    doc = numbered(listed("Cycle.", style="A"), DECIMAL, num_xml(1, 0), styles=styles)
+    assert labels(doc) == [None]
+    assert warnings_of(doc) == NUMBERING_WARNING
+
+
+def test_a_hostile_numbering_part_is_refused_cheaply() -> None:
+    # A level text of 50 placeholders makes a label longer than any real one, and a counter of
+    # ten digits is not a counter. Neither may cost time or memory per paragraph.
+    abstract = abstract_num(
+        0, level_xml(0, "decimal", "%1" * 50), level_xml(1, "decimal", "%2.", start=10**9)
+    )
+    body = "".join(listed("x", num_id=1, level=n) for n in (0, 1) * 2500)
+    started = time.perf_counter()
+    doc = numbered(body, abstract, num_xml(1, 0))
+    assert time.perf_counter() - started < 3
+    shown = labels(doc)
+    assert all(label is None or len(str(label)) <= 100 for label in shown)
+    assert shown[1] is None  # the level with a ten digit start is not rendered at all
+    assert shown[-2] is None  # level 1 outgrew the limit once its counter had four digits
+    assert warnings_of(doc) == NUMBERING_WARNING
+
+
+# A18: headers, footers and notes
+
+
+def test_headers_and_footers_follow_the_body_each_part_once(
+    fixture_bytes: dict[str, bytes],
+) -> None:
+    doc = parse_docx(fixture_bytes["header_footer.docx"])
+    assert [(b.kind, b.text) for b in doc.blocks] == [
+        ("text", "Cover."),
+        ("text", "Body of the agreement."),
+        ("header", "ACME SERVICES AGREEMENT"),
+        ("header", "DRAFT"),
+        ("footer", "CONFIDENTIAL"),
+        ("footer", "Page 1"),
+        ("footer", "Even page footer."),
+    ]
+    # Section 2 names a second header part with the first one's text, and the footer part of
+    # section 1 again. Neither adds a block.
+    page = {"section": 1, "variant": "default"}
+    assert locators(doc)[2:] == [
+        {"part": "header", **page, "paragraph": 1},
+        {"part": "header", "section": 1, "variant": "first", "paragraph": 1},
+        {"part": "footer", **page, "table": 1, "row": 1, "cell": 1, "segment": 1},
+        {"part": "footer", **page, "table": 1, "row": 1, "cell": 2, "segment": 1},
+        {"part": "footer", "section": 2, "variant": "even", "paragraph": 1},
+    ]
+    assert doc.decorations == tuple((b.start, b.end) for b in doc.blocks[2:])
+    assert doc.warnings == ()
+
+
+def test_notes_follow_the_page_parts_and_skip_word_separators(
+    fixture_bytes: dict[str, bytes],
+) -> None:
+    doc = parse_docx(fixture_bytes["notes.docx"])
+    assert [(b.kind, b.text) for b in doc.blocks] == [
+        ("text", "Claim."),
+        ("text", "Closing."),
+        ("footnote", "First note."),
+        ("footnote", "Second note."),
+        ("footnote", "Its second paragraph."),
+        ("footnote", "An endnote."),
+    ]
+    assert locators(doc)[2:] == [
+        {"part": "footnotes", "id": 1, "paragraph": 1},
+        {"part": "footnotes", "id": 2, "paragraph": 1},
+        {"part": "footnotes", "id": 2, "paragraph": 2},
+        {"part": "endnotes", "id": 1, "paragraph": 1},
+    ]
+    assert doc.decorations == ()  # a note is not furniture
+
+
+def test_a_part_named_by_many_sections_is_read_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[object] = []
+    real = docx_module._Walk.part
+
+    def counting(self: object, root: object, scope: dict[str, object], kind: str) -> None:
+        calls.append(scope["part"])
+        real(self, root, scope, kind)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(docx_module._Walk, "part", counting)
+    body = end_section(reference("header", "default", 1)) * 500 + paragraph("Body.")
+    doc = parse_docx(build_docx(body, [related_part("header", paragraph("Running head."))]))
+    assert calls.count("header") == 1
+    assert texts(doc) == ["Body.", "Running head."]
+
+
+def test_a_section_property_kept_inside_a_property_change_is_not_a_section() -> None:
+    old = f"<w:sectPr>{reference('header', 'default', 1)}</w:sectPr>"
+    change = (
+        '<w:pPrChange w:id="1" w:author="Drafter" w:date="2026-01-01T00:00:00Z">'
+        f"<w:pPr>{old}</w:pPr></w:pPrChange>"
+    )
+    body = f"<w:p><w:pPr>{change}</w:pPr><w:r><w:t>Body.</w:t></w:r></w:p>"
+    doc = parse_docx(build_docx(body, [related_part("header", paragraph("Old header."))]))
+    assert texts(doc) == ["Body."]
+
+
+def test_a_reference_to_a_part_that_is_not_there_is_malformed() -> None:
+    body = end_section(reference("header", "default", 9)) + paragraph("Body.")
+    assert rejects(build_docx(body)) == ErrorCode.MALFORMED_FILE
+
+
+def test_a_text_box_in_a_footer_carries_the_footers_locator() -> None:
+    box = f"<w:r><w:pict><w:txbxContent>{paragraph('Boxed.')}</w:txbxContent></w:pict></w:r>"
+    footer = f"<w:p><w:r><w:t>Anchor.</w:t></w:r>{box}</w:p>"
+    section = reference("footer", "default", 1)
+    data = build_docx(paragraph("Body."), [related_part("footer", footer)], section=section)
+    doc = parse_docx(data)
+    assert [(b.kind, b.text) for b in doc.blocks][1:] == [
+        ("footer", "Anchor."),
+        ("footer", "Boxed."),
+    ]
+    assert locators(doc)[2] == {
+        "part": "footer",
+        "section": 1,
+        "variant": "default",
+        "textbox": 1,
+        "paragraph": 1,
+    }
+    assert warnings_of(doc) == [(WarningCode.TEXT_BOX_CONTENT, None)]
+    assert doc.coverage.partial is False
+
+
+def test_the_same_text_in_a_header_and_a_footer_is_kept_twice() -> None:
+    extras = [
+        related_part("header", paragraph("Same.")),
+        related_part("footer", paragraph("Same.")),
+    ]
+    section = reference("header", "default", 1) + reference("footer", "default", 2)
+    doc = parse_docx(build_docx(paragraph("Body."), extras, section=section))
+    assert [(b.kind, b.text) for b in doc.blocks] == [
+        ("text", "Body."),
+        ("header", "Same."),
+        ("footer", "Same."),
+    ]
+
+
+def test_tables_and_text_boxes_are_numbered_within_each_part() -> None:
+    table = "<w:tbl><w:tblPr/><w:tr><w:tc><w:tcPr/>{}</w:tc></w:tr></w:tbl>"
+    inner = f"<w:txbxContent>{paragraph('Boxed.')}</w:txbxContent>"
+    box = f"<w:p><w:r><w:pict>{inner}</w:pict></w:r></w:p>"
+    body = table.format(paragraph("Body cell.")) + box
+    footer = table.format(paragraph("Footer cell.")) + box
+    section = reference("footer", "default", 1)
+    doc = parse_docx(build_docx(body, [related_part("footer", footer)], section=section))
+    ours = [
+        (b.locator["part"], b.locator.get("table"), b.locator.get("textbox")) for b in doc.blocks
+    ]
+    assert ours == [
+        ("document", 1, None),
+        ("document", None, 1),
+        ("footer", 1, None),
+        ("footer", None, 1),
+    ]
+
+
+def test_a_part_dropped_as_a_duplicate_does_not_use_up_the_text_budget() -> None:
+    # Two sections name a header part of their own with the same text, so one is kept. The
+    # dropped one must not count, or the footer that follows would pass the limit.
+    head = "h" * 100
+    extras = [
+        related_part("header", paragraph(head)),
+        related_part("header", paragraph(head), 2),
+        related_part("footer", paragraph("f" * 100)),
+    ]
+    body = end_section(reference("header", "default", 1)) + paragraph("b" * (MAX_TEXT_CHARS - 210))
+    final = reference("header", "default", 2) + reference("footer", "default", 3)
+    doc = parse_docx(build_docx(body, extras, section=final))
+    assert [b.kind for b in doc.blocks] == ["text", "header", "footer"]
+
+
+def test_page_parts_come_before_notes() -> None:
+    extras = [
+        related_part("footnotes", f'<w:footnote w:id="1">{paragraph("Note.")}</w:footnote>'),
+        related_part("header", paragraph("Head.")),
+    ]
+    section = reference("header", "default", 2)
+    doc = parse_docx(build_docx(paragraph("Body."), extras, section=section))
+    assert [(b.kind, b.text) for b in doc.blocks] == [
+        ("text", "Body."),
+        ("header", "Head."),
+        ("footnote", "Note."),
+    ]
+
+
+def test_page_part_text_counts_toward_the_text_limit() -> None:
+    extras = [related_part("header", paragraph("a" * MAX_TEXT_CHARS))]
+    section = reference("header", "default", 1)
+    data = build_docx(paragraph("Body."), extras, section=section)
+    assert rejects(data) == ErrorCode.TOO_MUCH_TEXT
+
+
+def test_a_note_with_no_id_is_malformed() -> None:
+    notes = related_part("footnotes", f"<w:footnote>{paragraph('Note.')}</w:footnote>")
+    assert rejects(build_docx(paragraph("Body."), [notes])) == ErrorCode.MALFORMED_FILE
+
+
 # Run content
 
 
@@ -544,6 +1037,10 @@ def rezip_with(data: bytes, member: str, content: bytes) -> bytes:
         ("simple.docx", True),
         ("textbox_alternate_content.docx", True),
         ("nested_table.docx", True),
+        ("numbering_levels.docx", True),
+        ("list_number_style.docx", True),
+        ("header_footer.docx", True),
+        ("notes.docx", True),
     ],
 )
 def test_damaged_files_give_a_parse_or_a_parse_error_and_leak_nothing(
@@ -581,3 +1078,17 @@ def test_damaged_files_give_a_parse_or_a_parse_error_and_leak_nothing(
     assert parsed and rejected  # the sweep reaches both outcomes
     assert caught == []
     assert caplog.records == []
+
+
+def test_an_external_relationship_of_a_read_type_is_not_followed() -> None:
+    # The footnotes relationship points outside the package. Nothing is fetched or read, and the
+    # file still parses.
+    data = build_docx(paragraph("Body."), [related_part("footnotes", "")])
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        rels = archive.read("word/_rels/document.xml.rels").decode()
+    external = rels.replace(
+        'Target="footnotes.xml"', 'Target="https://example.org/n.xml" TargetMode="External"'
+    )
+    assert external != rels
+    package = rezip_with(data, "word/_rels/document.xml.rels", external.encode())
+    assert texts(parse_docx(package)) == ["Body."]
