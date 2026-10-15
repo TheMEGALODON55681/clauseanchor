@@ -1163,3 +1163,79 @@ Not verified:
 Blockers: none.
 
 Next action: commit 1-D2 with `feat(parser): render DOCX numbering and extract page parts`, send the consolidated `[CONTRACT]` message for 1-B to 1-D2 to Tanishq, then reply `next` to start 1-E.
+
+
+## 2026-10-15: Part 1-E, clause structure tree and definitions
+
+Part: 1-E. It follows 1-D2, committed as 1a5ab87. 1-F is next.
+
+Files changed:
+- `backend/app/parsing/structure.py`: new. `build_structure(source_text, blocks)` returns `(nodes, warnings)`: the clause tree and the defined terms (A19 to A22).
+- `backend/tests/test_structure.py`: new, 135 tests.
+- `backend/tests/test_invariants.py`: `assert_valid_nodes`, which every valid fixture runs through `build_structure`.
+- `backend/tests/fixtures/build.py`: `contents_tab.docx`, a contents list typed as number, tab, title, tab, page number.
+- `docs/app/Rules.md`: two rows in the section 4 table, for `lxml` and `pdfminer.six`.
+- `docs/app/Phases.md`: 1-E ticked, with its deviations and ceilings.
+- `docs/app/Architecture.md`: the tree line, three decision rows and a paragraph on nodes.
+- `docs/app/BuildLog.md`: this entry.
+
+Commands run, from `backend/` with the venv interpreter:
+- `ruff format .`, `ruff check .`, `pytest -q`.
+- One-line mutants of `structure.py` on copies of `app/` and `tests/` outside the repo, in three runs.
+- The structure smoke check (below): the parser and `build_structure` over eight files, each as a script run with `python -I` and each path passed as an argument. The scripts printed counts, labels and the first line of a node or block (120 characters at most), and wrote nothing to disk.
+- The Rules section 1 scrub, and a dash scan with a control string that holds both dashes.
+- Read-only git: `git status`, `git diff`.
+
+Tests: 459 passed, 0 failed, 0 skipped (323 after 1-D2). `test_structure.py` holds 135 and `test_invariants.py` 84 (83 before, one for the new fixture). A clean install was not repeated, because no dependency changed.
+
+Pinned versions added: none. `lxml` and `pdfminer.six` were pinned in 1-D2. Their rows are now in the Rules section 4 table, each with a one-line reason: `pdfplumber` requires that exact `pdfminer.six`, and `python-docx` brings in `lxml`, and both are imported directly.
+
+Decisions (the rest are under the 1-E deviations in `Phases.md`):
+- One pass over the blocks with a stack of open nodes, and no sort. Nodes are created in document order and a container before what it holds, so the creation index is the id. The invariant test checks the order on every fixture.
+- A numbered label has to earn its place, and this took three versions. Accepting only a continuation or a start at 1 read party lists (`1.`, `2.`) as clause one and two and then lost the real clauses. Accepting a restart at 1 every time made 150 false top-level nodes in the Healthgate file. Resuming an interrupted run and choosing the longer of two runs both fail on ties. The rule that stayed lets a restart at 1 replace a run of 3 or fewer.
+- A Word label is trusted more than typed text. It goes through the same grammar, and it may open a top-level list above 1 because Word counts empty paragraphs.
+- A title in capitals belongs to the label before it. This departs from A20 as written and is tagged `[CONTRACT]`.
+- Two things are not built, and both need your decision: separate sequences for heading words and bare numbers (the Athens case), and accepting a gap in a Word list (an empty numbered paragraph in the middle).
+
+Findings during the part:
+- The first smoke run showed three faults, all fixed with tests: page numbers printed mid-page read as clause numbers (a bare number with no full stop is now ignored), `10.Title` with no space was not a label, and a party list took the first clause numbers.
+- The final smoke run, on the code after those fixes, showed three more:
+  - A notice block (`With a copy to:` over redaction marks) passed the 60 percent test on the whole block, because the marks are capitals. The test is now per line. It also stopped four multi-line blocks that were not headings: a company name over its description (Cybergy), a signature over a date (Healthgate), and a title over a date and two parties joined by `and` (Theravance).
+  - An all-caps title after `SCHEDULE A` or `ARTICLE 5` closed the node it names. Cybergy's Schedule A items sat at level 1, and Dova's article 5 held no clauses. A title straight after a bare label now belongs to the label.
+  - Common Paper had no sections, because an empty first Heading 1 paragraph holds `1.` and the first label read is `2.`. A Word list may now open above 1.
+- Athens: 46 definitions against 6 from a regex for the verb forms. The other 40 are bracketed (27 `(the "T")` and 13 `("T")`), so the gap is explained. Cybergy is the same case: 4 definitions, all bracketed.
+- Mutation runs on `structure.py` (copies outside the repo). The first run applied 66 one-line mutants: 40 were killed and 26 lived. Twenty-three of the 26 were test gaps, and each now has a test: the part and digit limits of a label, the leader length, case in definitions, the 60 percent and 80 character edges, contents entries in capitals, a table after a nested table, the page and letter guards of a Word list, a schedule clearing the state, a chain of restarts, the prefix rule, and letters keyed by parent. Three never changed a result: the sort in `finish`, a `typed and` in the title flag, and `>` against `>=` in `_outer_tables`. The sort and the `typed and` were removed as dead code. The `>=` is equivalent, because two tables never share a block.
+- The second run corrected three patterns that the tool had mangled and added the no-sort mutant. It left 7 alive: those three plus the sort variant, and three further gaps (the roman guard, a contents rule that read wrapped blocks, and a leader test whose entries the start-at-1 rule rejected anyway). All three have tests now. The third run killed everything except the equivalent `>=`. Four more mutants (the title flag set always or never, and the two id offsets) were killed on their own. In all, 74 mutants were defined and 4 were retired with the code they patched.
+- The review of the diff found nothing left to cut.
+
+Structure smoke check. Five CUAD agreements in PDF form (`data/cuad_smoke/`) and the three DOCX files from 1-D2 (`data/docx_smoke/`), all gitignored. "Found" is the top-level numbering the tree holds, and "visible" is a count of line starts in the text (`N.`, `ARTICLE N`, `Section N.`). The structure pass took 0.000 to 0.024 s per file.
+
+| File | Pages | Blocks | Nodes | By kind | Max level | Top level found / visible | Definitions |
+|---|---|---|---|---|---|---|---|
+| 01 Cybergy affiliate agreement | 16 | 174 | 93 | section 26, clause 48, subclause 13, heading 1, schedule 1, definition 4 | 3 | 1 to 26 / 1 to 26 | 4, all bracketed |
+| 02 Healthgate hosting agreement | 33 | 797 | 209 | heading 13, section 49, clause 90, subclause 29, schedule 2, definition 26 | 4 | 1 to 34 / 1 to 34, plus 2 false from the party list | 26 (16 by verb form) |
+| 03 Athens agency agreement | 33 | 246 | 157 | definition 46, heading 18, clause 65, section 2, subclause 26 | 4 | Section 1 to 20: 18 found, 5 and 6 missed, 2 false | 46 (6 by verb form) |
+| 04 Dova promotion agreement | 44 | 614 | 413 | heading 30, definition 84, clause 142, subclause 154, schedule 1, section 2 | 5 | ARTICLE 1 to 13 / 1 to 13 | 84 (68 by verb form) |
+| 05 Theravance service agreement | 14 | 176 | 124 | heading 3, definition 15, section 24, clause 48, subclause 34 | 3 | 1 to 24 / 1 to 24 | 15 (11 by verb form) |
+| Bonterms PSA (DOCX) | none | 21 | 5 | table 5 | 1 | none visible: cover tables only | 0 |
+| Common Paper CSA (DOCX) | none | 212 | 158 | table 5, definition 33, section 13, clause 93, subclause 14 | 3 | 2 to 14 found, and `1.` has no block | 33 (32 by verb form) |
+| Victoria general conditions (DOCX) | none | 251 | 165 | section 23, clause 99, subclause 43 | 3 | 1 to 23 found, equal to the 23 contents lines it ignored | 0 |
+
+Obviously wrong nodes, by file:
+- 01: 1 of 1 unlabelled headings (`COMPANY`, a signature block name).
+- 02: 3 of 13 headings (`BLACKWELL/MUNKSGAARD PUBLISHING SYSTEM` twice, a repeated page header, and a `[INITIALS ILLEGIBLE]` line), and 1 doubtful (`EXHIBIT 10.1`, a stamp). Two false level 1 nodes from the party list.
+- 03: two false nodes (`5`, `6`) and two missed sections. No unlabelled headings.
+- 04: 9 of 17 unlabelled headings: `TABLE OF CONTENTS` three times (a repeated header), `MULTIPLIED BY` four times (formula words) and two party names from the signature block. The other 8 are the title, RECITALS and six headings of a prescribing information exhibit.
+- 05: none.
+- DOCX: none by structure. The smoke script flagged two short list items in the Victoria file (`(b)` with `If:` and `17` with `GST`). Both are short paragraphs that Word numbers, and the label is what Word shows.
+
+Not verified:
+- Top-level numbers were compared with a count of line starts, and not with a human outline. Levels 2 and below were not counted, and the clause and subclause counts are unchecked.
+- A DOCX with an empty numbered paragraph in the middle of a list. The ceiling is derived from the rule (`Phases.md`, 1-E) and no file shows it.
+- Only one of the three DOCX files is native Word output, and Bonterms holds cover tables alone, so the DOCX tree is tested on two real contracts at most.
+- Definitions were checked by form on Athens and Cybergy. The gaps in the other files are the bracketed forms by count, and were not read one by one.
+- Linear time was tested on generated blocks. The slowest real file took 0.024 s.
+
+Blockers: none.
+
+Next action: commit 1-E with `feat(parser): build clause structure tree and detect definitions`, send the 1-E `[CONTRACT]` items to Tanishq (kinds, labels, sequence state, Word list opening, contents lines, all-caps headings, titles, tables and definitions), decide the two open items above, then reply `next` to start 1-F.

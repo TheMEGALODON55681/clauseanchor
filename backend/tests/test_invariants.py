@@ -1,13 +1,35 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 
 import pytest
 
 from app.parsing.docx import parse_docx
 from app.parsing.errors import ParseError
+from app.parsing.model import ParsedDocument, StructureNode
 from app.parsing.pdf import parse_pdf
+from app.parsing.structure import build_structure
 from tests.fixtures.build import NAMES, Fixtures
+
+
+def assert_valid_nodes(doc: ParsedDocument, nodes: Sequence[StructureNode]) -> None:
+    """The node half of the invariant: every node slices back to its text, nodes come in order
+    of start then level, and a child sits inside its parent and one level below it or deeper."""
+    by_id = {node.id: node for node in nodes}
+    assert len(by_id) == len(nodes)
+    size = len(doc.source_text)
+    previous = (-1, 0)
+    for node in nodes:
+        assert 0 <= node.start < node.end <= size
+        assert doc.source_text[node.start : node.end] == node.text
+        assert (node.start, node.level) >= previous
+        previous = (node.start, node.level)
+        if node.parent_id is not None:
+            parent = by_id[node.parent_id]
+            assert parent.start <= node.start
+            assert node.end <= parent.end
+            assert parent.level < node.level
 
 
 @pytest.mark.parametrize("name", NAMES)
@@ -29,3 +51,5 @@ def test_offsets_slice_back_to_the_text_for_every_fixture(name: str, fixtures: F
         previous_end = block.end
     for start, end in doc.decorations:
         assert 0 <= start <= end <= size
+    nodes, _ = build_structure(doc.source_text, doc.blocks)
+    assert_valid_nodes(doc, nodes)

@@ -858,6 +858,27 @@ def _notes() -> bytes:
     return build_docx(body, [footnotes, endnotes])
 
 
+def _contents_tab() -> bytes:
+    # A contents list typed as number, tab, title, tab, page number. A Word contents field
+    # copies the heading text, so the typed number survives into the file.
+    def entry(number: str, title: str, page: str) -> str:
+        tab = "<w:r><w:tab/></w:r>"
+        return f"<w:p>{_run(number)}{tab}{_run(title)}{tab}{_run(page)}</w:p>"
+
+    return build_docx(
+        _p("CONTENTS")
+        + entry("1.", "Definitions", "1")
+        + entry("2.", "Term of Agreement", "2")
+        + entry("3.", "Fees", "4")
+        + _p("1. Definitions")
+        + _p("1.1 Words have the meanings given here.")
+        + _p("2. Term of Agreement")
+        + _p("2.1 This Agreement starts on the Effective Date.")
+        + _p("3. Fees")
+        + _p("3.1 The Customer pays the Fees.")
+    )
+
+
 _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "simple.pdf": (_simple_bytes, None),
     "two_column.pdf": (lambda: _pdf(_two_column), None),
@@ -1081,6 +1102,8 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     # Page parts and notes (A18)
     "header_footer.docx": (_header_footer, None),
     "notes.docx": (_notes, None),
+    # A typed contents list with tab-separated page numbers (A21)
+    "contents_tab.docx": (_contents_tab, None),
 }
 
 NAMES = tuple(_BUILDERS)

@@ -75,6 +75,8 @@ Pin exact versions in `requirements.txt` / `requirements-dev.txt` as resolved at
 |---|---|---|
 | PDF text | `pdfplumber` | MIT. Accepts a file-like object, so bytes stay in RAM |
 | DOCX text | `python-docx` | Plus stdlib `zipfile` and `xml.etree` for parts it does not expose |
+| PDF library internals | `pdfminer.six` | `pdfplumber` requires this exact version. `pdf.py` imports its error types, its parser and `PDFPasswordIncorrect` directly, so it is pinned |
+| DOCX XML | `lxml` | `python-docx` brings it in. `docx.py` walks its elements and catches `etree.LxmlError`, so it is pinned |
 | API (from Phase 2) | `fastapi`, `uvicorn[standard]`, `pydantic` v2, `python-multipart` | |
 | Database (from Phase 2) | `sqlalchemy` 2.x, stdlib `sqlite3` | `Base.metadata.create_all()`, no migrations tool |
 | Config files | `pyyaml` | `yaml.safe_load` only |

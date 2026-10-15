@@ -45,8 +45,9 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
 - [x] **1-D2** DOCX numbering, headers, footers and footnotes
   `feat(parser): render DOCX numbering and extract page parts`
   Adds list labels, headers, footers, footnotes and endnotes to `docx.py` with A17, A18 and their fixtures. Deviations and ceilings are listed under the 1-D2 amendments below.
-- [ ] **1-E** Clause structure tree and definitions
+- [x] **1-E** Clause structure tree and definitions
   `feat(parser): build clause structure tree and detect definitions`
+  Adds `structure.py` with A19 to A22 and the `contents_tab.docx` fixture. Deviations and ceilings are listed under the 1-E amendments below.
 - [ ] **1-F** Public entry point, CLI and parser contract
   `feat(parser): add parse entry point, CLI and parser contract`
 - [ ] **1-R** Phase review: `/gstack-cso`, `/coderabbit:code-review`, `/gstack-review`; fixes as separate commits
@@ -192,7 +193,7 @@ Known ceilings of 1-D2, none of them silent unless noted:
 - A header list continues the body's count, because the counters are shared.
 - Other formats (ordinal, cardinal text, decimal with leading zero, scripts other than Latin) give no label and a warning.
 - A footnote reference mark adds nothing to the body (a 1-D ceiling), so a note's text carries no marker back to its place.
-- A DOCX table of contents is plain text with typed numbers and a tab before the page number (`1.<tab>Term of Agreement<tab>1`). 1-E must treat the tab and trailing number like a dot leader (A21).
+- A DOCX table of contents is plain text with typed numbers and a tab before the page number (`1.<tab>Term of Agreement<tab>1`). 1-E must treat the tab and trailing number like a dot leader (A21). Done in 1-E, with `contents_tab.docx`.
 
 #### 1-E
 
@@ -200,6 +201,33 @@ Known ceilings of 1-D2, none of them silent unless noted:
 - **A20 Levels [CONTRACT].** A decimal label's level is its number of parts, plus 1 while a schedule is open. ARTICLE and roman-numbered headings are level 1. Numeric SECTION and CLAUSE headings use their part count. All three have kind `heading`. An unnumbered all-caps heading is level 1; it closes open nodes, and that is a known ceiling. `(a)` with no open decimal node sits one level below the nearest open node, or at level 1 when none is open. Definition and table nodes are leaves one level below their container.
 - **A21 Numbering acceptance [CONTRACT].** A label counts only when it continues its previous sibling's sequence or starts one at 1, a or i. Other leading integers and roman tokens stay body text. Lines with dot leaders or a trailing page number (table of contents) are ignored. The same rule settles `(i)`, `(v)`, `(x)`, `(c)`, `(d)`, `(l)` and `(m)`. NUMBERING_AMBIGUOUS fires only when both readings continue a sequence.
 - **A22 Node ranges [CONTRACT].** A node ends at the end of the last body block it covers. A PDF node that spans a page break contains the interleaved header and footer text, so consumers mask the ranges in `decorations`.
+
+Deviations from A19 to A22, with reasons. Done in 1-E:
+- Kinds `[CONTRACT]`. A20 sets levels and gives `heading` to ARTICLE, roman, SECTION and CLAUSE labels. It names no kind for the rest. A numbered label takes its kind from its level: 1 is `section`, 2 is `clause`, 3 and deeper are `subclause`. ARTICLE, SECTION, CLAUSE and bare roman labels are `heading`, and so is an unnumbered all-caps line. SCHEDULE, ANNEXURE, APPENDIX and EXHIBIT labels are `schedule`.
+- Labels `[CONTRACT]`. `label` holds the label without its trailing full stop: `1`, `1.1`, `(a)`, `(ii)`, `ARTICLE I`, `Section 2.1`, `SCHEDULE 2`. A decimal has one to five parts of one to three digits, and may run into its title (`10.Title`). Letters run `(a)` to `(z)`, then `(aa)` and `(bb)`, as Word numbers them. A Word `list_label` is read with the same grammar and wins over the typed text. A definition's label is its quoted term without the quotes.
+- Sequence state `[CONTRACT]`. A21 says a label "continues its previous sibling's sequence or starts one at 1, a or i". The parser keeps the last number and the run length of each sequence: decimals by their prefix, letters and numerals by the node they sit under. A number continues a run when it is one more. A restart at 1 replaces a run of 3 or fewer (a party or recital list before the clauses) and is body text after a longer run (a list inside a clause). A decimal under an open decimal of the same depth must carry that decimal's number, so `2.1` after an open `1.` stays body text. A schedule label clears every sequence, because a schedule numbers from 1.
+- Word lists may open above 1 `[CONTRACT]`. The first top-level decimal read from `list_label` may be any number, because Word counts the empty paragraphs that the reader leaves out of the blocks. Typed numbers still open at 1. Without this rule every section of the Common Paper template (`2.` to `14.`) was rejected.
+- Letters and numerals. A letter sits one level below the nearest open decimal, else one level below the nearest open node that is not a letter or a numeral, else at level 1. A numeral sits one level below the nearest open letter. `(i)` is a letter when it continues the letters, and a numeral when it starts a run under a letter. When both continue it is a letter, and NUMBERING_AMBIGUOUS fires once per page.
+- Heading words. A heading word with a lower case word after it on the same line is running text (`Section 3 of this Agreement`). A typed ARTICLE, schedule or roman heading counts only when its first line has 80 characters or fewer.
+- Contents lines `[CONTRACT]`. A21 names dot leaders and a trailing page number. A block is a contents entry when it holds a dot leader anywhere (four or more full stops, with or without a space between them, or an ellipsis character), or when it is one line and the text after its label ends in a space or a tab and one to three digits. A year has four digits, so a clause that ends in one is a clause. `ARTICLE 1` is not an entry, because the test reads what follows the label. An all-caps line goes through the same test before it becomes a heading.
+- Bare numbers. A typed decimal whose first line is the number alone, with no full stop and no title, is ignored. 1-C does not mark a page number printed mid-page as furniture, and the number equals the next clause number on the page that opens that clause. `3.` with its full stop is still a label.
+- All-caps headings `[CONTRACT]`. A20 does not define the test. A block is a heading when it has 80 characters or fewer, at least 3 letters, and every line at least 60 percent capitals. The test runs per line, so a mixed case line with redaction marks under it is not a heading. A heading opens at level 1 and closes every open node, as A20 says.
+- Titles `[CONTRACT]`. An all-caps block straight after a block that is only a label (`ARTICLE 5`, `SCHEDULE A`, `1.`) is that label's title. It opens no heading, so the label's node stays open and keeps the clauses that follow. Read literally, A20 would close the node on its own title and leave it holding its label alone. A title in title case was already part of the node.
+- Tables `[CONTRACT]`. Each outermost table is one `table` node, one level below its container, and a nested table has no node. Labels and headings are not read inside a cell. A definition in a cell is a child of the table node, so a table is a leaf for labels only.
+- Definitions `[CONTRACT]`. The node spans the quoted term with both quotes and sits one level below the innermost open node, or below the table. A term has up to 80 characters and may wrap a line. Forms: `"T" means`, `shall mean`, `has the meaning`, `have the meaning`, `shall have the meaning`, `refers to`, and `(the "T")` or `("T")`, in straight or curly quotes. The label drops trailing `,`, `.` and `;` and collapses white space. An empty or space-padded term is not a definition, and neither is a quoted phrase with none of these forms around it.
+- Ranges. A node ends at the end of the last body block it covers (A22). Header, footer and footnote blocks never open a node and never extend one, so a node that spans a page break holds the furniture inside it and not after it.
+- Ids. Nodes are created in document order, a container before what it holds, so `n0001`, `n0002` and on follow start, then level. The invariant test checks the order on every fixture.
+
+Known ceilings of 1-E, none of them silent unless noted:
+- A numbered list that shares numbers with the section sequence takes them. In the Athens agency agreement a definitions list `1.` to `6.` inside Section 4 took 5 and 6, so Sections 5 and 6 are missed and two false `5` and `6` nodes appear. A Part A and Part B pair that restarts after a long run reads as a list inside the clause. Keying the sequences by label style (a heading word against a bare number) would split the two, and would then open the list items as level 1 nodes, which cuts Section 4 short. Not built.
+- A short all-caps line is a heading and closes open nodes (A20's ceiling). Seen: signature block names (`COMPANY`), formula words (`MULTIPLIED BY`, four times in Dova), and a page header that 1-C did not mark as furniture (`TABLE OF CONTENTS` three times in Dova, `BLACKWELL/MUNKSGAARD PUBLISHING SYSTEM` twice in Healthgate).
+- A party list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay (Healthgate).
+- An empty numbered paragraph after the first one breaks that Word list's run, because the reader drops the empty block and the next label is one number too high. This follows from the rule and no real file in the smoke set shows it. Accepting any larger number from a Word list would fix it.
+- Letters and numerals from a Word list still open at `(a)` and `(i)`. A list whose first items were empty paragraphs is not read, because a lenient start for letters would make `(i)` a letter.
+- Numbers inside a table cell are not read, so a contract laid out as one large table has a `table` node and no clauses (the Bonterms cover tables).
+- A contents page with neither a dot leader nor a trailing number would be read as clauses. None was seen.
+- A definition in a form that is not listed (`X shall be construed as`) is not found, and a quoted term at the end of one block with its verb at the start of the next is missed.
+- `ParserContract.md` and A24 belong to 1-F.
 
 #### 1-F
 
