@@ -17,6 +17,7 @@ from app.parsing.model import Block, ParseWarning, StructureNode
 _BODY = ("text", "table_cell")
 _SHORT = 80  # the longest line that reads as a heading
 _SHORT_RUN = 3  # a numbered run this short may be replaced by a restart at 1
+_CONTINUES, _STARTS = 3, 2  # how well a reading fits, above a Word number that skips ahead
 _KINDS = ("section", "clause", "subclause")  # by level, level 3 and deeper share the last
 
 _DECIMAL = r"\d{1,3}(?:\.\d{1,3}){0,4}"
@@ -272,7 +273,7 @@ class _Builder:
             fit = self._fit(reading, listed=not typed)
             if fit > score:
                 best, score = reading, fit
-            elif fit == score == 2:
+            elif fit == score == _CONTINUES:
                 ambiguous = True  # both readings continue a sequence: the first one stays
         if best is None:
             return
@@ -285,25 +286,36 @@ class _Builder:
         number = best.parts[-1]
         if best.family == "schedule":
             self.last.clear()  # numbering starts again inside a schedule
-        self.last[key] = (number, length + 1 if number == current + 1 else 1)
+        # A Word number above the last one is the same run, with the gap left unread.
+        self.last[key] = (number, length + 1 if number > current else 1)
         self._open(block, kind, label.text, level, best.family, best.parts)
         self.titled = not rest.strip()
 
     def _fit(self, reading: _Reading, *, listed: bool) -> int:
-        """2 when the reading continues its sequence, 1 when it starts one at 1, 0 when it
-        does neither. A restart replaces only a short run: a party or recital list that comes
-        before the clauses. A longer run restarting is a list inside a clause. A Word list's
-        first top-level number may be above 1, because Word counts the empty paragraphs that
-        the blocks leave out."""
+        """_CONTINUES when the reading continues its sequence, _STARTS when it starts one at 1,
+        1 when only a Word list explains it, 0 when none of these. A restart replaces only a
+        short run: a party or recital list that comes before the clauses. A longer run
+        restarting is a list inside a clause. Word counts the empty numbered paragraphs that
+        the blocks leave out, so a Word list may open a top-level number above 1, and a Word
+        number above the last one in its sequence continues it. A typed number has no empty
+        paragraph to explain a gap."""
         if reading.family == "dec" and not self._prefix_open(reading.parts[:-1]):
             return 0
         current, length = self.last.get(self._key(reading), (0, 0))
         number = reading.parts[-1]
         if current and number == current + 1:
-            return 2
+            return _CONTINUES
         if number == 1 and length <= _SHORT_RUN:
-            return 1
-        return int(listed and not current and reading.family == "dec" and len(reading.parts) == 1)
+            return _STARTS
+        if not listed:
+            return 0
+        if current:
+            # Word numbers letters a to z, then aa to zz. Reaching the next width by a gap would
+            # skip the rest of the alphabet, which empty paragraphs do not explain: (ii) after
+            # (i) is a numeral, not the 35th letter.
+            same_width = reading.family != "letter" or (number - 1) // 26 == (current - 1) // 26
+            return int(number > current and same_width)
+        return int(reading.family == "dec" and len(reading.parts) == 1)
 
     def _prefix_open(self, prefix: tuple[int, ...]) -> bool:
         """A decimal under an open decimal of the same depth must carry that decimal's number.

@@ -718,9 +718,143 @@ def test_a_list_label_that_equals_the_whole_text_is_still_a_label() -> None:
     assert labels(nodes) == ["1"]
 
 
-def test_a_word_label_that_jumps_inside_a_running_list_is_still_rejected() -> None:
-    nodes, _ = structure(b("Services.", list_label="1."), b("Fees.", list_label="5."))
-    assert labels(nodes) == ["1"]
+def test_a_word_list_continues_across_an_empty_numbered_paragraph(
+    fixture_bytes: dict[str, bytes],
+) -> None:
+    doc, nodes, warnings = structure_of("empty_numbered.docx", fixture_bytes)
+    assert [b.locator.get("list_label") for b in doc.blocks] == [
+        "1.",
+        "2.",
+        "4.",
+        "4.1",
+        "4.3",
+        "(a)",
+        "(c)",
+        "5.",
+    ]
+    assert outline(nodes) == [
+        ("section", "1", 1),
+        ("section", "2", 1),
+        ("section", "4", 1),
+        ("clause", "4.1", 2),
+        ("clause", "4.3", 2),
+        ("subclause", "(a)", 3),
+        ("subclause", "(c)", 3),
+        ("section", "5", 1),
+    ]
+    assert warnings == []
+
+
+def test_a_word_label_above_its_sequence_continues_it_because_the_gap_was_not_read() -> None:
+    nodes, _ = structure(
+        b("Services.", list_label="1."),
+        b("Fees.", list_label="2."),
+        b("Term.", list_label="5."),
+        b("Notices.", list_label="6."),
+    )
+    assert labels(nodes) == ["1", "2", "5", "6"]
+
+
+@pytest.mark.parametrize(
+    "given",
+    [
+        ["1.", "1.1", "(a)", "(b)", "(d)", "(e)"],
+        ["1.", "1.1", "(a)", "(c)", "(f)"],
+        ["1.", "1.1", "(a)", "(i)", "(ii)", "(iv)", "(vi)"],
+    ],
+)
+def test_a_gap_in_a_word_letter_or_numeral_list_does_not_stop_the_rest(given: list[str]) -> None:
+    nodes, _ = structure(*(b("Text.", list_label=label) for label in given))
+    assert labels(nodes) == [label.rstrip(".") for label in given]
+
+
+def test_a_gap_in_a_nested_word_list_keeps_the_rest_of_that_list() -> None:
+    nodes, _ = structure(
+        b("Fees.", list_label="1."),
+        b("Rate.", list_label="1.1"),
+        b("Cap.", list_label="1.3"),
+        b("Review.", list_label="1.4"),
+        b("Term.", list_label="2."),
+    )
+    assert outline(nodes) == [
+        ("section", "1", 1),
+        ("clause", "1.1", 2),
+        ("clause", "1.3", 2),
+        ("clause", "1.4", 2),
+        ("section", "2", 1),
+    ]
+
+
+def test_a_numeral_that_continues_a_roman_run_is_not_taken_for_a_letter() -> None:
+    # (v) is the 22nd letter and the fifth numeral. Letters (a) and (b) are open above it, so a
+    # rule that accepts any larger Word number must still rank a plain continuation first.
+    nodes, _ = structure(
+        b("Clause.", list_label="1.1"),
+        b("A.", list_label="(a)"),
+        b("B.", list_label="(b)"),
+        b("One.", list_label="(i)"),
+        b("Two.", list_label="(ii)"),
+        b("Three.", list_label="(iii)"),
+        b("Four.", list_label="(iv)"),
+        b("Five.", list_label="(v)"),
+    )
+    assert [n.level for n in nodes] == [2, 3, 3, 4, 4, 4, 4, 4]
+    assert labels(nodes)[-1] == "(v)"
+
+
+def test_a_numeral_after_the_ninth_letter_is_not_a_repeated_letter() -> None:
+    # Word numbers letters a to z, then aa, bb and on. (ii) is the 35th letter and (i) after (h)
+    # the ninth, so reading (ii) as a letter needs 26 empty paragraphs in between. That is not
+    # a gap. The numeral inside the list has no sequence to join, so it stays body text.
+    nodes, _ = structure(
+        b("Clause.", list_label="1."),
+        *(b("Item.", list_label=f"({letter})") for letter in "abcdefgh"),
+        b("One.", list_label="(i)"),
+        b("Two.", list_label="(ii)"),
+        b("Three.", list_label="(iii)"),
+    )
+    assert labels(nodes) == ["1", "(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)", "(i)"]
+
+
+def test_a_gap_may_reach_z_and_a_repeated_letter_may_skip_one_inside_its_own_width() -> None:
+    nodes, _ = structure(
+        b("Clause.", list_label="1."),
+        *(b("Item.", list_label=f"({letter})") for letter in "abcdefghijklmnopqrstuvwx"),
+        b("Item.", list_label="(z)"),
+        b("Item.", list_label="(aa)"),
+        b("Item.", list_label="(cc)"),
+    )
+    assert labels(nodes)[-4:] == ["(x)", "(z)", "(aa)", "(cc)"]
+
+
+def test_a_gap_counts_toward_the_length_of_the_run() -> None:
+    # 1, 2, 4, 5 is a run of four, so a restart at 1 is a list inside a clause. If the gap
+    # reset the run to one, the restart would replace it as a short party list.
+    nodes, _ = structure(
+        b("Services.", list_label="1."),
+        b("Fees.", list_label="2."),
+        b("Term.", list_label="4."),
+        b("Notices.", list_label="5."),
+        b("A list item.", list_label="1."),
+    )
+    assert labels(nodes) == ["1", "2", "4", "5"]
+
+
+def test_a_typed_number_that_jumps_is_still_body_text() -> None:
+    # Only a Word label is a counter. Typed text has no empty paragraph to explain a gap.
+    nodes, _ = structure("1. Services.", "2. Fees.", "4. Term.", "5. Notices.")
+    assert labels(nodes) == ["1", "2"]
+
+
+def test_a_word_label_below_or_equal_to_the_current_number_is_not_a_continuation() -> None:
+    nodes, _ = structure(
+        b("Services.", list_label="1."),
+        b("Fees.", list_label="2."),
+        b("Term.", list_label="3."),
+        b("Again.", list_label="3."),
+        b("Back.", list_label="2."),
+    )
+    assert labels(nodes) == ["1", "2", "3"]
 
 
 def test_typed_numbers_still_have_to_open_at_one() -> None:

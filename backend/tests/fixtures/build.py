@@ -806,6 +806,26 @@ def _numbering_levels() -> bytes:
     return build_docx("".join(listed(t, num_id=1, level=n) for n, t in items), [numbering])
 
 
+def _empty_numbered() -> bytes:
+    # Word shows a number for an empty numbered paragraph and counts it. The reader leaves the
+    # empty block out, so the label after each one is a number too high: 1, 2, 4, 4.1, 4.3.
+    numbering = related_part("numbering", _MULTILEVEL + num_xml(1, 0))
+    items = (
+        (0, "Services."),
+        (0, "Fees."),
+        (0, ""),
+        (0, "Term."),
+        (1, "First term clause."),
+        (1, ""),
+        (1, "Third term clause."),
+        (2, "First limb."),
+        (2, ""),
+        (2, "Third limb."),
+        (0, "Notices."),
+    )
+    return build_docx("".join(listed(t, num_id=1, level=n) for n, t in items), [numbering])
+
+
 def _header_footer() -> bytes:
     # Section 1 names a default and a first-page header and a default footer. Section 2 names a
     # second header part with the same text as the first, the footer part again, and an
@@ -1099,6 +1119,7 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     # Numbering (A17)
     "list_number_style.docx": (_list_number_style, None),
     "numbering_levels.docx": (_numbering_levels, None),
+    "empty_numbered.docx": (_empty_numbered, None),
     # Page parts and notes (A18)
     "header_footer.docx": (_header_footer, None),
     "notes.docx": (_notes, None),
@@ -1107,6 +1128,7 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
 }
 
 NAMES = tuple(_BUILDERS)
+VALID_NAMES = tuple(name for name, (_, expected) in _BUILDERS.items() if expected is None)
 
 
 def build_all(directory: Path) -> Fixtures:

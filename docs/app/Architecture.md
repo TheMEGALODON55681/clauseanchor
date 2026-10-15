@@ -53,7 +53,7 @@ flowchart TD
 | DOCX archive safety | Every member name is checked before any member is read. After backslashes become slashes, an absolute path, a drive letter or a `..` segment gives `ARCHIVE_UNSAFE`. A total declared size over 100 MiB gives `ARCHIVE_TOO_LARGE`. Nothing is extracted to disk | A member name decides nothing about where bytes go, because the parser reads from memory, but a package that names a path outside itself is hostile. zipfile stops a member at its declared size, so the declared total bounds every read, and a member that understates its size fails its checksum |
 | DOCX tables and cells | A cell is one `table_cell` block with its paragraphs joined by a newline. A nested table or a text box ends the block, and the text after it starts the next block of the same cell (`segment`). Tables are numbered in preorder across the document | Blocks follow the order of the file, and the text on either side of a nested table stays in blocks of the same cell |
 | DOCX headers, footers and notes | After the body come the header and footer variants (default, first, even) of each section, then footnotes, then endnotes. A part is read once and a part whose text repeats an earlier one of the same kind is dropped. Page parts have kind `header` or `footer`, including their table cells and text boxes, so `decorations` covers them. Notes have kind `footnote`, and Word's separator notes are skipped | Contract text sits in headers, footers and notes, and nothing may vanish silently. A part named by every section is read once, so a file with thousands of section breaks costs one read |
-| Structure: numbered labels | A label is read at the start of a block, or from the block's `list_label`. It becomes a node only when it continues the sequence at its depth, or starts one at 1, `(a)` or `(i)`. A restart at 1 replaces a run of 3 or fewer and is body text after a longer run. A Word list may open a top-level number above 1. A schedule label clears every sequence. A level is the number of parts of a decimal, plus 1 inside a schedule, and a letter or numeral sits below its parent | A number inside running text, a cross reference or a party list must not become a clause. Word counts empty paragraphs that the blocks drop. One pass with a stack, with no model, so every node can be explained |
+| Structure: numbered labels | A label is read at the start of a block, or from the block's `list_label`. It becomes a node only when it continues the sequence at its depth, or starts one at 1, `(a)` or `(i)`. A restart at 1 replaces a run of 3 or fewer and is body text after a longer run. A Word list may open a top-level number above 1, and a Word number above the last one in its sequence continues it. A schedule label clears every sequence. A level is the number of parts of a decimal, plus 1 inside a schedule, and a letter or numeral sits below its parent | A number inside running text, a cross reference or a party list must not become a clause. Word counts empty numbered paragraphs that the blocks drop, so a gap in a Word list is not a break. One pass with a stack, with no model, so every node can be explained |
 | Structure: headings and contents | A short block of capitals (80 characters, every line 60 percent capitals) is an unnumbered level 1 heading that closes open nodes, unless it directly follows a block that is only a label, where it is that label's title. A block with a dot leader, or a one-line block that ends in a page number, is a contents entry and is ignored. A bare number with no full stop is a page number | The contents page repeats every heading, and 1-C does not mark a page number printed mid-page. A title must not close the node it names. A line of redaction marks must not turn a notice into a heading |
 | Structure: tables and definitions | An outermost table is one `table` node, and nothing inside it is read as a label or heading. A quoted term followed by `means`, `shall mean`, `has the meaning`, `refers to`, or in brackets as `(the "T")`, is a `definition` node that spans the term with its quotes, one level below the innermost open node or the table | A table has no clause order to read. A definition node lets the core point at the term itself, and the container gives its scope |
 | Database | SQLite only, `create_all()` | Nothing durable is stored; no migrations tool needed |
@@ -75,7 +75,7 @@ backend/
   app/
     __init__.py
     parsing/                # Phase 1
-      __init__.py           # public: parse_document, ParsedDocument, ParseError
+      __init__.py           # public: parse_document (size check, type, reader, structure tree), ParsedDocument, ParseError, ErrorCode, WarningCode
       model.py              # dataclasses: ParsedDocument, Block, StructureNode, ParseWarning, Coverage
       assemble.py           # TextAssembler: builds source_text and assigns offsets while appending
       errors.py             # ParseError, the fixed error/warning code lists and the limits
@@ -83,9 +83,9 @@ backend/
       pdf.py                # pdfplumber extraction: error mapping, words to rows to blocks, columns (1-B); decoration, scanned checks, content budget (1-C)
       docx.py               # python-docx extraction: archive checks, tracked-change check, body order, tables, text boxes (1-D); headers, footers, footnotes, numbering (1-D2)
       structure.py          # clause tree from block text and list labels: numbered labels, headings, schedules, tables, definitions (1-E)
-      schema.py             # exports ParserContract JSON Schema
+      schema.py             # JSON Schema of the output (docs/app/parser_output.schema.json) and to_json, which turns a document into the data the schema describes
     scripts/
-      parse_file.py         # CLI: parse a local file and print JSON (dev only)
+      parse_file.py         # CLI: parse a local file and print JSON or a summary (dev only)
     main.py                 # (planned, Phase 2) FastAPI app
     config.py               # (planned, Phase 2)
     db.py, models.py        # (planned, Phase 2) SQLite metadata
@@ -111,6 +111,8 @@ backend/
     test_pdf.py
     test_docx.py
     test_structure.py
+    test_parse.py           # parse_document: every fixture, limits, warning order
+    test_contract.py        # JSON form, schema check, CLI
     test_invariants.py      # offset invariant over every fixture
 ```
 
@@ -133,7 +135,7 @@ class ParsedDocument:
     coverage: Coverage
 ```
 
-Party nodes (a requirement from the frontend, `FrontendDesign.md` 17.7, BR). The party list is built from nodes of kind `party`, and each carries `name_span`: `{start, end}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`, inside that range, covering the party's name alone (`ABC Technologies, Inc.`, not the defining phrase around it). The consumer never cuts a name at a comma, so the parser decides where the name ends. A party node with no span reads as its whole text. Not built: `StructureNode.kind` in `model.py` has no `party` value and no `name_span` field. `ParserContract.md` carries the field once that file exists, and API.md defines it on the document node, tagged `[CONTRACT]` (`Phases.md`, 2-E).
+Party nodes (a requirement from the frontend, `FrontendDesign.md` 17.7, BR). The party list is built from nodes of kind `party`, and each carries `name_span`: `{start, end}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`, inside that range, covering the party's name alone (`ABC Technologies, Inc.`, not the defining phrase around it). The consumer never cuts a name at a comma, so the parser decides where the name ends. A party node with no span reads as its whole text. Not built: `StructureNode.kind` in `model.py` has no `party` value and no `name_span` field. `ParserContract.md` section 8 carries the field (status: required, not built), and API.md defines it on the document node, tagged `[CONTRACT]` (`Phases.md`, 2-E).
 
 Separators: lines inside a block join with `"\n"`, blocks join with `"\n"`, pages join with `"\n\n"`. Trailing spaces and tabs are stripped from each line before it is appended. CRLF and CR become LF. In PDF text, runs of spaces collapse to one space and U+00A0 becomes U+0020. DOCX text keeps U+00A0.
 
@@ -143,7 +145,7 @@ DOCX blocks carry one of three locators, with every number 1-based. A body parag
 
 Headers and footers use `{"part": "header" or "footer", "section": s, "variant": "default" or "first" or "even", "paragraph": i}`, with `s` counting sections from 1. Footnotes and endnotes use `{"part": "footnotes" or "endnotes", "id": n, "paragraph": i}`, where `n` is the note's `w:id`. Tables and text boxes inside these parts add the same keys as in the body, numbered from 1 within each header, footer or note.
 
-Nodes. `StructureNode` holds `id` (`n0001`, `n0002` and on, in order of start and then level), `parent_id`, `kind` (`heading`, `section`, `clause`, `subclause`, `schedule`, `definition` or `table`), `label`, `level`, `start`, `end` and `text`, which is `source_text[start:end]`. A parent holds its children's range and sits at a lower level. A numbered node's kind follows its level, and a heading word, an all-caps line, a schedule, a table or a definition has its own kind. `ParserContract.md` is written in 1-F and carries the field list.
+Nodes. `StructureNode` holds `id` (`n0001`, `n0002` and on, in order of start and then level), `parent_id`, `kind` (`heading`, `section`, `clause`, `subclause`, `schedule`, `definition` or `table`), `label`, `level`, `start`, `end` and `text`, which is `source_text[start:end]`. A parent holds its children's range and sits at a lower level. A numbered node's kind follows its level, and a heading word, an all-caps line, a schedule, a table or a definition has its own kind. `ParserContract.md` carries the field list and every rule.
 
 ## 5. Interface to the core (planned, Phase 2)
 

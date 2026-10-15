@@ -48,8 +48,9 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
 - [x] **1-E** Clause structure tree and definitions
   `feat(parser): build clause structure tree and detect definitions`
   Adds `structure.py` with A19 to A22 and the `contents_tab.docx` fixture. Deviations and ceilings are listed under the 1-E amendments below.
-- [ ] **1-F** Public entry point, CLI and parser contract
+- [x] **1-F** Public entry point, CLI and parser contract
   `feat(parser): add parse entry point, CLI and parser contract`
+  Adds `parse_document`, `schema.py`, `scripts/parse_file.py` and `ParserContract.md` with A23 and A24, and closes the Word-list gap that 1-E left open. Deviations and ceilings are listed under the 1-F amendments below.
 - [ ] **1-R** Phase review: `/gstack-cso`, `/coderabbit:code-review`, `/gstack-review`; fixes as separate commits
 
 **Sync with Tanishq:** send the `[CONTRACT]` items below before 1-B and apply his changes before 1-F. After 1-F, share `docs/app/ParserContract.md` and agree separators, offsets and warnings.
@@ -222,17 +223,33 @@ Known ceilings of 1-E, none of them silent unless noted:
 - A numbered list that shares numbers with the section sequence takes them. In the Athens agency agreement a definitions list `1.` to `6.` inside Section 4 took 5 and 6, so Sections 5 and 6 are missed and two false `5` and `6` nodes appear. A Part A and Part B pair that restarts after a long run reads as a list inside the clause. Keying the sequences by label style (a heading word against a bare number) would split the two, and would then open the list items as level 1 nodes, which cuts Section 4 short. Not built.
 - A short all-caps line is a heading and closes open nodes (A20's ceiling). Seen: signature block names (`COMPANY`), formula words (`MULTIPLIED BY`, four times in Dova), and a page header that 1-C did not mark as furniture (`TABLE OF CONTENTS` three times in Dova, `BLACKWELL/MUNKSGAARD PUBLISHING SYSTEM` twice in Healthgate).
 - A party list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay (Healthgate).
-- An empty numbered paragraph after the first one breaks that Word list's run, because the reader drops the empty block and the next label is one number too high. This follows from the rule and no real file in the smoke set shows it. Accepting any larger number from a Word list would fix it.
+- An empty numbered paragraph after the first one breaks that Word list's run, because the reader drops the empty block and the next label is one number too high. This follows from the rule and no real file in the smoke set shows it. Accepting any larger number from a Word list would fix it. Closed in 1-F (see the 1-F amendments).
 - Letters and numerals from a Word list still open at `(a)` and `(i)`. A list whose first items were empty paragraphs is not read, because a lenient start for letters would make `(i)` a letter.
 - Numbers inside a table cell are not read, so a contract laid out as one large table has a `table` node and no clauses (the Bonterms cover tables).
 - A contents page with neither a dot leader nor a trailing number would be read as clauses. None was seen.
 - A definition in a form that is not listed (`X shall be construed as`) is not found, and a quoted term at the end of one block with its verb at the start of the next is missed.
-- `ParserContract.md` and A24 belong to 1-F.
+- `ParserContract.md` and A24 belong to 1-F. Done in 1-F.
 
 #### 1-F
 
 - **A23 CLI.** Default output omits every text field (`source_text`, `blocks[].text`, `nodes[].text`); `--text` includes them. A ParseError exits with status 2.
 - **A24 Contract ceilings.** `ParserContract.md` lists what the parser cannot see or fix: outlined vector text and form fields; `partial = True` means the core must never report "not found"; only Flate is budgeted; owner-only encrypted PDFs parse; an encrypted DOCX reports UNSUPPORTED_TYPE; a page-break `w:br` fuses neighbouring words; `w:noBreakHyphen` becomes ASCII `-`; rotated pages are unsupported.
+
+Deviations from the 1-F spec, with reasons. Done in 1-F:
+- Word-list gap `[CONTRACT]`. 1-E left a gap open: the reader drops an empty numbered paragraph, so the label after it is one number too high, and the rest of that list was read as body text. A Word label above the last number in its sequence now continues it, for decimals, letters and numerals alike. It ranks below a plain continuation and below a start at 1, so `(i)` after `(a)` and `(b)` is still a numeral. A letter does not reach a repeated letter (`(aa)`, `(bb)`) by a gap: Word letters run a to z, then aa to zz, so `(ii)` after `(i)` would be the 35th letter and needs 26 empty paragraphs. The first version allowed it, and the Victoria file showed `(ii)` and `(iii)` taken as clauses. The gap counts toward the run length, so `1`, `2`, `4`, `5` is a run of four and a restart at 1 after it is still a list inside a clause. A typed number never skips ahead. Tests for the new rule replace a 1-E test that pinned the old one (a Word `1.` followed by `5.` stays one node). Fixture: `empty_numbered.docx`, with an empty paragraph at the top level, inside a nested decimal list and inside a letter list.
+- `parse_document` checks the size, then `detect_type` (which raises `EMPTY_FILE` and `UNSUPPORTED_TYPE`), then dispatches to the reader, then builds the tree and attaches it with `dataclasses.replace`. The structure builder's warnings follow the reader's. The public names are `parse_document`, `ParsedDocument`, `ParseError`, `ErrorCode` and `WarningCode`, as the handoff lists.
+- `schema.py` holds the JSON Schema and `to_json`, the function that turns a document into the plain data the schema describes. The schema is written by hand, with the enums read from the model (block kinds, node kinds, warning codes). The checker that tests it against every parsed fixture is about 40 lines in `test_contract.py`, so no schema library was added. `docs/app/parser_output.schema.json` is the committed copy, and a test keeps it equal to `SCHEMA`.
+- The CLI keeps the handoff's `--summary`. The error code goes to stderr, so stdout holds only JSON. The CLI escapes non-ASCII characters in the JSON, because the Windows console cannot print every character a contract holds. A usage error from `argparse` also exits with status 2, which A23 gives to `ParseError`. The tool is for development, so it does not tell the two apart.
+- `VALID_NAMES` joined `NAMES` in `tests/fixtures/build.py`, so the schema test can run over the files that parse without skipping the rest.
+- The root README's backend section no longer says the readers are still to come, and shows the command line.
+- The handoff asks 1-F to run `graphify` against `Architecture.md`. Rules section 7 puts it at the end of the phase, so it moves to 1-R.
+
+Known ceilings of 1-F, none of them silent unless noted:
+- The schema describes shape only. `test_invariants.py` checks that offsets slice back to their text and that nodes nest inside their parents.
+- The gap rule trusts a Word number. A Word list that jumps for another reason (a restart that Word's own rules would have applied, which 1-D2 does not model) reads as one run. Two readings that both only skip ahead (`(x)` as a letter or a numeral) keep the first, which is the letter.
+- A Word list whose first item is an empty numbered paragraph is still not read when it is a nested decimal (`1.1` empty, `1.2` first), a letter list or a numeral list. Only a top-level decimal list may open high.
+- A numeral list that opens right after `(h)` reads `(i)` as the ninth letter, because a continuation outranks a start. Its other numerals stay inside that node, one level too high. This is the 1-E reading of `(i)`, seen in the Victoria general conditions (`(h) a reference to:` then `(i)` to `(iv)`) and not changed by the gap rule. Telling the two apart needs the Word list's own level, which `docx.py` knows and does not pass on.
+- `name_span` and the `party` kind are not built. `ParserContract.md` section 8 records the requirement, and no part of Phase 1 or 2 builds it yet. 2-E defines the API field on top of it.
 
 #### Process
 
@@ -252,6 +269,7 @@ Parts 2-0A and 2-0B hold the annotation work from plan v1.1 Phase 3. Both need o
 - [ ] **2-0A** Annotation guidelines
   `docs(docs): add annotation guidelines for the Indian contract set`
   Writes `docs/app/AnnotationGuidelines.md`. It covers the label set (core v2.0 categories, multi-span), span boundary rules, overlap rules, offsets as code points into the parser's `source_text`, worked examples, and every topic plan v1.1 section 4.3 lists: inclusion and exclusion, complete operative spans, overlapping categories, multiple occurrences, cross-references, schedules, definitions, negation, amended provisions, missing clauses, illegible text and disagreement resolution. It separates `absent` from `unassessable` and never labels stamp payment, enforceability or a case outcome from contract text.
+  Measure on the Indian contracts (a Phase 1 ceiling, listed under the 1-E ceilings and in `ParserContract.md` 12.6): the Athens-style list. A numbered list inside a section that shares numbers with the section sequence takes those numbers. In the Athens agency agreement a definitions list `1.` to `6.` inside Section 4 took 5 and 6, so Sections 5 and 6 were missed and two false nodes appeared. While annotating contracts 001 to 025, count the files where a numbered list sits inside a section and the section tree comes out wrong (missed or false sections), and note the numbering style of each (typed numbers, a heading word such as `Section 5`, or a Word list). The count decides whether to key the sequences by label style, which would split the two but would open the list items as level 1 nodes unless the rule says more.
 - [ ] **2-0B** Offline annotation tool
   `feat(annotator): add offline annotation tool`
   Builds `backend/tools/annotator/`. It runs locally with no network, loads parser output, lets the annotator select spans and exports JSONL with code-point offsets checked against the parser's `source_text` (plan v1.1 section 4.3). `[CONTRACT]` The export schema must match what Tanishq's `ml/` code consumes; agree it with him before this part starts. Needs Phase 1 complete. Any new dependency needs Aryan's approval at the start of the part.

@@ -1239,3 +1239,65 @@ Not verified:
 Blockers: none.
 
 Next action: commit 1-E with `feat(parser): build clause structure tree and detect definitions`, send the 1-E `[CONTRACT]` items to Tanishq (kinds, labels, sequence state, Word list opening, contents lines, all-caps headings, titles, tables and definitions), decide the two open items above, then reply `next` to start 1-F.
+
+
+## 2026-10-15: Part 1-F, public entry point, CLI and parser contract
+
+Part: 1-F. It follows 1-E, committed as eb3b30a. 1-R, the phase review, is next.
+
+Files changed:
+- `backend/app/parsing/__init__.py`: `parse_document` and `__all__`.
+- `backend/app/parsing/structure.py`: the Word-list gap rule (`_CONTINUES`, `_STARTS`, `_fit`, the run counter) and its letter width limit.
+- `backend/app/parsing/schema.py`: new. `SCHEMA` and `to_json`.
+- `backend/app/scripts/parse_file.py`: new. The command line tool. There is no `__init__.py`, because `python -m` works on a namespace package.
+- `backend/tests/fixtures/build.py`: `empty_numbered.docx`, and `VALID_NAMES` beside `NAMES`.
+- `backend/tests/test_structure.py`: the 1-E test that pinned "Word 1. then 5. stays one node" is replaced, and the file grows from 135 to 146 tests (two of them cover the letter width limit).
+- `backend/tests/test_parse.py`: new, 92 tests. `backend/tests/test_contract.py`: new, 131 tests.
+- `docs/app/ParserContract.md`: new, 15 sections. `docs/app/parser_output.schema.json`: the committed copy of `SCHEMA`.
+- `docs/app/Phases.md`, `docs/app/Architecture.md`, `README.md`: 1-F ticked with its deviations and ceilings, the tree and rows kept true, and the command line in the backend section.
+- `docs/app/BuildLog.md`: this entry.
+
+Commands run, from `backend/` with the venv interpreter:
+- `ruff format .`, `ruff check .`, `pytest -q`.
+- Mutants on copies of `app/` and `tests/` outside the repo, with `python -I`: 20 over the entry point, schema, CLI and gap rule, and 6 over the letter width limit.
+- A node-by-node comparison of the structure tree at the last commit and in the working tree, over the five CUAD PDFs and the three DOCX files of 1-D2. Scripts in the scratchpad, each path passed as an argument, nothing written to disk.
+- The Rules section 1 scrub, and a dash scan with a control string that holds both dashes.
+- Read-only git: `git status`, `git diff`, `git archive` into the scratchpad for the last commit's code.
+
+Tests: 694 passed, 0 failed, 0 skipped (459 after 1-E). `test_structure.py` holds 146 (135), `test_invariants.py` 85 (84, one for the new fixture), `test_parse.py` 92 and `test_contract.py` 131. A clean install was not repeated, because no dependency changed.
+
+Pinned versions added: none. The schema checker in `test_contract.py` is about 40 lines, so no schema library was added.
+
+Decisions (the rest are under the 1-F deviations in `Phases.md`):
+- The gap rule reverses a 1-E decision `[CONTRACT]`. 1-E pinned "a Word `1.` then `5.` stays one node" with a test, and listed the gap as a ceiling. A Word label above the last number in its sequence now continues it, for decimals, letters and numerals. Scores: a plain continuation 3, a start at 1 gives 2, a gap or an opening above 1 gives 1. The ambiguity warning fires only on a tie at 3. The gap counts toward the run length, and a typed number never skips ahead.
+- A letter does not reach the next width by a gap. See the first finding below. A gap from `(z)` to `(bb)` over an empty `(aa)` is not read either, which needs a 27th item to be the empty one.
+- `parse_document` checks the size, then the type, then calls the reader and the tree builder. Reader warnings come first, then structure warnings.
+- `ParserContract.md` replaces every earlier contract message. Each item is tagged same, refined or new against the first message to Tanishq (30 September, nine points).
+- The CLI keeps `--summary`. JSON omits `source_text`, `blocks[].text` and `nodes[].text` unless `--text`, the error code goes to stderr and the exit status is 2, and non-ASCII characters are escaped.
+- `graphify` moved to 1-R, because Rules section 7 puts it at the end of a phase.
+- The review of the diff cut four things before this entry: an unused `_TEXT_FIELDS` constant, an empty `scripts/__init__.py`, a test that restated the model's field list, and a test of absent code. A second review after the width rule found nothing to cut. Kept: `--summary`, the `__main__` print in `schema.py` and the in-test checker.
+
+Findings during the part:
+- The gap rule's first version was wrong on a real file. Of the three DOCX files, only the Victoria general conditions changed: 167 nodes against 165. `(h) a reference to:` is followed by a Word numeral list `(i)` to `(iv)`. `(i)` has been read as the ninth letter since 1-E, and under the gap rule `(ii)` and `(iii)` were taken as the 35th and 61st letters, 26 numbers above, as clauses at level 2. An empty paragraph does not explain a jump that long. Fix: a letter gap has to stay within the same width (a to z, aa to zz). The test was written first and failed on exactly `(ii)` and `(iii)`. After the fix all eight files match the 1-E trees node for node (93, 209, 157, 413, 124, 5, 158 and 165 nodes). The five PDFs were compared on the final code only. They carry no Word labels, so the gap rule cannot reach them.
+- No real file in the set holds an empty numbered paragraph inside a list. The gap rule is tested by `empty_numbered.docx` and by generated labels only.
+- The entry point, schema and CLI were written test first. The first run failed on the missing import.
+- The gap rule was also test first: 8 tests failed on the 1-E code. Two tests are regression guards and passed before the change: a numeral that continues a roman run is not taken for a letter, and a gap may reach `(z)` and a repeated letter may skip one inside its width.
+- Mutation. The first run covered 20 mutants: 19 killed, and 1 equivalent, which led to `grew = number > current if not typed else ...` becoming `number > current`. The run over the simplified code killed all 20. The 6 width mutants (always true, an off-by-one at the end of a width, a looser bound, an inverted family test, `or` for `and`, no ordering) were all killed.
+- Seen in passing, not changed: a numeral list right after `(h)` is read as one level 2 node that swallows `(ii)` to `(iv)`. That is the 1-E reading of `(i)`. The Word list's own level (`ilvl`) would settle it, and `docx.py` does not pass it on. Added to the 1-F ceilings and to `ParserContract.md` 12.6.
+
+Not verified:
+- The contract's tags compare with the first message only. The later messages to Tanishq (1-A update, 1-B, 1-C, 1-D, 1-D2, 1-E) were not re-read, so an item tagged "new" may have been sent in one of them.
+- Rows copied from `Phases.md` into the contract and not measured again: rotated pages unsupported, an encrypted DOCX gives `UNSUPPORTED_TYPE`, a chain of 3,000 Form XObjects, and the 186 s timing.
+- The gap rule against Word's own rendering. There is no Word here, and no real file exercises it.
+- A Word list that opens with an empty paragraph at a nested decimal, a letter list or a numeral list is still unread. Documented, not built.
+- The CLI ran by hand on one file only (the Victoria DOCX with `--summary` and without, and an empty file, which printed `EMPTY_FILE` and exited with 2). Piping its output into `head` prints a `BrokenPipeError` traceback. It is a development tool, so it was left alone.
+- The copy passes (copywriting, copy-editing, stop-slop) ran over `ParserContract.md` and over the new text in `Phases.md`, `Architecture.md` and `README.md` (the README text needed no change). Four sentences in `Phases.md` and one line in `Architecture.md` were rewritten.
+
+Blockers: none.
+
+Open for your decision:
+- Whether to build the `ilvl` carrier for the first-item and `(h)` then `(i)` cases.
+- Whether the first message is the right baseline for the contract tags.
+- `name_span` and the `party` kind: the frontend requires them, and nothing in Phase 1 or 2 builds them before 2-E.
+
+Next action: commit 1-F with `feat(parser): add parse entry point, CLI and parser contract`, send `ParserContract.md` to Tanishq as the replacement for every earlier contract message, then reply `next` to start the 1-R phase review.

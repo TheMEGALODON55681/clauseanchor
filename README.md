@@ -1,6 +1,6 @@
 ## Backend
 
-The backend reads a PDF or DOCX contract and builds one canonical text with exact character offsets. Its code lives in `backend/`. Today it holds the parsed-document model and the text assembler. The PDF and DOCX readers land next.
+The backend reads a PDF or DOCX contract and builds one canonical text with exact character offsets. Its code lives in `backend/`. Today it holds the PDF and DOCX parsers, the clause structure builder and a command-line tool. There is no server yet. The output format is in `docs/app/ParserContract.md`.
 
 ### Prerequisites
 
@@ -22,13 +22,13 @@ On macOS or Linux, activate with `source .venv/bin/activate`. `requirements.txt`
 
 ### Run
 
-The backend has no server or command-line tool yet. To check your install, import the package:
+There is no server yet. To parse a file and print the result as JSON, from `backend/` with the virtual environment active:
 
 ```bash
-python -c "import app.parsing.assemble"
+python -m app.scripts.parse_file CONTRACT.pdf
 ```
 
-A silent exit means the install works.
+The JSON leaves out the contract text unless you add `--text`. Add `--summary` for a count of blocks, nodes and warnings instead. A file the parser rejects prints its error code and exits with status 2.
 
 ### Test
 
