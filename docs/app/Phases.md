@@ -33,9 +33,9 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
 
 - [x] **1-A** Package scaffold and the parsed-document model
   `chore(backend): set up package, tooling and parsed document model`
-- [ ] **1-B** PDF text extraction in reading order
+- [x] **1-B** PDF text extraction in reading order
   `feat(parser): extract ordered text blocks from PDFs`
-  Paused at Aryan's request while the frontend track runs. It resumes when he says so.
+  Adds `detect.py` and `pdf.py` with the A1 error mapping, A6 to A8 and their fixtures. Deviations and ceilings are listed under the 1-B amendments below.
 - [ ] **1-C** PDF safety: decoration, scanned, encrypted, malformed, limits
   `feat(parser): mark repeated page furniture and reject unreadable PDFs`
 - [ ] **1-D** DOCX archive safety, body, tables and text boxes
@@ -80,6 +80,25 @@ Deviations from the 1-A spec, with reasons:
 - **A6 Text fidelity [CONTRACT].** Call `extract_words(expand_ligatures=False)`; the default rewrites U+FB01 to `fi`. Runs of spaces collapse to one and NBSP arrives as U+0020 in PDFs, and the contract says so. `latin_unicode.pdf` embeds the Vera font that ships with reportlab and asserts that U+FB01 survives. Only DOCX asserts NBSP.
 - **A7 Block splitting.** Compare the pitch (top to top) with the median pitch and split above 1.3 times, held in one named constant. A line that starts with a numbering token also starts a new block, matched by a coarse regex local to `pdf.py`. The left-edge rule applies only to a return to a column's left edge, never to an indent. New fixture: `tight_clauses.pdf` (hanging indents, 6 pt paragraph spacing).
 - **A8 Columns.** Assign words to columns first, then group lines. A full-width line crosses the gutter. New fixtures: a 3-column table page (covers MORE_THAN_TWO_COLUMNS and shows that a table page keeps top-to-bottom order) and a page for COLUMN_ORDER_UNCERTAIN.
+
+Deviations from the 1-B spec, with reasons. Done in 1-B:
+- 1-B carries all of A1's error mapping for the PDF reader, with the fixtures `malformed.pdf` (the first 60 percent of `simple.pdf`) and `encrypted.pdf` (a user password). The libraries log raw document bytes from their first call, so the silenced loggers and the closed catch tuple cannot wait. The byte-flip sweep is one test in `test_pdf.py` (300 seeded mutants, a log handler attached). 1-C keeps decoration, scanned pages, the owner-only encrypted file, the page limit and the content budget.
+- The `pdfplumber` logger is silenced next to `pdfminer`. pdfplumber puts exception text into a warning about unreadable metadata.
+- The reader function is the only place library errors are caught. It returns plain words, and every assembler call runs after it. A test patches the assembler to refuse an empty block and asserts a `ValueError` comes out, not a file error code.
+- A word with no text is dropped. A damaged ToUnicode map can produce one, and it reached layout as a division by zero in 28 to 35 of 2,500 mutants of the embedded-font fixture.
+- A7 clarified: a return to the left edge ends a block only when the block began at the edge, or is the first block of its stream. Read literally, a first-line indent returned to the edge on its second line and cut every paragraph after its first line (28 blocks for 14 paragraphs in a flowed test page). The first block of a stream is exempt because it may open on the tail of a hanging paragraph from the page before.
+- A8 gutter, in numbers: a strip at least 12 points wide that at most 40 percent of the rows touch, with words on both sides in at least two rows, whose right edge lies in the middle 60 percent of the page. A row reads across the gutter when a word spans its right edge or the gap there is under 12 points. Two or more gutters keep row order and add MORE_THAN_TWO_COLUMNS. A page with one gutter is read in bands: lines that cross it stand alone, and each run of column rows gives the left column, then the right.
+- COLUMN_ORDER_UNCERTAIN `[CONTRACT]` means a line that crosses the gutter sits between two runs of column rows, so the order around it is a guess. One warning per page. A full-width title above the columns or a full-width line below them does not trigger it.
+- Block locator `[CONTRACT]`: `{"page": n, "block": i}`, with both numbers 1-based and `i` counting blocks within the page.
+- `detect_type` returns `"pdf"` for `%PDF-`, `"docx"` for a ZIP that holds `word/document.xml` and no `word/vbaProject.bin`, and `UNSUPPORTED_TYPE` for everything else. A ZIP that cannot be read gives MALFORMED_FILE.
+- `blank_page.pdf` (text, blank, text) is in the registry. 1-C adds the BLANK_PAGE warning to it.
+
+Known ceilings of 1-B, none of them silent:
+- Paragraphs with no spacing, no numbering and no indent fuse into one block per page. Nothing in the geometry separates them.
+- First-line indents with no paragraph spacing and no numbering put block boundaries one line late: the next paragraph's indented first line joins the block above, and that paragraph's second line starts a new block. With 6 pt spacing the boundaries are right, except that a page opening on a paragraph start cuts it after its first line (16 blocks for 14 paragraphs on the two-page probe: one paragraph crosses the page break and one is cut).
+- A two-column table is read as two columns, because its geometry matches a two-column page. Tables with three or more columns read row by row.
+- `pdf.pages` builds every page object before 1-C adds the 100-page check and the incremental count (A11).
+- A mutated file with a broken page tree and no pages reports NO_TEXT_FOUND.
 
 #### 1-C
 

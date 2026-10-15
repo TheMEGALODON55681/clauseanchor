@@ -874,3 +874,53 @@ Browser launch audit and the pause. After the sweep, Aryan stopped all browser, 
 Housekeeping: no server, browser or background process was started for this commit. Only typecheck, test and build ran, and each exited on its own. No git write was run.
 
 Next action: Aryan runs the manual check for S1, S3, S3b and S4, then commits this part. FE-R is ticked in `Phases.md`. Part 1-B stays paused until Aryan says so.
+
+## 2026-10-15: Part 1-B, PDF text extraction in reading order
+
+Part: 1-B. It resumes after the frontend track closed at 75b6885.
+
+Files changed:
+- New in `backend/`: `app/parsing/detect.py`, `app/parsing/pdf.py`, `tests/conftest.py`, `tests/fixtures/build.py`, `tests/test_pdf.py`, `tests/test_invariants.py`.
+- `docs/app/Phases.md`: 1-B ticked; the 1-B deviations and ceilings added under A8.
+- `docs/app/Architecture.md`: the `pdf.py` tree line, two key-decision rows (reading order and blocks, errors and logs) and the block locator line in section 4.
+- `docs/app/BuildLog.md`: this entry.
+- Unchanged: `README.md` and `docs/app/Rules.md`. Rules.md section 1 already says either track may edit `README.md`, added at FE-0, so the exemption from the root-files freeze needed no change.
+
+Commands run, from `backend/` in Git Bash with the venv active:
+- `ruff format .`, `ruff check .`, `pytest -q`.
+- Probes of pdfplumber 0.11.10 and pdfminer.six 20260107 in the venv: the `extract_words` keys, the exception class tree, the wrapped `PDFPasswordIncorrect`, the logger names, and ligature and NBSP behaviour with the Vera font.
+- Two mutation passes on copies of `pdf.py` outside the repo, and byte-level sweeps of the fixtures outside the test suite (see Verification).
+- A flowed-layout probe built with reportlab platypus outside the repo.
+- The Rules section 1 scrub and a dash check over `backend/` and `docs/app/`.
+- Read-only git: `git status`, `git log`.
+
+Tests: 62 passed, 0 failed, 0 skipped. Of these, 24 come from 1-A, 25 are in `test_pdf.py` (7 for `detect_type`, 18 for `parse_pdf`) and 13 are in `test_invariants.py` (one per fixture, valid and invalid). Eighteen one-line mutations of `pdf.py` each failed at least one test: the pitch ratio, the numbering split, the left-edge return (removed, and firing on any jump), the opener condition, the stream-first exemption, ligature expansion, the logger silencing, the wrong-password mapping, the gutter width, the gutter zone, the rows-around-gutter check, the crossing test, the uncertain warning, the more-than-two branch, the empty-page skip, the empty-text filter, and moving the assembler calls inside the catch.
+
+Pinned versions added: none. No new dependency. `pdfminer.psexceptions.PSException` and `pdfminer.pdfdocument.PDFPasswordIncorrect` are imported for their exception types only, and pdfminer.six is already pinned through pdfplumber (see the pre-phase entry). The parser modules import without scikit-learn in `sys.modules`.
+
+Decisions:
+- The two additions carried over from before the pause. First, every assembler call stays outside the try block that catches `ValueError` (A1). `_read` is the only function with a try block, and it returns plain words, so the layout and the assembler run after it. A test patches `TextAssembler.add_block` to hand the real assembler an empty block and asserts that `ValueError("block has no text")` comes out and is not a `ParseError`. Moving the calls inside the catch fails that test. Second, the README exemption from the root-files freeze was already in Rules.md, so nothing was changed.
+- 1-B carries all of A1's error mapping (malformed to MALFORMED_FILE, a wrapped wrong password to ENCRYPTED_PDF, `from None`, silenced loggers), with `malformed.pdf` and `encrypted.pdf` and the byte-flip sweep. The libraries log raw bytes from their first call, so this could not wait for 1-C.
+- `pdfplumber` is silenced next to `pdfminer`: it puts exception text into a metadata warning.
+- Rows group by `top` from the first word of a row, with a tolerance of half the median word height. Lines inside a column are grouped again from that column's words.
+- The gutter search is a sweep over merged word spans per row, not a sampled grid, so a damaged file with huge coordinates costs no memory. A row reads across the gutter when a word spans the gutter's right edge (one point of tolerance) or the gap at that edge is under 12 points. The right edge decides because a column's right side is ragged and its left side is square.
+- A word with no text is dropped in `_read`. Without that filter, 28 and 35 of 2,500 mutants of `latin_unicode.pdf` raised `ZeroDivisionError` outside the catch. A patched `extract_words` covers it in `test_pdf.py`.
+- The numbering token is a coarse regex local to `pdf.py`: `1.`, `1.1`, `1.1.1.` and `(a)`, `(iv)`, `(3)`, followed by white space. A bare number is left out, so `30 days` at the start of a wrapped line does not split.
+- Block locator `[CONTRACT]`: `{"page": n, "block": i}`, both 1-based, `i` counting within the page. COLUMN_ORDER_UNCERTAIN `[CONTRACT]` fires once per page when a crossing line sits between two runs of column rows. Both go to Tanishq with the other contract items.
+- `detect_type` gives MALFORMED_FILE for a ZIP that cannot be read, and UNSUPPORTED_TYPE for a ZIP without `word/document.xml` or with `word/vbaProject.bin`.
+- Fixtures (all reportlab, `invariant=1`, uncompressed pages so a leak is visible, US letter): `simple`, `two_column`, `long_lines`, `latin_unicode` (Vera, holds U+FB01), `tight_clauses`, `three_column_table`, `column_uncertain`, `contents` (page numbers far right, covers the gutter zone), `first_line_indent`, `hanging_page_break`, `blank_page`, `malformed`, `encrypted`.
+
+Findings during the part:
+- Read literally, A7's left-edge rule cut every first-line-indent paragraph after its first line: 28 blocks for 14 paragraphs on a flowed two-page probe with 6 pt spacing. The rule now ends a block only when the block began at the edge or is the first block of its stream. A first attempt without the stream exemption fused the rest of a page that opened on the indented tail of a hanging paragraph, and a fixture caught it. The final numbers on the probe: 6 pt block paragraphs 14 blocks, 6 pt first-line indent 16, hanging with numbers 15, hanging without numbers 15, block paragraphs with no spacing 2 (one per page, nothing in the geometry separates them).
+- Geometry cannot tell a hanging indent that opens a page from a first-line indent that opens one. The remaining ceilings are in `Phases.md` under the 1-B deviations.
+- The reportlab default page is A4, so the first draft of the bbox test caught fixtures laid out for US letter. `PAGE_WIDTH` and `PAGE_HEIGHT` are now passed to the canvas.
+
+Verification:
+- `ruff format .`: 12 files left unchanged. `ruff check .`: all checks passed. `pytest -q`: 62 passed in about 1.7 s.
+- Sweeps outside the suite: about 13,500 mutants of eleven fixtures (byte flips, truncation, deleted ranges, inserted bytes), seeds 1 to 3, 21 to 23 and 31, the last 9,000 against the final extractor. Every result was a parse or a ParseError (MALFORMED_FILE, ENCRYPTED_PDF or NO_TEXT_FOUND). No other exception type, no log record, and the slowest parse took 56 ms.
+- Attribution scrub: no output. Dash check: no em or en dash in `backend/` or `docs/app/`.
+- No server, browser or background process was started. No git write was run.
+
+Blockers: none.
+
+Next action: commit 1-B with `feat(parser): extract ordered text blocks from PDFs`, send the two new `[CONTRACT]` items to Tanishq with the rest, then reply `next` to start 1-C.
