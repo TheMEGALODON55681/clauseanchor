@@ -50,6 +50,8 @@ flowchart TD
 | DOCX text boxes | Every `w:txbxContent` outside `mc:Fallback` is extracted as text blocks right after its anchor paragraph. `TEXT_BOX_CONTENT` is an informational warning and `partial` stays False | Contract text can sit in a text box. Reading the Fallback copy as well would duplicate it |
 | DOCX embedded objects | `EMBEDDED_OBJECT` warning and `coverage.partial = True` | The object's content is not extracted, so the core must not report "not found" for this file |
 | DOCX unknown block content | The body walk recurses through `sdt`, `smartTag`, `fldSimple`, `customXml` and `hyperlink`. An unknown block-level child, including `altChunk`, is skipped with an `UNSUPPORTED_DOCX_FEATURE` warning and `coverage.partial = True` | Text inside a wrapper must not vanish. A raised error would leave no result to mark partial, so an unknown block is a warning |
+| DOCX archive safety | Every member name is checked before any member is read. After backslashes become slashes, an absolute path, a drive letter or a `..` segment gives `ARCHIVE_UNSAFE`. A total declared size over 100 MiB gives `ARCHIVE_TOO_LARGE`. Nothing is extracted to disk | A member name decides nothing about where bytes go, because the parser reads from memory, but a package that names a path outside itself is hostile. zipfile stops a member at its declared size, so the declared total bounds every read, and a member that understates its size fails its checksum |
+| DOCX tables and cells | A cell is one `table_cell` block with its paragraphs joined by a newline. A nested table or a text box ends the block, and the text after it starts the next block of the same cell (`segment`). Tables are numbered in preorder across the document | Blocks follow the order of the file, and the text on either side of a nested table stays in blocks of the same cell |
 | Database | SQLite only, `create_all()` | Nothing durable is stored; no migrations tool needed |
 | Worker model | One API process, one bounded analysis worker, one executor thread. Each parse job runs in a child process with a wall-clock kill (planned, part 2-C) | Fits a laptop and a free host; no Redis or Celery. The kill stops a parse that the content budget cannot bound |
 | User content storage | RAM only, 60-minute absolute TTL | Matches the synopsis promise; nothing on disk |
@@ -75,7 +77,7 @@ backend/
       errors.py             # ParseError, the fixed error/warning code lists and the limits
       detect.py             # file type detection by magic bytes
       pdf.py                # pdfplumber extraction: error mapping, words to rows to blocks, columns (1-B); decoration, scanned checks, content budget (1-C)
-      docx.py               # python-docx extraction: body order, tables, text boxes, headers, footers, footnotes, numbering, tracked-change check
+      docx.py               # python-docx extraction: archive checks, tracked-change check, body order, tables, text boxes (1-D); headers, footers, footnotes, numbering (1-D2)
       structure.py          # numbering stack, headings, schedules, definitions
       schema.py             # exports ParserContract JSON Schema
     scripts/
@@ -132,6 +134,8 @@ Party nodes (a requirement from the frontend, `FrontendDesign.md` 17.7, BR). The
 Separators: lines inside a block join with `"\n"`, blocks join with `"\n"`, pages join with `"\n\n"`. Trailing spaces and tabs are stripped from each line before it is appended. CRLF and CR become LF. In PDF text, runs of spaces collapse to one space and U+00A0 becomes U+0020. DOCX text keeps U+00A0.
 
 PDF blocks carry the locator `{"page": n, "block": i}`. Both numbers are 1-based, and `i` counts the blocks within the page. A page lists its top margin lines first, then its body blocks, then its bottom margin lines. `coverage.pages_with_text` leaves out scanned pages, whose only blocks are margin stamps.
+
+DOCX blocks carry one of three locators, with every number 1-based. A body paragraph is `{"part": "document", "paragraph": i}`, where `i` counts all body-level paragraphs, empty ones included. A text box paragraph is `{"part": "document", "textbox": n, "paragraph": i}`, where `n` numbers the text boxes in preorder. A table cell is `{"part": "document", "table": t, "row": r, "cell": c, "segment": k}`, where `t` is the preorder index across all tables and `k` counts the blocks of that cell. DOCX blocks have no page and no box. Headers, footers and footnotes add their own `part` values in 1-D2.
 
 ## 5. Interface to the core (planned, Phase 2)
 

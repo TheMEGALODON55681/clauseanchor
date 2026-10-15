@@ -39,8 +39,9 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
 - [x] **1-C** PDF safety: decoration, scanned, encrypted, malformed, limits
   `feat(parser): mark repeated page furniture and reject unreadable PDFs`
   Adds decoration, the scanned and partial checks, the page limit and the content budget to `pdf.py`, with A9 to A11 and their fixtures. Deviations and ceilings are listed under the 1-C amendments below.
-- [ ] **1-D** DOCX archive safety, body, tables and text boxes
+- [x] **1-D** DOCX archive safety, body, tables and text boxes
   `feat(parser): extract DOCX body, tables and text boxes safely`
+  Adds `docx.py` with A12 to A16 and their fixtures. Deviations and ceilings are listed under the 1-D amendments below.
 - [ ] **1-D2** DOCX numbering, headers, footers and footnotes
   `feat(parser): render DOCX numbering and extract page parts`
 - [ ] **1-E** Clause structure tree and definitions
@@ -124,7 +125,7 @@ Deviations from the 1-C spec, with reasons. Done in 1-C:
 Known ceilings of 1-C, none of them silent:
 - Only Flate, behind any leading ASCII filter, is measured. LZW and RunLength streams count their stored length, which understates them.
 - A form drawn many times counts once. Font programs, ToUnicode maps and object streams are not budgeted.
-- The budget bounds decoded size, not time. A11 measured 186 s for 16 MB, so a stream just under 8 MiB can take about 90 s in `extract_words`. That is an extrapolation, and 1-C did not measure that size. The Phase 2 wall-clock kill is the real bound.
+- The budget bounds decoded size, not time. A11 measured 186 s for a 16 MB stream. An 8 MiB stream of white space, the largest the budget accepts, parsed in 0.05 s (BuildLog, "Checks before 1-D"), so the cost follows the number of tokens and not the number of bytes. 8 MiB of dense operators or text has not been measured. The Phase 2 wall-clock kill is the real bound.
 - A form chain 3,000 deep makes pdfminer fail, and the file is rejected as `MALFORMED_FILE` with no leak.
 - Annotation values held only on a parent field are not seen, and annotation types other than Widget and FreeText are not checked for text.
 - Overlapping images count twice toward the image share.
@@ -140,6 +141,31 @@ Known ceilings of 1-C, none of them silent:
   Resolution (2 October 2026): an unknown block-level child, including `altChunk`, is skipped. The parser adds an `UNSUPPORTED_DOCX_FEATURE` warning and sets `coverage.partial = True`; it does not raise. Reason: a raised error leaves no result to mark partial. The code stays in the warning list.
 - **A15 Text boxes [CONTRACT].** Extract every `w:txbxContent` outside `mc:Fallback`. Its paragraphs become `kind="text"` blocks directly after the anchor paragraph, with locator `{"part": "document", "textbox": n, "paragraph": i}`. Headers, footers and footnotes follow the same rule. TEXT_BOX_CONTENT stays as an informational warning and `partial` stays False. Embedded objects keep EMBEDDED_OBJECT with `partial = True`. Two tests: a document with `mc:AlternateContent` and a document with bare VML each yield the text exactly once. The `[CONTRACT]` tag covers the changed warning meaning and the new locator keys; block kinds do not change.
 - **A16 Cells and paragraphs [CONTRACT].** Walk a cell's children in XML order and flush the text before and after a nested table as separate blocks. `"table"` in a locator is the preorder index across all tables. Body paragraphs use `{"part": "document", "paragraph": i}`.
+
+Deviations from the 1-D spec, with reasons. Done in 1-D:
+- `parse_docx(data)` is the entry point. It does not call `detect_type`, which 1-F puts in front of both parsers. The package is opened with python-docx, so a file python-docx cannot open (a strict OOXML package, a template, a missing relationship) is `MALFORMED_FILE`.
+- A12 order: the member list is read and checked before any member is read. Sizes are the declared ones, and zipfile stops a member at its declared size, so the sum bounds what the parser reads. A member that understates its size is cut short and fails its checksum (`MALFORMED_FILE`). Nothing is extracted to disk. The overlapping-entries warning that zipfile raises is silenced, because its text carries a member name from the file.
+- A1 tuple for DOCX is larger than the spec's list: `zlib.error`, `EOFError`, `KeyError`, `ValueError` and `AttributeError` each came out of a mutation sweep as an uncaught type. `TypeError`, `AssertionError` and `IndexError` follow the PDF reader's tuple. The walk and the archive checks sit inside the try, the assembler calls outside it, as in `pdf.py`.
+- Locators `[CONTRACT]`. A body paragraph is `{"part": "document", "paragraph": i}`, with `i` counting every body-level paragraph from 1, empty ones included, so the number stays the paragraph's place in the file. A text box paragraph is `{"part": "document", "textbox": n, "paragraph": i}`. `n` numbers text boxes from 1 across the document in preorder (an outer box before the box inside it), and `i` counts the paragraphs of that box. A table cell is `{"part": "document", "table": t, "row": r, "cell": c, "segment": k}`. `t` is the preorder index across all tables, and `r` and `c` count rows and cells from 1 (a merged cell is one cell). `k` is not named in A16: it counts the blocks of one cell from 1, because a nested table or a text box ends one block and the text after it starts the next. The key is always present.
+- A cell is one block of kind `table_cell`, its paragraphs joined with a newline. An empty cell makes no block. A text box anchored in a cell is read as a nested table is: the cell text so far, anchor paragraph included, is flushed, then the box's blocks, then the rest of the cell as the next segment.
+- A paragraph with no text, or only white space (a lone U+00A0 included), makes no block and still counts in `paragraph`. Characters are never altered, so U+00A0 and runs of spaces stay.
+- Run text follows the library's rules: `w:t`, `w:tab`, `w:ptab` (tab), `w:cr` and a `w:br` of type text wrapping (newline), `w:noBreakHyphen` (`-`). A page or column `w:br` adds nothing, which is A24's fused-words ceiling. Field instructions (`w:instrText`) are not read, field results are.
+- A14 as built. At block level the walk sees through `sdt`, `customXml`, `smartTag`, `fldSimple` and `hyperlink`, also between table rows and between cells. A child that is not a paragraph, a table, one of those wrappers or a property or range marker is skipped, with `UNSUPPORTED_DOCX_FEATURE` and `partial`. `detail` is `altChunk` or `unknown_block`.
+- A15 as built: a `w:object` anywhere in a paragraph gives `EMBEDDED_OBJECT` and `partial`. `TEXT_BOX_CONTENT`, `EMBEDDED_OBJECT` and each `UNSUPPORTED_DOCX_FEATURE` detail are emitted once per document `[CONTRACT]`.
+- A13 as built: the tracked-change check covers the parts of type document, header, footer, footnotes and endnotes that the package relationships reach, matched by namespace and local name, in any element position. That includes `w:ins` inside `w:rPr`, which marks an inserted paragraph.
+- The walk stops with `TOO_MUCH_TEXT` as soon as the text passes 500,000 characters, before the assembler runs.
+- `media_type` is `application/vnd.openxmlformats-officedocument.wordprocessingml.document`.
+- Fixtures: `simple`, `zip_dotdot`, `zip_backslash`, `zip_drive_letter`, `zip_absolute`, `zip_dots_in_name`, `archive_too_large` (101 MiB sparse), `corrupt_zip`, `tracked_insert`, `tracked_delete`, `tracked_move_from`, `tracked_move_to`, `tracked_other_prefix`, `tracked_paragraph_mark`, `tracked_in_header`, `tracked_in_footnotes`, `foreign_ins`, `wrap_sdt`, `wrap_sdt_inline`, `wrap_smart_tag`, `wrap_fld_simple`, `wrap_custom_xml`, `wrap_hyperlink`, `wrap_sdt_row`, `wrap_sdt_cell`, `alt_chunk`, `unknown_block`, `textbox_alternate_content`, `textbox_vml`, `textbox_nested`, `textbox_in_cell`, `embedded_object`, `tables`, `nested_table`, `run_content`, `empty_paragraphs` and `entity_bomb`. All are generated at test time from raw XML, and nothing binary is committed. `build_zip(member_name)` builds the archive fixtures and sets the member name after the entry is made, because `ZipInfo` rewrites a backslash on Windows.
+
+Known ceilings of 1-D. The first two bullets are silent: the file parses and nothing says text was left out.
+- Inline math, chart text and SmartArt text are not read and raise no warning. A block-level `m:oMathPara` is skipped with `UNSUPPORTED_DOCX_FEATURE`.
+- Comments are not read and raise no warning. Symbol characters (`w:sym`) and footnote reference marks add nothing.
+- Headers, footers, footnotes and endnotes are not read until 1-D2. They are already searched for tracked changes.
+- A part that no relationship reaches is neither searched for tracked changes nor read.
+- A strict OOXML package, which `detect_type` accepts, is rejected here as `MALFORMED_FILE`.
+- XML nested deeper than 256 levels is `MALFORMED_FILE`.
+- A text box is read at its anchor paragraph, not by where it sits on the page.
+- Nothing is rendered for list numbering (1-D2). Merged cells are not marked.
 
 #### 1-D2
 

@@ -1005,3 +1005,95 @@ Not verified:
 Blockers: none.
 
 Next action: commit 1-C with `feat(parser): mark repeated page furniture and reject unreadable PDFs`, add the new `[CONTRACT]` items to the Tanishq message (kind `header` and `footer` on PDF blocks and the first-or-last-row page-number rule, the per-page `PARTIALLY_SCANNED_PDF` warning, the `BLANK_PAGE` warning, `pages_with_text` leaving out scanned pages, and the partial triggers: 20 to 199 characters on an image-dominant page, and annotation text), then reply `next` to start 1-D.
+
+## 2026-10-15: Checks before 1-D
+
+Two checks were open after 1-C was committed as 97bb743. No code changed for either.
+
+Fused paragraphs on the CUAD sample. This was already measured in the 1-C entry (five contracts, 2,007 blocks, 140 pages, nothing re-parsed). Blocks with a clause number somewhere other than the start:
+
+| File | Blocks | Clause number after the start | Of those, a second line opens with one |
+|---|---|---|---|
+| 01 Cybergy 2014 | 174 | 16 | 1 |
+| 02 Healthgate 1999 | 797 | 34 | 1 |
+| 03 Athens 2009 | 246 | 54 | 1 |
+| 04 Dova 2018 | 614 | 123 | 7 |
+| 05 Theravance 2020 | 176 | 10 | 0 |
+| Total | 2,007 | 237 (11.8 percent) | 10 |
+
+Of the 237, 120 are cross-references, 113 are inline enumerators inside one paragraph and 4 are dates or decimals. None of the 10 line-start hits is two numbered paragraphs run together. A separate check for a sentence end followed by a capitalised line found about 4 real fusions in 2,007 blocks, all unnumbered paragraphs in file 05. Verdict: 1-E needs no fix first. The sample is five SEC-exhibit style files, so it says little about other layouts.
+
+An 8 MiB whitespace stream. One foreground run, one process, hard exit after 180 s.
+- Input: a one-page PDF whose single content stream is exactly `MAX_DECODED_CONTENT_BYTES` spaces (8,388,608), Flate-packed, 8,603 bytes in all. It is the largest stream the budget accepts: `bomb_content.pdf` is the same file plus one byte.
+- Method: `parse_pdf` on a copy of `app/` outside the repo, run from the venv interpreter in isolated mode. The process set `faulthandler.dump_traceback_later(180, exit=True)` as its own hard timeout, and the tool call had a 200 s backstop. One process started (pid 4740), and it exited by itself.
+- Result: `NO_TEXT_FOUND` after 0.05 s wall and 0.03 s CPU. The budget let the stream through and the extractor read it.
+- Reading: white space is not the slow path. `pdfminer/psparser.py` skips it with one regex search over each 4 KiB buffer, so 8 MiB is about 2,000 searches. The 90 s extrapolation under the 1-C ceilings, and the guess under "Not verified" in the 1-C entry, do not hold for white space. The 186 s that A11 measured for a 16 MB stream must have come from a stream of tokens, where the cost follows the number of operators and words and not the number of bytes. That content was not recorded.
+- Not measured: 8 MiB of dense operators or text. That is the real worst case for time.
+
+A11 wall-clock kill, proposal for 2-C. The only parse times on record for real files are from the 1-C smoke check: 1.6 s to 18 s per file, the slowest being 33 pages in 18 s, one run each, on this laptop. That is about 0.55 s per page, so about 55 s for a 100-page file by a straight line. Proposed value: 120 s, one named constant in the 2-C config, about twice the extrapolated legitimate worst case. It lets a slow host through and caps what a hostile file can take from one worker at two minutes. Two things are open. The figure rests on one run per file and must be re-measured on the Phase 2 host before it is fixed. And the dense-token case above is unmeasured, so the 120 s is a bound on cost, not a number the bomb was shown to reach.
+
+## 2026-10-15: Part 1-D, DOCX archive safety, body, tables and text boxes
+
+Part: 1-D. It follows 1-C, committed as 97bb743. The numbering, headers, footers and footnotes are 1-D2.
+
+Files changed:
+- `backend/app/parsing/docx.py` (new): A12 to A16. `parse_docx(data)`, the archive checks, the tracked-change scan, and the body walk.
+- `backend/tests/fixtures/build.py`: 37 DOCX registry entries, `build_docx(body, extras, prolog)` and `build_zip(member_name)`.
+- `backend/tests/test_docx.py` (new): 73 tests.
+- `backend/tests/test_invariants.py`: picks `parse_docx` or `parse_pdf` by the fixture's suffix.
+- `docs/app/Phases.md`: 1-D ticked, with the 1-D deviations and ceilings.
+- `docs/app/Architecture.md`: two decision rows, the `docx.py` tree line and the DOCX locators.
+- `docs/app/BuildLog.md`: this entry, and the checks entry above it.
+
+Commands run, from `backend/` with the venv interpreter:
+- `ruff format .`, `ruff check .`, `pytest -q`.
+- One-line mutants of `docx.py` on copies of `app/` and `tests/` outside the repo, and mutation sweeps of small packages (damaged bytes, deleted ranges, inserted bytes), also outside the repo.
+- Probes of four edge cases (strict relationship type, deep nesting, a 10 MB text node, entity expansion), all small.
+- The Rules section 1 scrub, a tool-name grep over `backend/` and `docs/app/` added lines, and a dash scan with a control string that holds both dashes.
+- Read-only git: `git status`, `git diff`, `git log`.
+
+Tests: 259 passed, 0 failed, 0 skipped (149 after 1-C). `test_docx.py` holds 73, and `test_invariants.py` went from 42 to 79 (one per DOCX fixture).
+
+Pinned versions added: none. `lxml` 6.1.3 is now imported directly, for `etree.LxmlError`. It comes with python-docx 1.2.0 and is not pinned on its own, the same as pdfminer.six next to pdfplumber.
+
+Decisions (the rest are listed under the 1-D deviations in `Phases.md`):
+- python-docx opens the package, so 1-D2 can use its styles, numbering and header parts. The walk itself reads the raw elements, because the library's paragraph text skips runs inside `smartTag`, `fldSimple`, content controls and text boxes.
+- The reader returns plain items and the assembler runs after it, outside the try, as in `pdf.py`. A test patches the assembler to refuse an empty block and asserts a `ValueError`.
+- A cell is one `table_cell` block, and a nested table or a text box ends it. A16 did not name the `segment` key that tells the pieces apart. It is always present.
+- Warnings are once per document. A16 and A15 are silent on this.
+- The text limit is checked while walking, so a part that holds millions of characters is not collected in full before the assembler refuses it.
+- `NotImplementedError` is not in the catch tuple, because it is a subclass of `RuntimeError`, which A1 lists for the encrypted member.
+- Zipfile's warning for overlapping entries is silenced inside the reader, because its text carries a member name from the file and would reach a server log.
+
+Findings during the part:
+- Most byte-flipped packages fail the zip checksum before any XML is read, so a second kind of mutant damages one XML member and repacks the package with correct checksums. Over about 195,000 mutants of five small packages, the only types that came out uncaught were `KeyError` (a missing member), `ValueError` (a negative seek from a damaged header), `zlib.error` and `EOFError`. A package whose content types part is well formed but has the wrong root gave `AttributeError`, found by a test and not by a sweep. All five are in the tuple now. No log record appeared, and the slowest parse took 5 ms.
+- A first mutation run of `docx.py`: 66 mutants, 57 killed and 9 survived. Seven of the nine were test gaps and are closed:
+  - Block-level `smartTag`, `fldSimple` and `hyperlink` were untested, because the wrapper fixtures only exercise the inline path.
+  - Block-level markers such as `bookmarkStart` were untested.
+  - An unknown child of a table and of a row both produced the same deduplicated warning, so removing either check changed nothing visible.
+  - The early-end test raised `BadZipFile` and not `EOFError`.
+  - The silenced zipfile warning was untested.
+  - The remaining two were `NotImplementedError`, now removed from the tuple as redundant, and `if body is None`, an equivalent mutant: without the check the walk raises `TypeError`, which maps to the same code. The check stays for clarity.
+  After the new tests, the seven gap mutants were all killed, and four new ones (three more markers, and the `RuntimeError` entry replaced) were killed too.
+- Edge probes: a package with the strict relationship type passes `detect_type` and is `MALFORMED_FILE` here. 300 nested wrappers are `MALFORMED_FILE` (libxml2's depth limit is 256) and 100 parse. A single 10.1 MB text node is `TOO_MUCH_TEXT` after 0.02 s. Nested entities that would expand to 400,000 characters stay unexpanded.
+
+`[CONTRACT]` items to add to the Tanishq message for 1-D:
+- DOCX locators: body paragraph `{"part": "document", "paragraph": i}`, text box `{"part": "document", "textbox": n, "paragraph": i}`, cell `{"part": "document", "table": t, "row": r, "cell": c, "segment": k}`. All numbers are 1-based. `i` counts every body-level paragraph, empty ones included.
+- DOCX blocks have kind `text` or `table_cell`, `page` None and `bbox` None. A paragraph with no text or only white space makes no block. U+00A0 and runs of spaces are kept.
+- `TEXT_BOX_CONTENT`, `EMBEDDED_OBJECT` and `UNSUPPORTED_DOCX_FEATURE` appear once per document. The last carries `detail` `altChunk` or `unknown_block`, and sets `partial`. `EMBEDDED_OBJECT` sets `partial`. `TEXT_BOX_CONTENT` does not.
+- New error codes in use: `ARCHIVE_UNSAFE`, `ARCHIVE_TOO_LARGE`, `TRACKED_CHANGES_PRESENT`.
+- `media_type` is `application/vnd.openxmlformats-officedocument.wordprocessingml.document`.
+
+Verification:
+- `ruff format --check .`: 14 files already formatted. `ruff check .`: all checks passed. `pytest -q`: 259 passed in about 4.4 s.
+- Attribution scrub (Rules section 1): no output. No tool name in any line this part added. Dash scan over the files changed or added, with a control string that holds both dashes: the control was found, and no file held an en or em dash.
+- No browser, server or background service was started. The mutation run was one sequential background process with a 180 s limit per mutant, and it ended by itself. No git write was run.
+
+Not verified:
+- Parse time for a large DOCX. A `document.xml` near the 100 MiB archive limit has not been parsed, so its memory use and time are unknown. The walk stops at 500,000 characters, but lxml parses the whole part first. The Phase 2 wall-clock kill covers it, and the 120 s proposal in the checks entry above was derived from PDF timings only.
+- Only generated packages were parsed. No real contract in DOCX form was run, so Word's own markup (field codes, `mc:AlternateContent` with several `Choice` branches, grouped shapes) is covered by hand-written fixtures alone.
+- Strict OOXML, comments and inline math are listed as ceilings in `Phases.md` and have no fixture. Strict was probed once, outside the suite.
+
+Blockers: none.
+
+Next action: commit 1-D with `feat(parser): extract DOCX body, tables and text boxes safely`, add the 1-D `[CONTRACT]` items above to the Tanishq message, then reply `next` to start 1-D2.

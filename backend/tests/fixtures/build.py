@@ -1,12 +1,15 @@
-"""Generates every PDF fixture at test time with reportlab, so no binary file is committed."""
+"""Generates every PDF fixture at test time with reportlab, and every DOCX fixture from raw
+XML, so no binary file is committed."""
 
 from __future__ import annotations
 
 import io
 import os
+import zipfile
 import zlib
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Iterable
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 import reportlab
 from PIL import Image
@@ -16,7 +19,12 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 
-from app.parsing.errors import MAX_DECODED_CONTENT_BYTES, MAX_PDF_PAGES, ErrorCode
+from app.parsing.errors import (
+    MAX_ARCHIVE_BYTES,
+    MAX_DECODED_CONTENT_BYTES,
+    MAX_PDF_PAGES,
+    ErrorCode,
+)
 
 PAGE_WIDTH = 612.0  # US letter, in points
 PAGE_HEIGHT = 792.0
@@ -469,6 +477,221 @@ def _malformed_bytes() -> bytes:
     return data[: len(data) * 6 // 10]
 
 
+# DOCX fixtures (A12 to A16). Hand-written packages, so every wrapper, text box and tracked
+# change is exactly the markup under test. Text uses character references where a character
+# would be invisible or ambiguous in this file.
+
+_WML = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+_NAMESPACES = (
+    f'xmlns:w="{_WML}" '
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+    'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+    'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+    'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+    'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" '
+    'xmlns:v="urn:schemas-microsoft-com:vml" '
+    'xmlns:o="urn:schemas-microsoft-com:office:office"'
+)
+_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+_OFFICE_DOCUMENT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+_WML_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml"
+
+# A related part: (member name, content type, relationship type, xml)
+_Extra = tuple[str, str, str, str]
+
+
+def _run(text: str) -> str:
+    return f'<w:r><w:t xml:space="preserve">{escape(text)}</w:t></w:r>'
+
+
+def _p(text: str) -> str:
+    return f"<w:p>{_run(text)}</w:p>"
+
+
+def _tc(*content: str) -> str:
+    return f"<w:tc><w:tcPr/>{''.join(content)}</w:tc>"
+
+
+def _tr(*cells: str) -> str:
+    return f"<w:tr>{''.join(cells)}</w:tr>"
+
+
+def _tbl(*rows: str) -> str:
+    return f"<w:tbl><w:tblPr/><w:tblGrid/>{''.join(rows)}</w:tbl>"
+
+
+def _header(content: str) -> _Extra:
+    xml = f"{_XML}<w:hdr {_NAMESPACES}>{content}</w:hdr>"
+    return ("word/header1.xml", f"{_WML_TYPE}.header+xml", f"{_OFFICE_DOCUMENT}/header", xml)
+
+
+def _footnotes(content: str) -> _Extra:
+    xml = f"{_XML}<w:footnotes {_NAMESPACES}>{content}</w:footnotes>"
+    kind = f"{_OFFICE_DOCUMENT}/footnotes"
+    return ("word/footnotes.xml", f"{_WML_TYPE}.footnotes+xml", kind, xml)
+
+
+def _package(files: dict[str | zipfile.ZipInfo, bytes | str]) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, content in files.items():
+            archive.writestr(name, content)
+    return buffer.getvalue()
+
+
+def _docx_files(
+    body: str, extras: Iterable[_Extra] = (), prolog: str = ""
+) -> dict[str, bytes | str]:
+    extras = list(extras)
+    overrides = "".join(
+        f'<Override PartName="/{name}" ContentType="{content_type}"/>'
+        for name, content_type, _, _ in extras
+    )
+    relationships = "".join(
+        f'<Relationship Id="rId{n}" Type="{kind}" Target="{name.removeprefix("word/")}"/>'
+        for n, (name, _, kind, _) in enumerate(extras, start=1)
+    )
+    packages = "http://schemas.openxmlformats.org/package/2006"
+    files: dict[str, bytes | str] = {
+        "[Content_Types].xml": (
+            f'{_XML}<Types xmlns="{packages}/content-types">'
+            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.'
+            'relationships+xml"/>'
+            '<Default Extension="xml" ContentType="application/xml"/>'
+            f'<Override PartName="/word/document.xml" ContentType="{_WML_TYPE}.document.main+xml"/>'
+            f"{overrides}</Types>"
+        ),
+        "_rels/.rels": (
+            f'{_XML}<Relationships xmlns="{packages}/relationships">'
+            f'<Relationship Id="rId1" Type="{_OFFICE_DOCUMENT}/officeDocument" '
+            'Target="word/document.xml"/></Relationships>'
+        ),
+        "word/document.xml": (
+            f"{_XML}{prolog}<w:document {_NAMESPACES}><w:body>{body}"
+            '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>'
+        ),
+    }
+    if extras:
+        files["word/_rels/document.xml.rels"] = (
+            f'{_XML}<Relationships xmlns="{packages}/relationships">{relationships}</Relationships>'
+        )
+        files.update({name: xml for name, _, _, xml in extras})
+    return files
+
+
+def build_docx(body: str, extras: Iterable[_Extra] = (), prolog: str = "") -> bytes:
+    """A package whose body is the given WordprocessingML, for fixtures and inline tests."""
+    return _package(_docx_files(body, extras, prolog))
+
+
+def build_zip(member_name: str) -> bytes:
+    """A valid package plus one member with exactly this name. The name is set after the entry
+    is made, because ZipInfo rewrites a backslash to a slash on Windows when it is built."""
+    entry = zipfile.ZipInfo("placeholder.txt")
+    entry.filename = member_name
+    return _package({**_docx_files(_p("Body text.")), entry: b"x"})
+
+
+def _archive_too_large() -> bytes:
+    """One sparse member of 101 MiB, which deflates to about 100 KB."""
+    buffer = io.BytesIO()
+    megabyte = bytes(1024 * 1024)
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as archive:
+        for name, content in _docx_files(_p("Body text.")).items():
+            archive.writestr(name, content)
+        with archive.open("word/media/blank.bin", "w") as member:
+            for _ in range(MAX_ARCHIVE_BYTES // len(megabyte) + 1):
+                member.write(megabyte)
+    return buffer.getvalue()
+
+
+def _simple_docx() -> bytes:
+    return build_docx(
+        _p("SERVICES AGREEMENT")
+        + _p("1. Definitions")
+        + _p("1.1 In this Agreement the following words have these meanings.")
+        + _p('(a) "Services" means the work described in Schedule 1.')
+        + _p("2. Term")
+        + _p("2.1 This Agreement starts on the Effective Date.")
+    )
+
+
+def _corrupt_zip() -> bytes:
+    data = _simple_docx()
+    return data[: len(data) * 6 // 10]
+
+
+_CHANGE = 'w:id="1" w:author="Drafter" w:date="2026-01-01T00:00:00Z"'
+
+
+def _tracked(markup: str) -> Callable[[], bytes]:
+    return lambda: build_docx(_p("Before.") + f"<w:p>{markup}</w:p>" + _p("After."))
+
+
+def _doc(*body: str) -> Callable[[], bytes]:
+    return lambda: build_docx("".join(body))
+
+
+_SDT = '<w:sdt><w:sdtPr><w:alias w:val="Field"/></w:sdtPr><w:sdtContent>{}</w:sdtContent></w:sdt>'
+_OMATH = (
+    '<m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">'
+    "<m:oMath><m:r><m:t>x</m:t></m:r></m:oMath></m:oMathPara>"
+)
+
+
+def _anchor(*inner: str) -> str:
+    return f"<w:p>{_run('Anchor text.')}<w:r>{''.join(inner)}</w:r></w:p>"
+
+
+def _vml_box(*paragraphs: str) -> str:
+    content = f"<w:txbxContent>{''.join(paragraphs)}</w:txbxContent>"
+    return f"<w:pict><v:shape><v:textbox>{content}</v:textbox></v:shape></w:pict>"
+
+
+def _alternate_content() -> str:
+    # Word writes the DrawingML box and a VML copy of it. Only the first one is read.
+    paragraphs = _p("Boxed first.") + _p("Boxed second.")
+    drawing = (
+        '<mc:Choice Requires="wps"><w:drawing><wp:anchor><a:graphic><a:graphicData><wps:wsp>'
+        f"<wps:txbx><w:txbxContent>{paragraphs}</w:txbxContent></wps:txbx>"
+        "</wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice>"
+    )
+    fallback = f"<mc:Fallback>{_vml_box(paragraphs)}</mc:Fallback>"
+    anchor = _anchor(f"<mc:AlternateContent>{drawing}{fallback}</mc:AlternateContent>")
+    return anchor + _p("After the anchor.")
+
+
+def _nested_boxes() -> str:
+    inner = _vml_box(_p("Inner box."))
+    outer = _vml_box(_p("Outer box."), f"<w:p><w:r>{inner}</w:r></w:p>", _p("Outer tail."))
+    return _anchor(outer)
+
+
+_RUN_CONTENT = (
+    f"<w:p>{_run('Term')}<w:r><w:tab/></w:r>{_run('30')}<w:r><w:noBreakHyphen/></w:r>"
+    f"{_run('day')}</w:p>"
+    "<w:p><w:r><w:t>first</w:t><w:br/><w:t>second</w:t><w:cr/><w:t>third</w:t></w:r></w:p>"
+    '<w:p><w:r><w:t>before</w:t><w:br w:type="page"/><w:t>after</w:t></w:r></w:p>'
+    '<w:p><w:r><w:t xml:space="preserve">two  spaces and&#160;nbsp</w:t></w:r></w:p>'
+    f"<w:p>{_run('a')}{_run(' ')}{_run('b')}</w:p>"
+    '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> PAGE </w:instrText>'
+    '</w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>'
+    f'{_run("result")}<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'
+)
+_EMPTY_PARAGRAPHS = (
+    "<w:p/>" + _p("   ") + _p("First.") + "<w:p><w:r><w:t>&#160;</w:t></w:r></w:p>" + _p("Second.")
+)
+
+
+def _entity_prolog() -> str:
+    """Nested entities that would expand to 400,000 characters. The parser keeps them as they
+    are, so the body that names the last one reads as empty."""
+    declared = ['<!ENTITY a "' + "a" * 40 + '">']
+    for inner, outer in zip("abcd", "bcde", strict=True):
+        declared.append(f'<!ENTITY {outer} "' + f"&{inner};" * 10 + '">')
+    return "<!DOCTYPE w:document [" + "".join(declared) + "]>"
+
+
 _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "simple.pdf": (_simple_bytes, None),
     "two_column.pdf": (lambda: _pdf(_two_column), None),
@@ -527,6 +750,163 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "bomb_form.pdf": (_bomb_form_bytes, ErrorCode.TOO_MUCH_TEXT),
     "bomb_encrypted.pdf": (_bomb_encrypted_bytes, ErrorCode.TOO_MUCH_TEXT),
     "form_cycle.pdf": (_form_cycle_bytes, None),
+    # DOCX archive safety (A12)
+    "simple.docx": (_simple_docx, None),
+    "zip_dotdot.docx": (lambda: build_zip("../evil.txt"), ErrorCode.ARCHIVE_UNSAFE),
+    "zip_backslash.docx": (lambda: build_zip("..\\evil.txt"), ErrorCode.ARCHIVE_UNSAFE),
+    "zip_drive_letter.docx": (lambda: build_zip("C:\\evil.txt"), ErrorCode.ARCHIVE_UNSAFE),
+    "zip_absolute.docx": (lambda: build_zip("/etc/evil.txt"), ErrorCode.ARCHIVE_UNSAFE),
+    "zip_dots_in_name.docx": (lambda: build_zip("word/media/image..1.png"), None),
+    "archive_too_large.docx": (_archive_too_large, ErrorCode.ARCHIVE_TOO_LARGE),
+    "corrupt_zip.docx": (_corrupt_zip, ErrorCode.MALFORMED_FILE),
+    # Tracked changes (A13)
+    "tracked_insert.docx": (
+        _tracked(f"<w:ins {_CHANGE}>{_run('Added.')}</w:ins>"),
+        ErrorCode.TRACKED_CHANGES_PRESENT,
+    ),
+    "tracked_delete.docx": (
+        _tracked(f"<w:del {_CHANGE}><w:r><w:delText>Gone.</w:delText></w:r></w:del>"),
+        ErrorCode.TRACKED_CHANGES_PRESENT,
+    ),
+    "tracked_move_from.docx": (
+        _tracked(f"<w:moveFrom {_CHANGE}>{_run('Moved.')}</w:moveFrom>"),
+        ErrorCode.TRACKED_CHANGES_PRESENT,
+    ),
+    "tracked_move_to.docx": (
+        _tracked(f"<w:moveTo {_CHANGE}>{_run('Moved.')}</w:moveTo>"),
+        ErrorCode.TRACKED_CHANGES_PRESENT,
+    ),
+    "tracked_other_prefix.docx": (
+        _tracked(f'<x:ins xmlns:x="{_WML}" {_CHANGE}>{_run("Added.")}</x:ins>'),
+        ErrorCode.TRACKED_CHANGES_PRESENT,
+    ),
+    "tracked_paragraph_mark.docx": (
+        _doc(f"<w:p><w:pPr><w:rPr><w:ins {_CHANGE}/></w:rPr></w:pPr>{_run('Marked.')}</w:p>"),
+        ErrorCode.TRACKED_CHANGES_PRESENT,
+    ),
+    "tracked_in_header.docx": (
+        lambda: build_docx(
+            _p("Body."), [_header(f"<w:p><w:ins {_CHANGE}>{_run('Header.')}</w:ins></w:p>")]
+        ),
+        ErrorCode.TRACKED_CHANGES_PRESENT,
+    ),
+    "tracked_in_footnotes.docx": (
+        lambda: build_docx(
+            _p("Body."),
+            [
+                _footnotes(
+                    f'<w:footnote w:id="1"><w:p><w:del {_CHANGE}><w:r><w:delText>Note.'
+                    "</w:delText></w:r></w:del></w:p></w:footnote>"
+                )
+            ],
+        ),
+        ErrorCode.TRACKED_CHANGES_PRESENT,
+    ),
+    # The element name alone is not enough: the namespace decides.
+    "foreign_ins.docx": (_tracked(f'{_run("Kept.")}<x:ins xmlns:x="urn:example:other"/>'), None),
+    # Wrappers (A14), one fixture each
+    "wrap_sdt.docx": (_doc(_SDT.format(_p("Inside a block control."))), None),
+    "wrap_sdt_inline.docx": (
+        _doc(f"<w:p>{_run('Before ')}{_SDT.format(_run('inside'))}{_run(' after')}</w:p>"),
+        None,
+    ),
+    "wrap_smart_tag.docx": (
+        _doc(
+            f'<w:p><w:smartTag w:uri="urn:example" w:element="date">{_run("Dated 1 May.")}'
+            "</w:smartTag></w:p>"
+        ),
+        None,
+    ),
+    "wrap_fld_simple.docx": (
+        _doc(f'<w:p>{_run("Page ")}<w:fldSimple w:instr=" PAGE ">{_run("7")}</w:fldSimple></w:p>'),
+        None,
+    ),
+    "wrap_custom_xml.docx": (
+        _doc(f'<w:customXml w:element="clause">{_p("Inside custom xml.")}</w:customXml>'),
+        None,
+    ),
+    "wrap_hyperlink.docx": (
+        _doc(
+            f'<w:p>{_run("See ")}<w:hyperlink w:anchor="schedule1">{_run("Schedule 1")}'
+            f"</w:hyperlink>{_run('.')}</w:p>"
+        ),
+        None,
+    ),
+    "wrap_sdt_row.docx": (_doc(_tbl(_SDT.format(_tr(_tc(_p("Row in a control.")))))), None),
+    "wrap_sdt_cell.docx": (_doc(_tbl(_tr(_SDT.format(_tc(_p("Cell in a control.")))))), None),
+    "alt_chunk.docx": (_doc(_p("Before."), '<w:altChunk r:id="rId9"/>', _p("After.")), None),
+    "unknown_block.docx": (_doc(_p("Before."), _OMATH, _p("After.")), None),
+    # Text boxes and embedded objects (A15)
+    "textbox_alternate_content.docx": (_doc(_alternate_content()), None),
+    "textbox_vml.docx": (
+        _doc(
+            _anchor(_vml_box(_p("Boxed in VML."))),
+            _p("Middle."),
+            _anchor(_vml_box(_p("Second box."))),
+        ),
+        None,
+    ),
+    "textbox_nested.docx": (_doc(_nested_boxes()), None),
+    "textbox_in_cell.docx": (
+        _doc(
+            _tbl(
+                _tr(
+                    _tc(
+                        _p("Cell before."),
+                        _anchor(_vml_box(_p("Boxed in a cell."))),
+                        _p("Cell after."),
+                    )
+                )
+            )
+        ),
+        None,
+    ),
+    "embedded_object.docx": (
+        _doc(
+            _p("Before."),
+            '<w:p><w:r><w:object><v:shape/><o:OLEObject Type="Embed" ProgID="Excel.Sheet.12"/>'
+            "</w:object></w:r></w:p>",
+            _p("After."),
+        ),
+        None,
+    ),
+    # Tables (A16)
+    "tables.docx": (
+        _doc(
+            _p("Parties"),
+            _tbl(
+                _tr(_tc(_p("A1")), _tc(_p("B1"))),
+                _tr(_tc(_p("A2a"), _p("A2b")), _tc("<w:p/>")),
+            ),
+            _p("Between."),
+            _tbl(_tr(_tc(_p("C1")))),
+        ),
+        None,
+    ),
+    "nested_table.docx": (
+        _doc(
+            _tbl(
+                _tr(
+                    _tc(
+                        _p("Outer before."),
+                        _tbl(_tr(_tc(_p("Inner one.")), _tc(_p("Inner two.")))),
+                        _p("Outer after."),
+                    ),
+                    _tc(_p("Second cell.")),
+                )
+            )
+        ),
+        None,
+    ),
+    # Run content, empty paragraphs and entities
+    "run_content.docx": (_doc(_RUN_CONTENT), None),
+    "empty_paragraphs.docx": (_doc(_EMPTY_PARAGRAPHS), None),
+    "entity_bomb.docx": (
+        lambda: build_docx(
+            _p("Visible.") + "<w:p><w:r><w:t>&e;</w:t></w:r></w:p>", prolog=_entity_prolog()
+        ),
+        None,
+    ),
 }
 
 NAMES = tuple(_BUILDERS)
