@@ -120,6 +120,7 @@ export default function DropdownMenu({ items = DEFAULT_ITEMS, open, focusIndex, 
               aria-disabled={it.disabled || undefined}
               tabIndex={it.disabled ? -1 : 0}
               aria-checked={it.checked}
+              className="focus-inset"
               onClick={() => pick(it)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -139,8 +140,8 @@ export default function DropdownMenu({ items = DEFAULT_ITEMS, open, focusIndex, 
                 background: focusIndex === i ? "var(--anchor-100)" : "transparent",
                 opacity: it.disabled ? 0.6 : 1,
                 cursor: it.disabled ? "not-allowed" : "pointer",
-                outline: focusIndex === i ? "2px solid var(--focus-ring)" : "none",
-                outlineOffset: -2,
+                // Only the gallery's forced state draws its own ring. An inline `none` would beat :focus-visible and hide a real one.
+                ...(focusIndex === i ? { outline: "2px solid var(--focus-ring)", outlineOffset: -2 } : null),
               }}
             >
               {it.icon && <span style={{ color: "var(--ink-tertiary)", display: "inline-flex" }}>{it.icon}</span>}

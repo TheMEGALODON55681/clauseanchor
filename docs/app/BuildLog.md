@@ -824,3 +824,53 @@ Housekeeping: the two preview servers (4173, 4174) stopped. A build of `f86a36a`
 Open for Aryan: below 768 px "Recall" and "Silent miss" sort inside groups, so the worst rows are no longer first across the list. The Weak count in each summary shows where the Weak rows are, and a flat worst-first list would restore the order. Not asked for, and listed under Deferred in 17.7.
 
 Next action: commit this part, then the final sweep (Lighthouse and axe on every route, the keyboard run in dark and at 375 px with a real click on a Reader sidebar row at 1280 and in the categories drawer at 375, the before and after pairs, the quality bars in the final BuildLog entry, FE-R ticked in `Phases.md`).
+
+## 2026-10-15: Part FE-R, final sweep and close
+
+Part: FE-R, step 2, commit 8 of 8, the last entry of the phase (theme: the four keyboard findings of the final sweep, and the phase's measurements). Starts from `2b32140`. Part 1-B stays paused. No dependency was added. The sweep stopped on 14 October at Aryan's request, for laptop safety, so the four fixes below were made in code and handed to Aryan for a manual check.
+
+Files changed:
+- `components/DropdownMenu.tsx` (S1), `components/DropdownMenu.test.ts` (new, 1 test), `components/MobileDrawer.tsx` (exports `PEEK_PX`) `pages/Reader.tsx` (S3, S3b and S4) and `pages/Reader.test.ts` (new, 1 test). No user-facing string changed.
+- Docs: `FrontendDesign.md` (status, 17.7 rows CN to CQ and three Deferred rows), `Architecture.md` (the test count), `Phases.md` (FE-R ticked), this entry. `README.md` is unchanged, because nothing it describes moved.
+
+Method. Production build of `2b32140` served by `vite preview` on `localhost:4173`, headless Edge over the DevTools protocol with extensions disabled, real pointer and key events, Lighthouse 13.5.0 (mobile, simulated throttling) and axe-core 4.14.0. The scripts live outside the repo. Screenshots are in `frontend/.screens/FE-R/`, gitignored, including 32 FE-0 and FE-R pairs in `pairs/`. The measurements below were taken before the four fixes. The fixes touch the Reader and the menu only and change no colour, so the other routes and the contrast figures stand. The keyboard run was not repeated after the fixes (see Not run).
+
+Quality bars (`FrontendDesign.md` 1.3):
+
+| Bar | Result | Verdict |
+|---|---|---|
+| Lighthouse mobile `/` | Performance 96, 97, 97 (three runs). LCP 2.21, 2.17, 2.26 s. TBT 127, 105, 31 ms. CLS 0.00003. Accessibility 100, Best Practices 100, SEO 91 | Passes (95, 2.5 s, 0.05, 100, 95) |
+| Lighthouse, the other routes (no bar) | `/start` 95, 94, 95 with LCP 2.59, 2.67, 2.65 s. `/how-it-works` 94, 96, 96 with LCP 2.61, 2.40, 2.49 s. `/accuracy` 90, 94, 94 with LCP 2.79 s in all three and CLS 0. Accessibility 100 and Best Practices 100 on all four routes | Information. `/start` and `/accuracy` are over 2.5 s, and the bar names `/` only |
+| axe, every route, both themes | Every route and state at 375, 768 and 1280 px, 77 captures in each theme, 154 in all: 0 violations. The R2 pair (dark Accuracy at 375 px) is among them | Passes |
+| Keyboard | Light at 375 px and dark at 1280 px, landing to start to how it works to accuracy to the Reader, clause panel, judgment card, menu and delete dialog. Every stop has a 2 px ring and a 44 px target except where listed below. Real pointer runs: 120 of 120 checks pass across light and dark, motion and reduced motion, including a click on the opener and a pick at 1280 and 375 px | Passes at 1280 px. Below 1280 px the run found S3, S3b and S4, now fixed in code and verified by hand (below) |
+| Contrast | `tokens.test.ts` passes. Rendered pixels, both themes: lowest ratio 4.57:1 in light (category rows at rest) and 6.10:1 in dark (the panel with a judgment card). Two groups in each theme read false for holding elements with no drawn text, and every ratio in them is above 4.5 | Passes (4.5) |
+| Bundle | JavaScript named by `index.html` 109.25 KB gzipped at level 9, entry 73.58 KB by Vite's figure. All 20 chunks 148.81 KB. `/` transfers 112.06 KB of script in 7 files | Passes (200 KB) |
+| Fonts, third party | One origin, `localhost:4173`, on `/`, `/start`, `/how-it-works` and `/accuracy` (16 to 24 requests). 15 font files in `dist/fonts`. No font or CDN host named anywhere in `dist` | Passes |
+| Reading measure | Reader: 73.2 characters on 37 full-line paragraphs at 1280, 1440 and 1920 px (65 to 81, column 612 px, sheet 710 px). Hero sheet 70.3 (69 to 72) | Passes (68 to 80) |
+
+Keyboard findings of the sweep and what was done:
+- S1, the menu item has no focus ring (`DropdownMenu.tsx`). Fixed in code. Verified manually by Aryan. An inline `outline: none` on each item outranked `:focus-visible`. The item takes `focus-inset` and sets an inline outline only for the Gallery's forced state. Confirmed in the source: the one inline `outline` left is the forced-state ring, and `DropdownMenu.test.ts` fails if another appears.
+- S3, a focused mark entirely behind the peek sheet below 1280 px (4 of 24 marks at 375 px with the panel open). Fixed in code. Verified manually by Aryan. The scroll area has `scrollPaddingBottom` of the sheet's height plus 16 px while a sheet shows.
+- S4, Enter on a mark under reduced motion below 1280 px left focus on the mark. Fixed in code. Verified manually by Aryan. The panel title is focused again one frame later when the first call is refused.
+- S3b, a control in the peek sheet taking focus below the viewport: at peek below 1280 px the judgment card's "Higher confidence", "View full passage" and "Open source" sat inside the clipped sheet. Fixed in code. Verified manually by Aryan. The panel in the sheet has an `onFocus` that opens the sheet when the focused control's bottom edge is more than `PEEK_PX` below the sheet's own top. The offset is taken from the sheet, so a slide in progress does not change it, and a control inside the peek (the title after Enter on a mark, "Close panel") leaves the sheet at peek. `Reader.test.ts` reads the source for the guard, the threshold and the wiring.
+- Not defects: three stops read not in view by under 1 px at the viewport edge (two summaries on the landing page, the footer link on How it works), and a card button that read under 44 px while off screen.
+
+Other results:
+- Gallery, development only, axe: 6 `aria-required-parent`, 2 `landmark-unique`, 1 `color-contrast`, 2 `empty-table-header` and 2 `scrollable-region-focusable`, all inside specimens. The Gallery is not in the build.
+- Closed with no change: SEO 91 (no `robots.txt`, as decided in commit 4, BV).
+
+Checks (this commit):
+- `pnpm typecheck`: exit 0. `pnpm test`: 65 of 65 pass (7 reveal, 15 tokens, 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 11 reader, 2 accuracy, 1 menu, 1 sheet), 0 failed, 0 skipped. `pnpm build`: 172 modules, exit 0, no warning. Entry 73.58 KB gzipped (unchanged), Reader chunk 15.25 KB (15.08).
+- The two new tests fail on `2b32140` and pass on this commit: the menu test on the missing outline literal, the sheet test on the missing handler (run red before the handler was written).
+- `/ponytail:ponytail-review` over the full diff (S1, S3, S3b, S4 and both tests): no P1 and no P2. One P3 fixed earlier: the first of two menu tests was implied by the second. One P3 kept: `!xl && sheetState !== "closed"` appears twice in the scroller's style, and hoisting it saves no line. Kept: `SHEET_OPEN` (one value for the sheet's height and the scroll padding), the one retry in the focus effect (it has a cause and is cancelled with the effect), and the `top !== undefined` guard in `openSheetOnFocus` (typing only, `closest` always finds the sheet). Net: 0 lines possible.
+- No user-facing string was added or changed, so the copy passes did not run.
+
+Reviews. Step 1 ran `/ponytail:ponytail-review` over the full range and one independent second review, and applied the `/gstack-review` and `/gstack-cso` checklists by hand. `/coderabbit:code-review` did not run: it failed to start on the full range and on `8aee425..HEAD`, and the installed command line (0.7.6) cannot update itself. Aryan accepted it as not run. It was not retried.
+
+Not run: the keyboard run after the four fixes (Aryan's manual check stands in for it), Lighthouse after the fixes (the fixes do not touch `/`), a screen reader on any route, and a real device or network.
+
+Browser launch audit and the pause. After the sweep, Aryan stopped all browser, server and background launches and asked for the harness launches to be audited from the saved scripts and session logs (read only, nothing started). Every harness launch used a fresh temporary profile and none used the real profile, and Lighthouse used its own temporary profile. All were headless. Findings: (1) the first FE-0 harness run did not disable extensions, and an installed extension still ran in that fresh profile. How it got there was not established, and every later run disabled extensions. (2) One review session closed browsers by killing every `msedge.exe` by name, which also closes the user's own Edge, and two browsers ran at once in that session. (3) Leftover temporary profile folders remain in the temp directory (78 of them), because cleanup failed or never ran when a run was cut short. (4) The built-in browser pane loaded `localhost` pages only, and no desktop-control tool was used in any session. The standing rules that replace this practice are kept outside the repo: no launch without approval for that step, a fresh profile with extensions and sync disabled, a ledger of every process started and no kill by name, and a stop at any sign-in prompt. FE-R is closed on the measurements above, with S1, S3, S3b and S4 verified by hand.
+
+Housekeeping: no server, browser or background process was started for this commit. Only typecheck, test and build ran, and each exited on its own. No git write was run.
+
+Next action: Aryan runs the manual check for S1, S3, S3b and S4, then commits this part. FE-R is ticked in `Phases.md`. Part 1-B stays paused until Aryan says so.

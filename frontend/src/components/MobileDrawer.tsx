@@ -22,8 +22,8 @@ type MobileDrawerProps = {
   fixed?: boolean;
 };
 
-/* How much of a peeking bottom sheet shows. */
-const PEEK_PX = 168;
+/* How much of a peeking bottom sheet shows. The Reader pads its scroll area by it. */
+export const PEEK_PX = 168;
 
 export default function MobileDrawer({
   side = "bottom",

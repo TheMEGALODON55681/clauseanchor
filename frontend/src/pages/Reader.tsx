@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, FocusEvent, ReactNode } from "react";
 import { useNavigate, useParams } from "react-router";
 import { client } from "../api/client";
 import { ApiError, type Analysis, type Category, type Clause, type Document, type Job, type ManualReview, type Role } from "../api/types";
@@ -23,7 +23,7 @@ import NoticeBanner from "../components/NoticeBanner";
 import ErrorCard from "../components/ErrorCard";
 import ConfirmDialog from "../components/ConfirmDialog";
 import DropdownMenu, { type MenuItem } from "../components/DropdownMenu";
-import MobileDrawer from "../components/MobileDrawer";
+import MobileDrawer, { PEEK_PX } from "../components/MobileDrawer";
 import RuleFlagCard from "../components/RuleFlagCard";
 import JudgmentCard from "../components/JudgmentCard";
 import KeyboardHint from "../components/KeyboardHint";
@@ -46,6 +46,8 @@ const STAGES: { key: string; label: string }[] = [
 ];
 
 const TERMINAL = new Set(["succeeded", "partial", "failed", "cancelled"]);
+/* Height of the open bottom sheet. */
+const SHEET_OPEN = "78dvh";
 
 type Finding = { clause: Clause; categoryId: string; s16: number; e16: number; kind: SpanKind; status: StatusKind };
 type Selection = { type: "category"; id: string; clause: number } | { type: "manual" } | null;
@@ -256,11 +258,17 @@ export default function Reader() {
     setSheet("open");
   }, [choose]);
 
-  /* After an Enter on a mark the panel title takes focus, once the panel has rendered. */
+  /* After an Enter on a mark the panel title takes focus, once the panel has rendered.
+     The bottom sheet can still count as hidden on this tick (reduced motion), and focus() is refused there, so a refused focus is tried once more a frame later. */
   useEffect(() => {
     if (!panelFocus.current) return;
     panelFocus.current = false;
-    document.getElementById("detail-panel-title")?.focus({ preventScroll: true });
+    const title = document.getElementById("detail-panel-title");
+    if (!title) return;
+    title.focus({ preventScroll: true });
+    if (document.activeElement === title) return;
+    const frame = requestAnimationFrame(() => title.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
   }, [selection, sheet]);
 
   /* A reload ends the session and the text with it, so the browser asks first. It shows its own prompt. */
@@ -699,6 +707,15 @@ export default function Reader() {
   const sheetBody = held.current ?? { node: panel, title: "Detail", open: false };
   const sheetState = selection && sheet !== "closed" ? sheet : "closed";
 
+  /* At peek the sheet shows only its top PEEK_PX, and focus cannot scroll a fixed sheet into view, so a control focused
+     below that line is out of sight: focus there opens the sheet. The offset is taken from the sheet's own top, which a
+     slide in progress does not move. A control inside the peek, such as the panel title after Enter on a mark, leaves it. */
+  const openSheetOnFocus = (e: FocusEvent<HTMLDivElement>) => {
+    if (sheetState !== "peek") return;
+    const top = e.currentTarget.closest('[role="dialog"]')?.getBoundingClientRect().top;
+    if (top !== undefined && e.target.getBoundingClientRect().bottom - top > PEEK_PX) setSheet("open");
+  };
+
   if (!token || !meta) return null;
 
   return (
@@ -784,7 +801,12 @@ export default function Reader() {
             ref={scroller}
             onScroll={measure}
             className="scroll-pane min-w-0 flex-1 overflow-y-auto"
-            style={{ background: "var(--paper-sunken)", paddingBottom: !xl && sheetState !== "closed" ? 160 : 0 }}
+            style={{
+              background: "var(--paper-sunken)",
+              paddingBottom: !xl && sheetState !== "closed" ? 160 : 0,
+              // A focused mark scrolls into the part the sheet leaves free, never fully under it (Tab on a mark near the bottom).
+              scrollPaddingBottom: !xl && sheetState !== "closed" ? `calc(${sheetState === "open" ? SHEET_OPEN : `${PEEK_PX}px`} + 16px)` : 0,
+            }}
           >
             <div ref={content} className="mx-auto flex w-full flex-col items-center px-3 py-6 md:px-4 md:py-10">
               {/* Above the sheet. The progress band goes when the review ends, and scroll anchoring keeps the text still. */}
@@ -900,14 +922,14 @@ export default function Reader() {
           side="bottom"
           state={sheetState}
           title={sheetBody.title}
-          size="78dvh"
+          size={SHEET_OPEN}
           actions={
             <Button variant="tertiary" size="s" onClick={() => setSheet(sheet === "peek" ? "open" : "peek")}>
               {sheetBody.open ? "Peek" : "Open"}
             </Button>
           }
         >
-          <div className="reader-panel">{sheetBody.node}</div>
+          <div className="reader-panel" onFocus={openSheetOnFocus}>{sheetBody.node}</div>
         </MobileDrawer>
       )}
 
