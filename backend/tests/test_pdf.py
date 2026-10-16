@@ -6,6 +6,7 @@ import hashlib
 import io
 import logging
 import random
+import time
 import zipfile
 import zlib
 from collections.abc import Callable
@@ -259,6 +260,29 @@ def test_a_full_width_line_between_column_rows_warns_that_order_is_uncertain(
         "Right beta one\nRight beta two",
     ]
     assert doc.warnings == (ParseWarning(WarningCode.COLUMN_ORDER_UNCERTAIN, page=1),)
+
+
+def word(x0: float, x1: float, top: float = 0.0) -> pdf_module._Box:
+    return pdf_module._Box("w", x0, x1, top, top + 10)
+
+
+def test_a_gutter_needs_text_on_both_sides_in_two_rows() -> None:
+    two_words = [word(10, 100), word(140, 230)]
+    assert pdf_module._gutters([two_words]) == []
+    assert pdf_module._gutters([two_words, [word(10, 100, 20), word(140, 230, 20)]]) == [140]
+
+
+def test_a_gap_between_rows_that_is_never_a_gap_inside_one_row_is_no_gutter() -> None:
+    assert pdf_module._gutters([[word(10, 100)], [word(140, 230, 20)]]) == []
+
+
+def test_the_gutter_scan_grows_with_the_words_and_not_with_their_square() -> None:
+    gaps = 6_000
+    rows = [[word(30.0 * n, 30.0 * n + 10, 12.0 * r) for n in range(gaps + 1)] for r in range(20)]
+    started = time.perf_counter()
+    edges = pdf_module._gutters(rows)
+    assert len(edges) == gaps
+    assert time.perf_counter() - started < 5  # about 130 s with a scan of every row per gap
 
 
 # parse_pdf: decoration (A9)

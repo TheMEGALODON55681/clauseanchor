@@ -5,9 +5,10 @@ import logging
 import re
 import statistics
 import zlib
+from bisect import bisect_left, bisect_right
 from collections.abc import Iterator
 from dataclasses import dataclass
-from itertools import chain, groupby, islice, pairwise
+from itertools import accumulate, chain, groupby, islice, pairwise
 from typing import Literal
 
 import pdfplumber
@@ -270,9 +271,10 @@ def _gutters(rows: list[list[_Box]]) -> list[float]:
     """Returns the right edge of every gutter: a strip of at least GUTTER_MIN_WIDTH points that
     at most GUTTER_MAX_ROW_SHARE of the rows touch and that has text on both sides."""
     deltas: dict[float, int] = {}
-    for row in rows:
+    ordered_rows = [sorted(row, key=lambda w: w.x0) for row in rows]
+    for row in ordered_rows:
         spans: list[list[float]] = []
-        for word in sorted(row, key=lambda w: w.x0):
+        for word in row:
             if spans and word.x0 <= spans[-1][1]:
                 spans[-1][1] = max(spans[-1][1], word.x1)
             else:
@@ -294,14 +296,25 @@ def _gutters(rows: list[list[_Box]]) -> list[float]:
         else:
             runs.append([x, following])
             open_run = True
-    edges = []
-    for start, end in runs:
-        if end - start < GUTTER_MIN_WIDTH:
-            continue
-        around = sum(1 for row in rows if _sides(row, end)[2] == "columns")
-        if around >= MIN_ROWS_AROUND_GUTTER:
-            edges.append(end)
-    return edges
+    edges = [end for start, end in runs if end - start >= GUTTER_MIN_WIDTH]
+    # A row reads as "columns" at an edge (see _sides) when the split falls in one of its gaps of
+    # GUTTER_MIN_WIDTH or more and no word on the left reaches the edge. Each such gap holds a
+    # range of edges, so the rows are counted per edge with a difference array and not by testing
+    # every row at every edge. `splits` is each edge as _sides compares it, so ties come out alike.
+    splits = [edge - EDGE_TOLERANCE for edge in edges]
+    rows_at = [0] * (len(edges) + 1)
+    for row in ordered_rows:
+        reach = list(accumulate((w.x1 for w in row), max))
+        for k in range(1, len(row)):
+            if row[k].x0 - reach[k - 1] < GUTTER_MIN_WIDTH:
+                continue
+            first = max(bisect_right(splits, row[k - 1].x0), bisect_left(edges, reach[k - 1]))
+            last = bisect_right(splits, row[k].x0)
+            if first < last:
+                rows_at[first] += 1
+                rows_at[last] -= 1
+    counts = accumulate(rows_at)  # one longer than edges, for the closing decrement
+    return [e for e, n in zip(edges, counts, strict=False) if n >= MIN_ROWS_AROUND_GUTTER]
 
 
 def _sides(row: list[_Box], edge: float) -> tuple[list[_Box], list[_Box], str]:

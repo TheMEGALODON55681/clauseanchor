@@ -1461,3 +1461,44 @@ Blockers: none.
 - Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds. Such a file used to parse when the first filter's output was inside the budget (for example Flate twice over small content), and now has no result.
 
 Next action: commit with `fix(parser): count a second growing PDF filter as over budget`, then reply `next` for commit 3, the gutter scan (B4).
+
+
+## 2026-10-16: Part 1-R, step 2, commit 3 of 11: gutter scan (B4)
+
+Part: 1-R step 2, theme 3 of the eleven. Fixes B4, the P2 finding that the gutter scan grew with the square of the words on a page. No `[CONTRACT]` change: the output is the same for every input tried. Commit 2 is `2a986b9`, and the tree was clean before this part started.
+
+Files changed:
+- `backend/app/parsing/pdf.py`: `_gutters` counts the rows that read as columns at each strip from their sorted positions, and no longer calls `_sides` for every row at every strip. `_sides` stays for `_two_columns`. Two imports (`bisect_left`, `bisect_right`, `accumulate`).
+- `backend/tests/test_pdf.py`: two tests that pin the rule the rewrite replaces (a gutter needs text on both sides in two rows, and a gap that is never a gap inside one row is no gutter), and one scale test: 20 rows of 6,001 words, 6,000 gaps, finished in under 5 s. 707 tests became 710.
+- `docs/app/Phases.md` (A8 resolution), `docs/app/BuildLog.md` (this entry). `ParserContract.md` and `Architecture.md` say nothing about the cost of this step and needed no change.
+
+What changed, in the order the code runs:
+- The sweep that finds the strips (at most 40 percent of the rows touch them) is unchanged. Each row is sorted once and the sorted rows are reused.
+- Each row now lists its gaps of 12 points or more. A gap between two words covers one contiguous range of the strips, so each range is added to a difference array with two binary searches, and a strip is a gutter when two rows cover it. The searches use `edge - EDGE_TOLERANCE`, the same float `_sides` compares with, and the largest right edge of the words on the left, so ties give the same answer.
+
+Findings during the part:
+- Step 1 proposed stopping after two rows and counting the staggered case from sorted row positions. Stopping early is not enough: each `_sides` call still builds lists the size of the row, so the cost per strip stays proportional to the words in a row, and a strip that fails scans every row. A page can have many strips that each fail: a few rows with long words keep the count at the limit, and one row of small words lifts it above the limit at every gap, which makes every gap a strip that only one row reads as columns. That page costs strips times rows (computed, not built). The difference array does not depend on the layout.
+- Equality with the old function, on a copy of the last commit: 600,000 random pages, three generators (a half point grid, free floats with offsets of 1.0, 12.0, 11.99, 12.01 and 0.001 from earlier words, and two column pages), 306,998 of them with at least one gutter, 0 differences. Two deliberately broken copies (the upper search flipped to the lower, and the width test turned into at most 12) gave 580 and 1,056 differences in 60,000 pages each, so the comparison can see an error.
+- Scale, one process each. The function on 20 identical rows: 800 gaps took 2.52 s on the old code and 0.03 s on the new; 6,000 gaps took 133 s on the old code (as the red test run) and 0.21 s on the new; 10,000 gaps took 0.38 s on the new (the old would take about 390 s, computed from the 800 figure). End to end on a synthetic one-page PDF of 20 rows (20,095 B and 40,947 B): 400 gaps 1.13 s to 0.73 s, 800 gaps 4.23 s to 1.51 s, same JSON by hash. 3,000 gaps (147,703 B) took 9.3 s and +115 MiB on the new code, not run on the old. A profile of that parse puts the time in pdfminer's interpreter, parser and object handling, none in our code. That is the text-operation ceiling (B15), which the docs commit records.
+- The three real PDFs of the smoke set give the same JSON, by hash, on both versions (174, 797 and 614 blocks) in the same time.
+
+Commands run, from `backend/` with the venv interpreter: `ruff format app tests`, `ruff check app tests` (one `B905` on the `zip`, fixed with `strict=False` and a comment), `pytest -q -p no:cacheprovider` (a red run of the new tests first: the scale test failed after 134 s, the two rule tests passed). Probes on a copy of `app/` for the last commit and for the working tree, in the session scratchpad and never the repo, each as its own `python -I` process: the comparison (once, then twice more on the broken copies), the function timing (old, new), the build of three wide PDFs, the end to end parse (old, new), the real PDFs (old, new) and the profile. Read-only git.
+
+Tests: 710 passed, 0 failed, 0 skipped (707 before). Pinned versions added: none.
+
+Over-engineering review of the diff: nothing to cut. `_sides` is still used by `_two_columns`, the rows are sorted once, and the comment says why the difference array exists.
+
+Processes. Started 25, closed 25: 17 Python (3 test runs, 14 scripts and probes) and 8 of the formatter and linter (four runs of the pair). A process listing at the end found no Python or ruff process running.
+
+Not verified:
+- A page with both many gaps and many rows at full size (for example 200,000 words), end to end. pdfminer's own time dominates and was not run.
+- The old code at 10,000 gaps (computed).
+- Two-column pages from real files. The three smoke PDFs were identical, and the column fixtures pass, but none of the smoke files is known to have columns.
+
+Blockers: none.
+
+`[CONTRACT]`, held for the one message at the end of 1-R. This commit adds none. The list so far:
+- Commit 1: `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and counts the bytes read.
+- Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds.
+
+Next action: commit with `fix(parser): find column gutters without a scan per candidate`, then reply `next` for commit 4, the DOCX bounds (B5, B8 and B11).
