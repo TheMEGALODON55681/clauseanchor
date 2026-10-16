@@ -515,7 +515,9 @@ def test_exactly_100_pages_parse(fixture_bytes: dict[str, bytes]) -> None:
     assert len(doc.blocks) == MAX_PDF_PAGES
 
 
-@pytest.mark.parametrize("name", ["bomb_content.pdf", "bomb_form.pdf", "bomb_encrypted.pdf"])
+@pytest.mark.parametrize(
+    "name", ["bomb_content.pdf", "bomb_double_flate.pdf", "bomb_form.pdf", "bomb_encrypted.pdf"]
+)
 def test_a_stream_that_decodes_past_the_budget_is_rejected_without_being_decoded(
     name: str, fixture_bytes: dict[str, bytes], no_text_extraction: None
 ) -> None:
@@ -561,6 +563,22 @@ def test_a_flate_stream_is_measured_exactly_across_chunk_boundaries(size: int) -
 def test_a_flate_stream_is_abandoned_soon_after_it_passes_the_limit() -> None:
     measured = pdf_module._decoded_length(flate_stream(50 * CHUNK), CHUNK)
     assert CHUNK < measured <= 2 * CHUNK
+
+
+@pytest.mark.parametrize(
+    "filters",
+    [
+        ["FlateDecode", "FlateDecode"],
+        ["ASCII85Decode", "FlateDecode", "FlateDecode"],
+        ["FlateDecode", "LZWDecode"],
+        ["RunLengthDecode", "FlateDecode"],
+    ],
+)
+def test_a_second_growing_filter_is_over_the_budget_whatever_the_stream_holds(
+    filters: list[str],
+) -> None:
+    stream = PDFStream({"Filter": [LIT(name) for name in filters]}, b"")
+    assert pdf_module._decoded_length(stream, 10**9) > 10**9
 
 
 def a85(data: bytes) -> bytes:

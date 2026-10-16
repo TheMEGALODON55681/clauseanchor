@@ -1417,3 +1417,47 @@ Blockers: none.
 - `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and now counts the bytes read. A file that declared a small size and held more no longer passes as small.
 
 Next action: commit with `fix(parser): count DOCX archive bytes as read and refuse bzip2 and lzma`, send the two `[CONTRACT]` items above to Tanishq, then reply `next` for commit 2, the PDF budget chain (B2) with the `bomb_double_flate` fixture.
+
+
+## 2026-10-16: Part 1-R, step 2, commit 2 of 11: PDF budget chain (B2)
+
+Part: 1-R step 2, theme 2 of the eleven. Fixes B2, the P1 finding that the PDF content budget measured the first filter of a stream and ignored the rest of the chain. `[CONTRACT]`: `TOO_MUCH_TEXT` gains a meaning, see the last section. Commit 1 is `ede388a`, and the tree was clean before this part started.
+
+Standing instruction from Aryan, applied from this part: no `[CONTRACT]` item is sent per commit. Every one is held, `ParserContract.md` is updated as each commit lands so it stays the single source, and one consolidated message for Tanishq covering all eleven commits is printed at the end of 1-R. The two items of commit 1 are held with this one.
+
+Files changed:
+- `backend/app/parsing/pdf.py`: `_decoded_length` returns "past the limit" for a stream whose filter list names more than one filter that can grow the data (Flate, LZW, RunLength), before it reads any byte. New constant `_GROWING_FILTERS`, two new pdfminer imports. The rest of the function is unchanged.
+- `backend/tests/fixtures/build.py`: `_single_content_pdf` (the one-page file `bomb_content` already used) and the `bomb_double_flate` fixture, registered with `TOO_MUCH_TEXT`.
+- `backend/tests/test_pdf.py`: the existing bomb test also runs `bomb_double_flate`, which proves no stream is decoded. New: four filter chains that must count as over the limit whatever the stream holds. 700 tests became 707 (one fixture row, four chains and two tests that run over every registered fixture).
+- `docs/app/ParserContract.md` (the `TOO_MUCH_TEXT` row, the limits row, the ceiling row, the refined list in section 14), `docs/app/Phases.md` (A11 resolution), `docs/app/Architecture.md` (the PDF budget row), `docs/app/BuildLog.md` (this entry).
+
+What changed, in the order the code runs:
+- `_check_budget` calls `_decoded_length` for every content stream and Form XObject. The function now reads the filter names first. Two or more growing filters end the count at once as over the limit, so `_check_budget` raises `TOO_MUCH_TEXT` before pdfminer decodes anything.
+- Everything else is as before: leading ASCII85 and ASCIIHex are undone, one Flate is read in 64 KiB steps, and any other filter counts the stored length.
+
+Findings during the part:
+- Step 1 proposed measuring the chain stage by stage with a cap on each stage, and refusing a second compressing filter after Flate. Only the refusal is needed, and it covers LZW and RunLength too. Measuring each stage bounds memory but not work: a chain of N Flate stages that each inflate to 8 MiB costs N times 8 MiB of work, and N is limited only by the file size (computed, not run). One growing filter per stream bounds the work to one stage. So the rule is a count of growing filters, in any order, and the position of the ASCII filters does not matter.
+- Reproduced on a new probe file (two Flate stages over 64 MiB of white space, 702 B, first stage 65,239 B). The code at the last commit does not reject it: `NO_TEXT_FOUND` after 0.28 s, and the peak working set rose 127 MiB, which is the content decoded in full, 8 times the budget. The new code gives `TOO_MUCH_TEXT` in under 0.01 s with no rise. Step 1 measured 0.82 s and 129 MiB on a file with different content, which is the same finding.
+- The three real PDFs of the smoke set hold 458 Flate streams, each alone, and 47 streams with no filter. None has a chain. Their JSON is the same by hash before and after: 174, 797 and 614 blocks.
+- A stream whose only growing filter is LZW or RunLength still counts its stored length. That is the 1-C ceiling, reworded in the contract. Measuring both needs a chunked reader for each (the other way in call 1 of step 1) and was not done.
+
+Commands run, from `backend/` with the venv interpreter: `ruff format app tests`, `ruff check app tests`, `pytest -q -p no:cacheprovider` (a red run of the new tests first: 6 failed, 3 passed). Probes on a copy of `app/` for the last commit (exported with `git archive`) and for the working tree, in the session scratchpad and never the repo, each as its own `python -I` process: one for the file build, two for the 64 MiB file (old code, new code), one for the filter chains of the three smoke PDFs, two for their parse (old code, new code). Peak working set came from `K32GetProcessMemoryInfo` in the probe itself. Read-only git.
+
+Tests: 707 passed, 0 failed, 0 skipped (700 before). Pinned versions added: none.
+
+Over-engineering review of the diff: cut one test case (the interleaved chain `Flate, ASCIIHex, Flate`), because the count ignores position and the case with a leading ASCII85 is the one a real writer would produce. Kept: `_single_content_pdf` (two fixtures use it), `_GROWING_FILTERS`. Nothing left unfixed.
+
+Processes. Started 16, closed 16: 10 Python (4 test runs, 6 probe scripts) and 6 of the formatter and linter (three runs of the pair). A process listing at the end found no Python or ruff process running. No browser, no server, no node process.
+
+Not verified:
+- Other producers. The claim that a content stream has no use for a chain of growing filters rests on the PDF format and on three files from one source (SEC exhibits in `data/cuad_smoke/`), not on a survey. A producer that writes Flate twice would now get no result.
+- A real LZW or RunLength content stream. Both are untested, and the lone-filter ceiling stands.
+- The 256 MiB case of step 1 and the 8 GB figure for stage one at 8 MiB (computed there).
+
+Blockers: none.
+
+`[CONTRACT]`, held for the one message at the end of 1-R:
+- Commit 1: `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and counts the bytes read.
+- Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds. Such a file used to parse when the first filter's output was inside the budget (for example Flate twice over small content), and now has no result.
+
+Next action: commit with `fix(parser): count a second growing PDF filter as over budget`, then reply `next` for commit 3, the gutter scan (B4).

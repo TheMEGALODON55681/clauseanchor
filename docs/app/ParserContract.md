@@ -364,7 +364,7 @@ A rejected file raises `ParseError`. Its message is the code alone, so no docume
 | `ENCRYPTED_PDF` | A PDF needs a password to open. An owner-password file that opens without one parses | refined |
 | `SCANNED_PDF` | Every page that has content is scanned. A blank page does not count | refined |
 | `TOO_MANY_PAGES` | A PDF has more than 100 pages. Checked before any text is read | same |
-| `TOO_MUCH_TEXT` | The decoded page content passes 8 MiB (PDF), or the text passes 500,000 code points (PDF and DOCX) | refined |
+| `TOO_MUCH_TEXT` | The decoded page content passes 8 MiB (PDF), or a PDF content stream names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds, or the text passes 500,000 code points (PDF and DOCX) | refined |
 | `ARCHIVE_TOO_LARGE` | The members of a DOCX archive inflate to more than 100 MiB. The parser counts the bytes it reads, and stops at the limit | refined |
 | `ARCHIVE_UNSAFE` | A member name is absolute, has a drive letter or has a `..` segment, after backslashes become slashes. Or a member uses a compression method other than stored or Flate | refined |
 | `TRACKED_CHANGES_PRESENT` | `ins`, `del`, `moveFrom` or `moveTo` appears in the document, a header, a footer, the footnotes or the endnotes, in any element position. The user accepts all changes and uploads again | refined |
@@ -394,7 +394,7 @@ A warning is `ParseWarning(code, page, detail)`. `page` is a 1-based PDF page or
 |---|---|---|---|
 | Input size | 10 MiB | `FILE_TOO_LARGE` | same |
 | PDF pages | 100 | `TOO_MANY_PAGES` | same |
-| Decoded PDF page content, content streams and Form XObjects, each stream counted once | 8 MiB, decoded incrementally and aborted as soon as the total passes | `TOO_MUCH_TEXT` | same |
+| Decoded PDF page content, content streams and Form XObjects, each stream counted once | 8 MiB, decoded incrementally and aborted as soon as the total passes. A stream with more than one growing filter (for example Flate twice) counts as over the limit without being decoded | `TOO_MUCH_TEXT` | refined |
 | Text | 500,000 code points | `TOO_MUCH_TEXT` | same |
 | DOCX archive, total uncompressed size, counted as the members are read | 100 MiB | `ARCHIVE_TOO_LARGE` | refined |
 
@@ -443,7 +443,7 @@ The first message listed no ceilings, so this whole section is new. The last col
 
 | Case | Marked |
 |---|---|
-| Only Flate streams are budgeted, behind any leading ASCII85 or ASCIIHex filter. LZW and RunLength streams count their stored length. Font programs, ToUnicode maps and object streams are not budgeted | No |
+| Only Flate streams are measured, behind any leading ASCII85 or ASCIIHex filter. A stream whose only growing filter is LZW or RunLength counts its stored length. Font programs, ToUnicode maps and object streams are not budgeted | No |
 | The budget bounds size and not time. A 16 KB file that decodes to 16 MB took 186 s. The Phase 2 child process kill is the real bound | No |
 | An owner-password PDF parses. The parser does not enforce usage permissions | No |
 | An encrypted DOCX reports `UNSUPPORTED_TYPE`, not `ENCRYPTED_PDF`, because it is not a ZIP | Yes, by the error |
@@ -537,7 +537,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 **Refined** (stated before, now exact or changed):
 
 - `warnings` order, and the meaning of `COLUMN_ORDER_UNCERTAIN`, `PARTIALLY_SCANNED_PDF` (an error code in the original spec), `NUMBERING_AMBIGUOUS`, `NUMBERING_NOT_RENDERED`, `TEXT_BOX_CONTENT`, `EMBEDDED_OBJECT` and `UNSUPPORTED_DOCX_FEATURE` (section 10).
-- The meaning of `UNSUPPORTED_TYPE`, `MALFORMED_FILE`, `ENCRYPTED_PDF`, `SCANNED_PDF`, `TOO_MUCH_TEXT`, `ARCHIVE_TOO_LARGE`, `ARCHIVE_UNSAFE` and `TRACKED_CHANGES_PRESENT` (section 9).
+- The meaning of `UNSUPPORTED_TYPE`, `MALFORMED_FILE`, `ENCRYPTED_PDF`, `SCANNED_PDF`, `TOO_MUCH_TEXT`, `ARCHIVE_TOO_LARGE`, `ARCHIVE_UNSAFE` and `TRACKED_CHANGES_PRESENT` (section 9), and the PDF content budget (section 11).
 - The PDF locator and every DOCX locator (4.3), header, footer and endnote reading (4.3), and the page-number rule (section 5).
 - The triggers of `partial` (section 6), DOCX wrappers and text boxes (3.4), structure levels, ranges and acceptance (7.2 and 7.4).
 

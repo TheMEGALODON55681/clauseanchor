@@ -18,6 +18,8 @@ from pdfminer.pdftypes import (
     LITERALS_ASCII85_DECODE,
     LITERALS_ASCIIHEX_DECODE,
     LITERALS_FLATE_DECODE,
+    LITERALS_LZW_DECODE,
+    LITERALS_RUNLENGTH_DECODE,
     PDFStream,
     resolve1,
 )
@@ -71,6 +73,7 @@ SCANNED_MAX_CHARS = 20
 PARTIAL_MAX_CHARS = 200
 
 _FLATE_CHUNK = 64 * 1024  # bytes of Flate output read per step while measuring a stream (A11)
+_GROWING_FILTERS = (*LITERALS_FLATE_DECODE, *LITERALS_LZW_DECODE, *LITERALS_RUNLENGTH_DECODE)
 
 # Both libraries put raw document bytes into log records and exception text (A1).
 for _name in ("pdfminer", "pdfplumber"):
@@ -112,12 +115,16 @@ class _Page:
 def _decoded_length(stream: PDFStream, limit: int) -> int:
     """The length of a stream after Flate, read in chunks and abandoned once it passes limit.
     Leading ASCII85 and ASCIIHex filters are undone first, since they never grow the data and
-    producers such as reportlab put them in front of Flate. Any other filter counts the stored
-    length, which can only understate it (A11)."""
+    producers such as reportlab put them in front of Flate. A second filter that can grow the
+    data (Flate, LZW or RunLength) is counted as past the limit: pdfminer inflates each stage
+    in full, and a content stream has no use for such a chain. Any other filter counts the
+    stored length, which can only understate it (A11)."""
+    names = [name for name, _ in stream.get_filters()]
+    if sum(name in _GROWING_FILTERS for name in names) > 1:
+        return limit + 1
     data = stream.get_rawdata() or b""
     if stream.decipher and stream.objid is not None and stream.genno is not None:
         data = stream.decipher(stream.objid, stream.genno, data, stream.attrs)
-    names = [name for name, _ in stream.get_filters()]
     total = 0
     try:
         while names and names[0] in (*LITERALS_ASCII85_DECODE, *LITERALS_ASCIIHEX_DECODE):

@@ -411,13 +411,25 @@ def _bomb() -> bytes:
     return zlib.compress(b" " * (MAX_DECODED_CONTENT_BYTES + 1), 9)
 
 
-def _bomb_content_bytes() -> bytes:
+def _single_content_pdf(content: bytes) -> bytes:
     return _raw_pdf(
         {
             **_CATALOG,
             3: b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>",
-            4: _stream(_bomb(), b"/Filter /FlateDecode"),
+            4: content,
         }
+    )
+
+
+def _bomb_content_bytes() -> bytes:
+    return _single_content_pdf(_stream(_bomb(), b"/Filter /FlateDecode"))
+
+
+def _bomb_double_flate_bytes() -> bytes:
+    # The same bomb inside a second Flate stage. The first stage is about 9 KB, so a count
+    # that stops after one filter sees a stream well inside the budget.
+    return _single_content_pdf(
+        _stream(zlib.compress(_bomb(), 9), b"/Filter [/FlateDecode /FlateDecode]")
     )
 
 
@@ -954,6 +966,7 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "hundred_pages.pdf": (lambda: _pdf(_many_pages(MAX_PDF_PAGES)), None),
     "too_many_pages.pdf": (lambda: _pdf(_many_pages(MAX_PDF_PAGES + 1)), ErrorCode.TOO_MANY_PAGES),
     "bomb_content.pdf": (_bomb_content_bytes, ErrorCode.TOO_MUCH_TEXT),
+    "bomb_double_flate.pdf": (_bomb_double_flate_bytes, ErrorCode.TOO_MUCH_TEXT),
     "bomb_form.pdf": (_bomb_form_bytes, ErrorCode.TOO_MUCH_TEXT),
     "bomb_encrypted.pdf": (_bomb_encrypted_bytes, ErrorCode.TOO_MUCH_TEXT),
     "form_cycle.pdf": (_form_cycle_bytes, None),
