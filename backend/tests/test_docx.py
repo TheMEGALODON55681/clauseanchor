@@ -73,15 +73,22 @@ def patch_headers(data: bytes, *, flag_bit: int = 0, method: int | None = None) 
 
 
 def declare(
-    data: bytes, member: str, *, compressed: int | None = None, size: int | None = None
+    data: bytes,
+    member: str,
+    *,
+    compressed: int | None = None,
+    size: int | None = None,
+    crc: int | None = None,
 ) -> bytes:
-    """Rewrites the compressed or uncompressed size the central directory declares for one
-    member."""
+    """Rewrites the compressed size, the uncompressed size or the checksum the central
+    directory declares for one member."""
     out = bytearray(data)
     at = out.find(b"PK")
     while at >= 0:
         (name_length,) = struct.unpack_from("<H", out, at + 28)
         if out[at + 46 : at + 46 + name_length] == member.encode():
+            if crc is not None:
+                struct.pack_into("<I", out, at + 16, crc)
             if compressed is not None:
                 struct.pack_into("<I", out, at + 20, compressed)
             if size is not None:
@@ -127,7 +134,7 @@ def test_the_name_check_runs_before_any_member_is_read() -> None:
     assert rejects(buffer.getvalue()) == ErrorCode.ARCHIVE_UNSAFE
 
 
-def test_the_size_limit_is_inclusive_and_counts_declared_sizes(
+def test_the_size_limit_is_inclusive_and_counts_the_bytes_read(
     fixture_bytes: dict[str, bytes], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     data = fixture_bytes["simple.docx"]
@@ -139,13 +146,71 @@ def test_the_size_limit_is_inclusive_and_counts_declared_sizes(
     assert rejects(data) == ErrorCode.ARCHIVE_TOO_LARGE
 
 
+def test_the_limit_stops_a_member_in_the_middle_of_its_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The step is smaller than the member, so the limit trips before the member is all read.
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("word/document.xml", bytes(64))
+    monkeypatch.setattr(docx_module, "_READ_STEP", 8)
+    monkeypatch.setattr(docx_module, "MAX_ARCHIVE_BYTES", 16)
+    assert rejects(buffer.getvalue()) == ErrorCode.ARCHIVE_TOO_LARGE
+
+
 def test_a_member_that_lies_about_its_size_is_cut_short_and_refused(
     fixture_bytes: dict[str, bytes],
 ) -> None:
-    # zipfile stops a member at its declared size, so a small claim cannot hide a large
-    # member. The cut data then fails its checksum.
+    # zipfile stops a member at its declared size. The cut data then fails its checksum.
     data = declare(fixture_bytes["simple.docx"], "word/document.xml", size=8)
     assert rejects(data) == ErrorCode.MALFORMED_FILE
+
+
+def stored_members(data: bytes, monkeypatch: pytest.MonkeyPatch) -> dict[str, tuple[int, int]]:
+    """Parses data and returns (method, size) of every member the library was handed."""
+    seen: dict[str, tuple[int, int]] = {}
+    real = docx_module.Document
+
+    def spy(source: io.BytesIO) -> object:
+        with zipfile.ZipFile(source) as archive:
+            seen.update({m.filename: (m.compress_type, m.file_size) for m in archive.infolist()})
+        return real(source)
+
+    monkeypatch.setattr(docx_module, "Document", spy)
+    parse_docx(data)
+    return seen
+
+
+def test_the_library_is_handed_every_member_stored_at_its_real_size(
+    fixture_bytes: dict[str, bytes], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    data = fixture_bytes["simple.docx"]
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        original = {m.filename: m.file_size for m in archive.infolist()}
+    handed = stored_members(data, monkeypatch)
+    assert handed == {name: (zipfile.ZIP_STORED, size) for name, size in original.items()}
+
+
+def test_a_member_that_lies_and_matches_its_checksum_is_cut_and_handed_over_stored(
+    fixture_bytes: dict[str, bytes], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The declared size is 100 and the checksum fits the first 100 bytes, so zipfile accepts
+    # the cut. Left alone, python-docx would inflate all 3 MiB (up to 1 GiB for a larger
+    # member) before the cut. The stored copy holds the 100 bytes and nothing else.
+    padding = bytes(3 * 1024 * 1024)
+    buffer = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(fixture_bytes["simple.docx"])) as source,
+        zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as target,
+    ):
+        for name in source.namelist():
+            target.writestr(name, source.read(name))
+        target.writestr("word/media/padding.bin", padding)
+    data = declare(
+        buffer.getvalue(), "word/media/padding.bin", size=100, crc=zlib.crc32(padding[:100])
+    )
+    handed = stored_members(data, monkeypatch)
+    assert handed["word/media/padding.bin"] == (zipfile.ZIP_STORED, 100)
 
 
 def test_a_member_whose_compressed_data_ends_early_is_malformed(
@@ -159,9 +224,13 @@ def test_an_encrypted_member_is_malformed(fixture_bytes: dict[str, bytes]) -> No
     assert rejects(patch_headers(fixture_bytes["simple.docx"])) == ErrorCode.MALFORMED_FILE
 
 
-def test_an_unsupported_compression_method_is_malformed(fixture_bytes: dict[str, bytes]) -> None:
-    data = patch_headers(fixture_bytes["simple.docx"], method=99)
-    assert rejects(data) == ErrorCode.MALFORMED_FILE
+@pytest.mark.parametrize("method", [zipfile.ZIP_BZIP2, zipfile.ZIP_LZMA, 9, 99])
+def test_a_member_that_is_neither_stored_nor_deflated_is_unsafe(
+    method: int, fixture_bytes: dict[str, bytes]
+) -> None:
+    # zipfile has no output limit for bzip2 and lzma, so the method is refused before any read.
+    data = patch_headers(fixture_bytes["simple.docx"], method=method)
+    assert rejects(data) == ErrorCode.ARCHIVE_UNSAFE
 
 
 def test_bytes_that_are_not_a_package_are_malformed(fixture_bytes: dict[str, bytes]) -> None:

@@ -1301,3 +1301,119 @@ Open for your decision:
 - `name_span` and the `party` kind: the frontend requires them, and nothing in Phase 1 or 2 builds them before 2-E.
 
 Next action: commit 1-F with `feat(parser): add parse entry point, CLI and parser contract`, send `ParserContract.md` to Tanishq as the replacement for every earlier contract message, then reply `next` to start the 1-R phase review.
+
+
+## 2026-10-16: Part 1-R, step 1, the phase review (findings only)
+
+Part: 1-R, step 1 of 2. Range `1077d25..a37cbec`, which is 1-B to 1-F (`9b2fa01` to `a37cbec`) in the backend. The range also holds the frontend commits, so CodeRabbit read those too. Review only: no file under `backend/` changed, no dependency was added, and no git write ran. Files changed: this entry. The fixes are step 2, one commit per theme, after Aryan replies. Already approved for step 2: pass the Word list level (`ilvl`) from `docx.py` into `structure.py` so a numeral list after `(h)` reads `(i)` as a numeral in DOCX, and record the PDF case as a ceiling.
+
+Reviews that ran:
+- `/gstack-cso`, focused on untrusted file input, archive and decompression limits, logging of file content and exception paths. Attack surface: one entry point, `parse_document(bytes)`, with no network, disk, subprocess or HTTP in this phase. Secrets in tracked files and in history: none. Stray documents: none tracked, and `data/*` is ignored. CI files: none exist. Dependencies: advisory lookups by package name and version only (three searches, one page fetch).
+- `/gstack-review`, as its checklist read against the code. The critical categories (SQL, races, model output, shell) have nothing to check in this phase. Enum completeness was traced: every `ErrorCode` and `WarningCode` is raised in `app/`, listed in `ParserContract.md` and covered by a test. The skill's auto-fix, review-log, version-queue and specialist steps did not run, because this step is review only.
+- `/coderabbit:code-review --base-commit 1077d25`, one attempt. It started this time, ran about four minutes and exited 0 with 3 findings (one backend, two frontend). The earlier failures to start at FE-R did not repeat, and `coderabbit update` was not run.
+- One independent second review, read-only, over the ten files under `backend/app/`. It was given no finding from the other reviews.
+
+Method. Probes ran as separate processes with `python -I` against a copy of `app/` and `tests/` in the session scratchpad, never the repo. Each ran inside a job object with a 1.5 GiB memory cap, so a runaway allocation could only end that one process. Inputs were synthetic and nothing was written under the repo. Baseline on the copy: 694 passed in 36 s. A 100 MiB DOCX and an 8 MiB dense PDF were not run at full size, so the figures for those are scaled from smaller runs and marked as computed.
+
+Findings are grouped by severity. P1 means a limit the docs promise does not hold. P2 weakens a guarantee, or leaves a known ceiling unbounded. P3 is hygiene. `Verified` means a probe reproduced it. `Code` means read in the source. `Second review` means it found the same thing on its own.
+
+P1:
+- B1. The DOCX archive limit (A12) trusts sizes the file author writes, and `zipfile` inflates a member in full before it cuts the result to the declared size. `_check_archive` (`docx.py:371`) sums `file_size` from the central directory. python-docx then reads each member with `ZipFile.read`. In the installed Python 3.12, `ZipExtFile._read1` (`zipfile/__init__.py:1067` to `1078`) asks Flate for up to 1 GiB per call (`MAX_N` is `1 << 31 - 1`, which Python reads as `1 << 30`), calls `decompress(data)` with no limit for bzip2 and lzma, and slices to the declared size afterwards. Verified: `word/document.xml` holding 128 MiB of white space, with the central directory declaring 2,000 bytes, passes `_check_archive`, allocates it all and only then fails the checksum as `MALFORMED_FILE`. Peak working set rose 256 MiB for Flate (file 131,589 B), 260 MiB for bzip2 (1,279 B) and 265 MiB for lzma (20,116 B). The 10 MiB input cap bounds the file and not the output: Flate allows about 10 GB from 10 MiB (computed from the 1,032 to 1 ceiling), and bzip2 reached 100,000 to 1 here. The three real DOCX files in the smoke set hold 90 members, 86 Flate and 4 stored, and none uses another method. Fix: refuse any other method, and count the real output in chunks (`archive.open(name).read(65536)` keeps Flate to 64 KiB a step) before python-docx reads, against the same 100 MiB total. `[CONTRACT]`: `ARCHIVE_TOO_LARGE` means the real size, and `ARCHIVE_UNSAFE` gains the method rule. A12 in `Phases.md` ("zipfile stops a member at its declared size") and `ParserContract.md` lines 368 and 399 ("declared") need the same correction. The second review did not find this one.
+- B2. The PDF content budget (A11) measures only the first filter of a stream. `_decoded_length` (`pdf.py:112`) undoes leading ASCII filters, counts the output of one Flate, and ignores the rest of the chain. pdfminer's `decode` applies every filter with an unbounded `zlib.decompress`. `/Filter [/FlateDecode /FlateDecode]` passes, because stage one is the compressed form of stage two and is small. Verified: 64 MiB of content in one Flate stream is `TOO_MUCH_TEXT` in 0.01 s (file 65,807 B). The same content in two stages (file 838 B) parses in 0.82 s and the peak working set rose 129 MiB. 256 MiB in two stages (file 1,162 B) raised it 513 MiB, about twice the decoded size. Stage one may be up to 8 MiB, so a file under 10 KB can ask for about 8 GB (computed). Fix: measure the whole chain stage by stage with `max_length`, and treat a second compressing filter after Flate as over budget. Add a `bomb_double_flate` fixture beside `bomb_content`. The second review and CodeRabbit (major) found it too, and CodeRabbit proposed the same fixture.
+
+P2:
+- B3. Streams the budget never visits: embedded font programs, ToUnicode maps, object streams and xref streams. This is the 1-C ceiling in `Phases.md` and `ParserContract.md` line 446, now measured. A 66,262 B PDF whose font holds a 64 MiB Flate `FontFile2` parsed, and the peak working set rose 64 MiB (verified). At 1,000 to 1, a 10 MiB file asks for about 10 GB (computed). No library-level fix bounds every stream, because `pdfplumber.open` makes pdfminer read object streams before the budget check runs. The bound is the child process of Phase 2: it needs a memory cap next to the wall-clock kill, and 2-C should say so (call 2 below).
+- B4. The gutter scan grows with the square of the words. `_gutters` (`pdf.py:294`) runs `_sides` over every row for every gutter candidate and never stops early. A wide MediaBox with many gaps makes a small file expensive. Verified on the function with 20 rows: 100, 200, 400 and 800 gaps took 0.02, 0.07, 0.28 and 1.07 s, about four times for each doubling. End to end, a 173,232 B PDF (400 gaps, 12,100 pt wide) took 0.78 s and a 349,232 B PDF (800 gaps, 24,100 pt) took 3.19 s. 10,000 gaps on one page would take about 170 s (computed), inside the 8 MiB budget. pdfminer accepts any page width. Fix: stop after `MIN_ROWS_AROUND_GUTTER` rows, and count the staggered case (words on both sides but never in one row) from sorted row positions instead of a scan per candidate.
+- B5. DOCX walk cost per byte. The cap is 100 MiB of XML, and an empty paragraph is 6 bytes, so 17.5 million fit. Verified at scale: 200,000 empty paragraphs (file 2,838 B) took 0.71 s, 3.6 microseconds each, and the peak rose 25 MiB. 100 MiB of them is about 62 s and 2.2 GB (computed). A paragraph with a 32 step style chain (the maximum A17 allows) costs 19 microseconds, and 100,000 of them raised the peak 60 MiB. 100 MiB of those, 2.1 million paragraphs, is about 41 s and 1.3 GB (computed). A numbered one costs 24 microseconds, about 51 s. This is the open 100 MiB DOCX item on 2-C, now with figures. Real contracts have a `document.xml` under a few MB. Fix: cap the XML bytes of one part (for example 25 MiB) or count paragraphs in `_Walk`, plus the memory cap of call 2.
+- B6. Glyphs with no text mapping enter the text silently. Verified: a Type0 font with no ToUnicode map and the string `<004100420043>` gives `source_text` of `(cid:65)(cid:66)(cid:67)`, no warning, `coverage.partial` False. A PDF set in such a font reads as a full document in which every clause is "not found". Neither the contract nor `Phases.md` mentions it. Fix: count `(cid:N)` tokens per page, and above a share (a decision) add a warning and set `partial`, as the scanned-page rule does. `[CONTRACT]` (a new code or an old one, call 3).
+- B7. Text-free output still carries text. `to_json(doc, text=False)` and the CLI without `--text` leave out `source_text`, block text and node text, but `locator.list_label` (up to 100 characters of numbering text from the file) and the `label` of a definition node (a quoted term up to 80 characters) stay. Verified: a numbering level `Clause %1 SECRET-LABEL` and the term `Secret Widget Pricing` both appear in the JSON printed without `--text`. The CLI docstring says the result "can be pasted into a ticket without the contract", and defined terms are often party and product names. Fix: drop both when `text` is False, or say in the docstring and A23 that labels are content (call 4).
+- B8. A DOCX with a DOCTYPE loses the text after an entity reference, silently. `_paragraph` reads `w:t.text` and never the tail of the entity node. Verified: `Before &inner; after` with an internal entity gives `Before`. The external entity and external DTD cases end as `MALFORMED_FILE` and the canary file text did not appear, so there is no file read, only loss. Word never writes a DOCTYPE into a package. Fix: refuse a part with a DOCTYPE as `MALFORMED_FILE`. The `entity_bomb` fixture pins "reads as empty" today and changes with it.
+
+P3:
+- B9. Hidden and alternate text is read as plain text. Verified: a run with `w:vanish` is in `source_text`, and an `mc:AlternateContent` with two `mc:Choice` branches gives both, with `Requires` never evaluated (`_NO_TEXT` at `docx.py:101` skips only the Fallback). The Reader shows the text, so hidden text becomes visible, but the contract does not say so. Second review found the Choice case. Fix: say it in the ceilings of `ParserContract.md`. A `w:vanish` or Choice warning would be a `[CONTRACT]` change and is not proposed.
+- B10. A valid PDF with any bytes before `%PDF-` is refused. Verified: one leading newline, a UTF-8 BOM and 100 junk bytes all give `UNSUPPORTED_TYPE`. Readers accept the header anywhere in the first 1,024 bytes. Whether pdfminer then parses such a file was not tested (call 6).
+- B11. A footnote `w:id` is not bounded. Verified: 4,200 digits parse, and the locator `id` becomes a 4,200 digit integer (4,913 characters of JSON). The numbering code bounds its numbers with `_number` (9 digits), and this one does not. A consumer with a 64 bit column or a JavaScript number would fail on it. Fix: use `_number` at `docx.py:605`.
+- B12. The CLI reads the whole file before the 10 MiB check (`parse_file.py:29`, `Path.read_bytes()`). A development tool, so low. Second review. Fix: compare `stat().st_size` first.
+- B13. `warnings.catch_warnings()` in `docx._read` changes the process-wide filter list, which is not safe if two threads parse at once. Phase 2 parses in a child process, so it only matters if that changes. Code.
+- B14. Transitive runtime packages are not pinned: `cryptography`, `pypdfium2`, `charset-normalizer`, `cffi`, `pycparser`, `typing_extensions`, and Pillow in production (only `requirements-dev.txt` pins it). A clean install can resolve newer ones. Rules section 4 says to pin what the install resolved. Fix: a constraints file from the clean install (no new dependency, call 7).
+- B15. The text limit counts only after layout. A compressed content stream just under 8 MiB can hold hundreds of thousands of tiny text operations, and `extract_words` builds the per-glyph objects before `TextAssembler` rejects the text. This is the 1-C ceiling "the budget bounds decoded size, not time". Second review. Not measured here.
+
+Frontend, from CodeRabbit, outside Phase 1 (both minor, both still true in the current files):
+- B16. `Reader.tsx:653` uses `var(--anchor-50)`, which `index.css` does not define (only `--anchor-100`), so the manual selection row draws no background. Code.
+- B17. `revealOnce` in `lib/reveal.ts` returns a cleanup that disconnects the observer and leaves `data-reveal="pending"`, so a cleanup before the element shows can leave it hidden. Code.
+
+Not reproduced. The second review said a 400 digit `/MediaBox` raises an uncaught `OverflowError`. It does not: that file gives `MALFORMED_FILE`, and 400 digit operands for `Td`, `Tf`, `Tm` and a zero `Tz`, a zero or negative MediaBox and `/Rotate 90` all parse with finite boxes or end in `ParseError`.
+
+Checked and clean:
+- `app/` opens no file, socket or subprocess, and has no `eval`, `pickle` or `yaml`. The only logging is the two `setLevel` lines that silence pdfminer and pdfplumber. Their messages go through `logging` only, and no library calls `warnings.warn` with file content. `ParseError` carries the code alone, and every `raise` inside a catch block is `from None`.
+- XML: the parser python-docx builds resolves no entities, loads no DTD and has no network. Nesting: 110 nested `sdt`, 80 nested tables and 55 nested text boxes parse, 130 nested `sdt` is `MALFORMED_FILE`, and Form XObject chains of 1,000 and 3,000 give `MALFORMED_FILE`.
+- Regexes in `structure.py` and `pdf.py` were read for backtracking, and none nests a quantifier over the same characters.
+- The assembler's offset arithmetic and the definition node offsets (the `-1` and `+1` around the quoted term).
+- Libraries. pdfminer.six 20260107 is past 20251230, the fix for CVE-2025-64512 and CVE-2025-70559 (the pickle CMap issues), and the installed `cmapdb.py` loads JSON from a checked path with no pickle. lxml 6.1.3 is past 6.1.0, the fix for CVE-2026-41066, which concerns `iterparse` and `ETCompatXMLParser` and neither is used. No advisory turned up for python-docx 1.2.0 or pdfplumber 0.11.10. A search by name is not a scan, so run `pip-audit` once on the install.
+
+Not verified:
+- The full size runs named above, and the 186 s PDF timing from 1-C.
+- Whether pdfminer parses a PDF whose header sits after leading bytes (B10).
+- A scan with `pip-audit`, which is not installed. Nothing was installed.
+- `graphify` did not run, because it writes `graphify-out/`. It belongs with the docs commit of step 2. `/ponytail:ponytail-review` is not part of 1-R and did not run.
+
+Processes. Started 36, closed 36, confirmed by a process listing at the end: 33 Python (23 probes, 2 test runs of the scratch copy, 8 short scripts) and 3 CodeRabbit (version, sign-in status, the one review). Short read-only shell commands (git, grep, ls, a process listing) are not counted. No browser, no server, no node process of ours. The second review went through the already connected MCP server, which is not ours and was left alone. The ledger and the probe scripts are in the session scratchpad, outside the repo.
+
+Blockers: none for step 2.
+
+Aryan's calls, in order of effect:
+1. B1 and B2: refuse what Word and real producers never write (a non-stored, non-Flate DOCX member, a second compressing filter after Flate), and measure real output for the rest. Recommended. The other way is to measure everything, which needs a chunked reader for LZW and RunLength as well.
+2. Phase 2: 2-C gets a memory cap for the parse child next to the wall-clock kill, because B3 and B5 have no library-level bound.
+3. B6: a new warning code for unmapped text, or `partial` alone, and the share that triggers it.
+4. B7: drop `list_label` and definition labels from text-free output, or document them as content.
+5. B8: refuse any DOCTYPE as `MALFORMED_FILE`.
+6. B10: accept `%PDF-` anywhere in the first 1,024 bytes.
+7. B14: add a constraints file from the clean install.
+8. B16 and B17: fold into step 2 as one frontend commit, or leave to the frontend track.
+
+Proposed step 2, one commit per theme: (1) archive limits, B1. (2) PDF budget chain, B2, with the fixture. (3) gutter scan, B4. (4) DOCX bounds, B5, B8 and B11. (5) unreadable text, B6. (6) text-free output and the CLI, B7 and B12. (7) the `ilvl` carrier, with the PDF case recorded as a ceiling. (8) docs: the ceilings (B3, B9, B13, B15), A11 and A12 corrected, `ParserContract.md`, the 2-C note, the `graphify` refresh and the 1-R tick in `Phases.md`.
+
+Next action: reply with the fixes you want in step 2. The default set is calls 1 to 5 and 7 as recommended, and the eight commits above.
+
+
+## 2026-10-16: Part 1-R, step 2, commit 1 of 11: DOCX archive limits (B1)
+
+Part: 1-R step 2, theme 1 of the proposed eleven (the eight of step 1, plus the PDF header window from call 6, the constraints file from call 7 and the frontend commit from call 8). Fixes B1, the P1 finding that the archive limit trusted sizes the file author writes. `[CONTRACT]`: two error codes change meaning, see the last section. The BuildLog also carries the step 1 entry above, which was not committed before this part started, so one commit takes both.
+
+Files changed:
+- `backend/app/parsing/docx.py`: `_check_archive` is replaced by `_unpack`. It checks every member name and compression method, then reads each member in 64 KiB steps, counts the bytes against `MAX_ARCHIVE_BYTES` and writes them into a new package with every member stored. python-docx opens that copy. Two constants, `_READABLE_METHODS` and `_READ_STEP`.
+- `backend/tests/test_docx.py`: `declare` takes a checksum. The size-limit test is renamed (bytes read, not declared sizes). New: the limit trips in the middle of a member, the library is handed every member stored at its real size, and a member that lies about its size with a matching checksum is handed over cut. The compression test now runs for bzip2, lzma, Deflate64 and an unknown method and expects `ARCHIVE_UNSAFE`. 694 tests became 700 (four methods replace one test, three new).
+- `docs/app/Phases.md` (A12 resolution, and the "A12 order" deviation rewritten), `docs/app/ParserContract.md` (the two error rows, the limits row, the refined list in section 14), `docs/app/Architecture.md` (the archive safety row), `docs/app/BuildLog.md` (this entry).
+
+What changed, in the order the code runs:
+- A member whose name is unsafe, or whose method is neither stored nor Flate, is `ARCHIVE_UNSAFE`. This runs before any member is read. zipfile inflates bzip2 and lzma with no limit on the output, so there is nothing to count.
+- Each remaining member is read with `ZipFile.open(...).read(65536)`. Flate then yields at most 64 KiB a step, and the running total stops the read at 100 MiB plus one step (`ARCHIVE_TOO_LARGE`).
+- The library gets a stored copy, so none of its reads inflates anything. This is the part that differs from the step 1 plan.
+
+Findings during the part:
+- The fix proposed in step 1 (count the real output in steps, then let python-docx read) is not enough. `ZipExtFile` cuts a member at the size the file declares, so a member that declares 2,000 bytes with a checksum that fits the first 2,000 passes the count. python-docx then calls `ZipFile.read`, which inflates up to 1 GiB in one call before it cuts. Verified with a new probe file (`word/document.xml` of 128 MiB of white space, declared 2,000 bytes, checksum of the first 2,000, file 131,599 B): the code at the last commit rose 257 MiB in peak working set (45 to 302 MiB) in 0.14 s, and the new code rose 1 MiB (45 to 46) in under 0.01 s. Both end `MALFORMED_FILE`, since the cut XML is not a document. Handing over a stored copy closes this, and the test for it needs no large allocation: it checks that the member reaches the library as 100 stored bytes.
+- The three step 1 files on the new code: the Flate file with a wrong checksum rose 1 MiB (was 256), bzip2 and lzma are `ARCHIVE_UNSAFE` with no rise (were 260 and 265).
+- Real files are unchanged. The three DOCX files of the smoke set give the same JSON, by hash, before and after: 21, 212 and 251 blocks.
+- The rejection of a bomb now costs memory. The 101 MiB sparse fixture (463,358 B) was rejected from the member list in 0.00 s with no rise. It is now read until the limit, which took 0.46 s and raised the peak working set from 47 to 231 MiB: the 100 MiB copy, plus the growth of its buffer. That is the same order as accepting a 100 MiB archive, so the worst case of the parser did not grow, and the 2-C memory cap covers it. Counting first and copying second would avoid it for bombs at the price of inflating every file twice. Not done.
+- Writing a directory entry into the copy needs no special case: a first version skipped them, a check showed they copy as they are, and the skip was cut.
+
+Commands run, from `backend/` with the venv interpreter: `ruff format app tests`, `ruff check app tests`, `pytest -q -p no:cacheprovider`. Probes on a copy of `app/` and `tests/` in the scratchpad, never the repo, each as its own process under a 1.5 GiB cap: the four lying archives (three from step 1 and the checksum-matched one) against the last commit and the new code, and the 101 MiB fixture against both. A hash of the full JSON for each smoke DOCX file, for the last commit (exported with `git archive`) and for the working tree. Read-only git.
+
+Tests: 700 passed, 0 failed, 0 skipped (694 before). Pinned versions added: none.
+
+Over-engineering review of the diff: cut two fixtures (`archive_bzip2.docx`, `archive_lzma.docx`) and their 14 line builder, because the header-patched methods in the compression test reach the same check, and the `is_dir` skip described above. Kept: the test that stops a member in the middle (it is the only test of the step size), and the two constants. Nothing left unfixed.
+
+Processes. Started 32, closed 32, confirmed by a process listing at the end: 26 Python (16 probes, 3 test runs, 7 short scripts) and 6 of the formatter and linter (three runs of the pair). No browser, no server, no node process.
+
+Not verified:
+- Other producers. The refusal of bzip2 and lzma rests on the smoke set (86 Flate members and 4 stored, across 90) and on Word's format, not on a survey. Google Docs, Pages, LibreOffice and WPS exports were not opened.
+- Deflate64 was tested by patching a header, not with a real Deflate64 file, which Python cannot write.
+- A real 100 MiB DOCX of dense XML, which is B5.
+
+Blockers: none.
+
+`[CONTRACT]` for Tanishq, not yet sent:
+- `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. Such a file used to parse if zipfile could read it (bzip2, lzma), and now has no result.
+- `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and now counts the bytes read. A file that declared a small size and held more no longer passes as small.
+
+Next action: commit with `fix(parser): count DOCX archive bytes as read and refuse bzip2 and lzma`, send the two `[CONTRACT]` items above to Tanishq, then reply `next` for commit 2, the PDF budget chain (B2) with the `bomb_double_flate` fixture.

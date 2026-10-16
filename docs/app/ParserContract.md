@@ -365,8 +365,8 @@ A rejected file raises `ParseError`. Its message is the code alone, so no docume
 | `SCANNED_PDF` | Every page that has content is scanned. A blank page does not count | refined |
 | `TOO_MANY_PAGES` | A PDF has more than 100 pages. Checked before any text is read | same |
 | `TOO_MUCH_TEXT` | The decoded page content passes 8 MiB (PDF), or the text passes 500,000 code points (PDF and DOCX) | refined |
-| `ARCHIVE_TOO_LARGE` | A DOCX archive's declared uncompressed size is over 100 MiB | same |
-| `ARCHIVE_UNSAFE` | A member name is absolute, has a drive letter or has a `..` segment, after backslashes become slashes | same |
+| `ARCHIVE_TOO_LARGE` | The members of a DOCX archive inflate to more than 100 MiB. The parser counts the bytes it reads, and stops at the limit | refined |
+| `ARCHIVE_UNSAFE` | A member name is absolute, has a drive letter or has a `..` segment, after backslashes become slashes. Or a member uses a compression method other than stored or Flate | refined |
 | `TRACKED_CHANGES_PRESENT` | `ins`, `del`, `moveFrom` or `moveTo` appears in the document, a header, a footer, the footnotes or the endnotes, in any element position. The user accepts all changes and uploads again | refined |
 | `NO_TEXT_FOUND` | The file parses and holds no text, such as an all-blank PDF | same |
 
@@ -396,7 +396,7 @@ A warning is `ParseWarning(code, page, detail)`. `page` is a 1-based PDF page or
 | PDF pages | 100 | `TOO_MANY_PAGES` | same |
 | Decoded PDF page content, content streams and Form XObjects, each stream counted once | 8 MiB, decoded incrementally and aborted as soon as the total passes | `TOO_MUCH_TEXT` | same |
 | Text | 500,000 code points | `TOO_MUCH_TEXT` | same |
-| DOCX archive, total declared uncompressed size | 100 MiB | `ARCHIVE_TOO_LARGE` | same |
+| DOCX archive, total uncompressed size, counted as the members are read | 100 MiB | `ARCHIVE_TOO_LARGE` | refined |
 
 The budget bounds size, not time. The API runs each parse in a child process with a wall-clock kill (Phase 2, part 2-C).
 
@@ -537,7 +537,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 **Refined** (stated before, now exact or changed):
 
 - `warnings` order, and the meaning of `COLUMN_ORDER_UNCERTAIN`, `PARTIALLY_SCANNED_PDF` (an error code in the original spec), `NUMBERING_AMBIGUOUS`, `NUMBERING_NOT_RENDERED`, `TEXT_BOX_CONTENT`, `EMBEDDED_OBJECT` and `UNSUPPORTED_DOCX_FEATURE` (section 10).
-- The meaning of `UNSUPPORTED_TYPE`, `MALFORMED_FILE`, `ENCRYPTED_PDF`, `SCANNED_PDF`, `TOO_MUCH_TEXT` and `TRACKED_CHANGES_PRESENT` (section 9).
+- The meaning of `UNSUPPORTED_TYPE`, `MALFORMED_FILE`, `ENCRYPTED_PDF`, `SCANNED_PDF`, `TOO_MUCH_TEXT`, `ARCHIVE_TOO_LARGE`, `ARCHIVE_UNSAFE` and `TRACKED_CHANGES_PRESENT` (section 9).
 - The PDF locator and every DOCX locator (4.3), header, footer and endnote reading (4.3), and the page-number rule (section 5).
 - The triggers of `partial` (section 6), DOCX wrappers and text boxes (3.4), structure levels, ranges and acceptance (7.2 and 7.4).
 

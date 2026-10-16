@@ -361,6 +361,10 @@ class _Numbering:
         return text if text.strip() else None
 
 
+_READABLE_METHODS = (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)  # the others have no output limit
+_READ_STEP = 64 * 1024  # bytes of a member read per step, so the limit stops a bomb early
+
+
 def _unsafe(name: str) -> bool:
     path = name.replace("\\", "/")
     return (
@@ -368,15 +372,32 @@ def _unsafe(name: str) -> bool:
     )
 
 
-def _check_archive(data: bytes) -> None:
-    """Amendment A12. Reads the member list only. The declared sizes bound every later read,
-    because zipfile stops a member at its declared size."""
-    with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        members = archive.infolist()
-    if any(_unsafe(member.filename) for member in members):
-        raise ParseError(ErrorCode.ARCHIVE_UNSAFE)
-    if sum(member.file_size for member in members) > MAX_ARCHIVE_BYTES:
-        raise ParseError(ErrorCode.ARCHIVE_TOO_LARGE)
+def _unpack(data: bytes) -> io.BytesIO:
+    """Amendment A12. Checks the member names and methods, then reads every member in small
+    steps against the size limit and returns the same members stored. Only stored and Flate are
+    read: zipfile inflates bzip2 and lzma with no output limit, and a Flate member in one call
+    up to 1 GiB, before it cuts the result to the size the file declares. The library gets the
+    stored copy, so none of its reads can inflate anything."""
+    packed = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(data)) as source,
+        zipfile.ZipFile(packed, "w", zipfile.ZIP_STORED) as stored,
+    ):
+        members = source.infolist()
+        if any(
+            _unsafe(member.filename) or member.compress_type not in _READABLE_METHODS
+            for member in members
+        ):
+            raise ParseError(ErrorCode.ARCHIVE_UNSAFE)
+        total = 0
+        for member in members:
+            with source.open(member) as reader, stored.open(member.filename, "w") as writer:
+                while chunk := reader.read(_READ_STEP):
+                    total += len(chunk)
+                    if total > MAX_ARCHIVE_BYTES:
+                        raise ParseError(ErrorCode.ARCHIVE_TOO_LARGE)
+                    writer.write(chunk)
+    return packed
 
 
 def _children(element: etree._Element) -> Iterator[etree._Element]:
@@ -607,15 +628,14 @@ class _Walk:
 
 
 def _read(data: bytes) -> _Walk:
-    """Returns the walked document. The only place library errors are caught. The archive
-    checks run first, and no member is read before they pass."""
+    """Returns the walked document. The only place library errors are caught. The archive is
+    unpacked and checked first, and the library only ever reads the stored copy."""
     try:
-        _check_archive(data)
         with warnings.catch_warnings():
-            # zipfile warns about overlapping entries and puts the member name in the text.
-            # That name is file content, and it should not reach a server log.
+            # zipfile warns about overlapping and duplicate entries and puts the member name in
+            # the text. That name is file content, and it should not reach a server log.
             warnings.simplefilter("ignore")
-            document = Document(io.BytesIO(data))
+            document = Document(_unpack(data))
         for part in document.part.package.iter_parts():
             if part.content_type in _TEXT_PARTS and (
                 next(_root(part).iter(*_TRACKED), None) is not None
