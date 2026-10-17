@@ -7,7 +7,7 @@ export type ObserverFactory = (callback: (entries: { isIntersecting: boolean }[]
 
 type Revealable = { dataset: Record<string, string | undefined> };
 
-/** Returns a function that stops watching. */
+/** Returns a function that stops watching and shows an element still pending: a rerun under reduced motion never hides it. */
 export function revealOnce(el: Revealable, makeObserver: ObserverFactory, reduced: boolean): () => void {
   if (reduced) return () => {};
   const observer = makeObserver((entries) => {
@@ -18,7 +18,10 @@ export function revealOnce(el: Revealable, makeObserver: ObserverFactory, reduce
   if (!observer) return () => {};
   el.dataset.reveal = "pending";
   observer.observe(el);
-  return () => observer.disconnect();
+  return () => {
+    observer.disconnect();
+    if (el.dataset.reveal === "pending") delete el.dataset.reveal;
+  };
 }
 
 export const browserObserver: ObserverFactory = (callback) =>

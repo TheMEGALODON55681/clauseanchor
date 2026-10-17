@@ -73,3 +73,20 @@ test("the stop function disconnects the observer", () => {
   stop();
   assert.equal(log.disconnects, 1);
 });
+
+/* The effect cleans up when reduced motion switches on, and its rerun returns early, so a
+   cleanup that left the element pending would hide it for good. */
+test("the stop function shows an element that is still pending", () => {
+  const { el, factory } = setup();
+  const stop = revealOnce(el, factory, false);
+  stop();
+  assert.equal(el.dataset.reveal, undefined);
+});
+
+test("the stop function leaves a shown element shown", () => {
+  const { el, factory, fire } = setup();
+  const stop = revealOnce(el, factory, false);
+  fire({ isIntersecting: true });
+  stop();
+  assert.equal(el.dataset.reveal, "shown");
+});

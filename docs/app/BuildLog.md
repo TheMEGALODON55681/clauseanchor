@@ -1796,3 +1796,63 @@ Blockers: none.
 - Commit 9: none. The parser output is the same for every fixture under the old and the new pins.
 
 Next action: commit with `build(backend): pin transitive packages with a constraints file`, then reply `next` for commit 10, the frontend commit (B16: the undefined `--anchor-50` in `Reader.tsx`, B17: `revealOnce` cleanup leaves `data-reveal="pending"`).
+
+
+## 2026-10-17: Part 1-R, step 2, commit 10 of 11: the frontend findings (B16 and B17)
+
+Part: 1-R step 2, theme 10 of the eleven. Fixes B16 and B17, the two frontend findings CodeRabbit raised in step 1. Frontend only: no backend file and no dependency changed, and no browser or server ran. `[CONTRACT]`: none. Commit 9 landed as `5a1df05`, and the tree was clean before this part started.
+
+Files changed:
+- `frontend/src/pages/Reader.tsx` (one line): the selected Manual review button fills with `var(--anchor-100)`.
+- `frontend/src/lib/reveal.ts`: the stop function that `revealOnce` returns also removes the mark when it still reads `pending`.
+- `frontend/src/tokens.test.ts`: one new test. `frontend/src/lib/reveal.test.ts`: two new tests.
+- `docs/app/FrontendDesign.md` (17.7 rows CR and CS and one sentence in its intro, the reveal hook paragraph, two rows in section 13), `docs/app/Architecture.md` (the test count and the `tokens.test.ts` note), `docs/app/DesignSystem.md` (the scroll reveal row), `docs/app/BuildLog.md` (this entry).
+- `docs/app/Phases.md` and `docs/app/ParserContract.md` did not change: 1-R is ticked with commit 11, and the parser output did not move.
+
+What changed:
+- B16. `Reader.tsx` read `var(--anchor-50)`, which `index.css` never declared, so the declaration was invalid and the selected button drew no fill. It now reads `--anchor-100`, the tint a selected category row already has, so both selected states match. The other way was a new `--anchor-50` with a light and a dark value, which needs a contrast check against every text on it and has no other user, since nothing lighter than `anchor-100` is in the design. The contrast of text on `anchor-100` is already under test in both themes. The new test reads every `.ts`, `.tsx` and `.css` file under `src` (the test files aside), collects each `var(--name)` and fails for a name that no stylesheet or inline custom property declares. A name cut at a template hole must start a declared one: two Gallery lines build `var(--radius-${r})` and `var(--elevation-${e})`.
+- B17. `useReveal` runs `revealOnce` in a layout effect keyed on reduced motion. When the preference switched on while an element below the fold was still pending, the cleanup ran, the rerun returned early, and the element stayed hidden until a reload, because the stylesheet hides `pending`. The stop function now clears a pending mark and leaves a shown one. Under strict mode in development the effect runs twice, and the cleanup and the second run both happen in one layout pass, before the first paint. Only a reduced motion setting that changes while the page is open reaches this path.
+
+Findings during the part:
+- The token test found one undeclared name in the current source, `--anchor-50`, and no false positive. The scan before the test read 73 names plus the two cut at a template hole.
+- Of the three new tests, one passes on the old code on purpose: a shown element stays shown after the stop function. It guards the `pending` check, and the second mutation below shows it does.
+
+Checks, frontend only, run with no browser and no server:
+- Tests first. Red run: 68 tests, 66 passed and 2 failed, the token test (it names `--anchor-50` and nothing else) and the reveal test for a pending mark. Both passed after the two source edits.
+- Mutations on a copy of `src` in the session scratchpad, never the repo: a mistyped prefix in the Gallery (`--rad-${r}`) fails the token test and names `--rad-`. A stop function that always clears the mark fails the shown test. A stop function that clears nothing fails the pending test.
+- Final code, run after the last edit: `pnpm typecheck` exit 0, `pnpm test` 68 of 68 (65 before: 9 reveal, 16 tokens, 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 11 reader, 2 accuracy, 1 menu, 1 sheet) and `pnpm build` 172 modules with no warnings. Sizes (Vite, gzipped): entry 73.59 KB, Reader chunk 15.24 KB, stylesheet 7.89 KB. No module gained an importer, and no earlier build was made to compare.
+- The Rules section 1 scrub, the tool-name grep over `frontend/` and `README.md`, and the en and em dash scan over the added lines are clean. The dash scan matched a control file that holds both dashes. No user-facing string changed. `copywriting`, `copy-editing` and `stop-slop` ran over the docs prose, in that order, and changed two sentences (the end of row CR and the reach of the B17 path above).
+
+Manual checklist for the fill and the reveal (not run, no browser by instruction). From `frontend/`, `pnpm dev`, then in the browser:
+1. Open the Reader on the sample contract at 1280 px wide. Click "Manual review" in the sidebar. The button takes a pale teal fill like a selected category row, and its label and the count badge stay readable.
+2. Switch to the dark theme and click it again. The fill is the dark teal of a selected row, with the same readable text.
+3. Click a category row. The Manual review button goes back to the plain sheet fill.
+4. Open `#/how-it-works` with the browser's reduced motion emulation off, before scrolling. Turn the emulation on (DevTools, Rendering, prefers-reduced-motion), then scroll to the lower fragments. They are visible. Before this commit they stayed hidden until a reload.
+
+ponytail-review: cut two lines of the first reveal test (a rerun under reduced motion that only restated the existing reduced motion test) and a doc comment from two lines to one. Net 3 lines, all applied. Kept: the `>= 60` guard in the token test (a scan that read nothing would pass without it, as in the sibling test's `fills.length >= 9`), the second reveal test (the only test of the `pending` check, as the mutation shows), and the template hole branch (two real uses in the Gallery). Nothing else left unfixed.
+
+Commands run, from `frontend/`: `pnpm test` (the red run), `pnpm typecheck`, `pnpm test`, `pnpm build`, then `pnpm typecheck`, `pnpm test` and `pnpm build` again on the final code, three `node --test` runs on the scratch copy, `pnpm --version` and `node --version`. Read-only git.
+
+Tests: frontend 68 passed, 0 failed, 0 skipped (65 before). Backend not run: no backend file changed. Pinned versions added: none.
+
+Not verified:
+- How the new fill looks, and the reveal after a live reduced motion switch: no browser ran, so both rest on the tests and the checklist above.
+- A comparison build of the previous commit, for the bundle size.
+
+Processes. Started 12, closed 12, confirmed by a process listing at the end: 10 pnpm and node commands from the ledger (four of them ended with exit status 1 on purpose: the red run and three mutations) and two version queries. Each ran in the foreground and exited. The one `node.exe` still listed is the Codex MCP server, started at 15:40 before this part's first command, and not ours. No browser, no server, no Python. Short read-only shell commands (git, grep, diff, ls) are not counted.
+
+Blockers: none.
+
+`[CONTRACT]`, held for the one message at the end of 1-R. The list so far:
+- Commit 1: `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and counts the bytes read.
+- Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds.
+- Commit 3: none.
+- Commit 4: `MALFORMED_FILE` also means a DOCX text, styles or numbering part with a DOCTYPE, and a footnote or endnote whose `w:id` is missing, signed or longer than nine digits. `TOO_MUCH_TEXT` also means a DOCX with more than 100,000 paragraphs in all its parts, empty ones included.
+- Commit 5: a new warning code, `UNMAPPED_GLYPHS`: a PDF page where more than 25 percent of the glyphs have no text mapping. It carries the page, sets `partial`, and the text keeps each glyph as `(cid:N)`. The JSON schema enum gains the value, last.
+- Commit 6: the text-free JSON (the CLI default and `to_json(doc, text=False)`) has no `locator.list_label` on any block, and the `label` of every `definition` node is `null`. The full form is unchanged. The schema is unchanged. The CLI refuses a file over 10 MiB with `FILE_TOO_LARGE` before reading it.
+- Commit 7: a new locator key `list_level` on a numbered DOCX paragraph: an integer from 0 to 8 (the Word `w:ilvl`), present exactly when `list_label` is, absent on PDF blocks and on cell blocks of several paragraphs, and kept by the text-free form. The structure tree changes where a Word numeral list follows letters on a deeper level: `(i)` after `(h)` is now a numeral child of `(h)`, where it was the ninth letter and left the other numerals inside it. In a PDF or a typed list nothing changes. The schema is unchanged.
+- Commit 8: `UNSUPPORTED_TYPE` no longer means "does not start with `%PDF-`". A PDF with bytes in front of the header (a newline, a byte order mark, junk) now parses when `%PDF-` ends inside the first 1,024 bytes, and gives the same output as the plain file. A header after that is still `UNSUPPORTED_TYPE`. A ZIP signature is checked first. Nothing in the output format changes.
+- Commit 9: none. The parser output is the same for every fixture under the old and the new pins.
+- Commit 10: none. Frontend only, and no parser output moved.
+
+Next action: commit with `fix(frontend): fill selected manual review button, clear pending reveal`, then reply `next` for commit 11, the docs commit: the `graphify` refresh, a line in `Rules.md` section 4 for `backend/constraints.txt` and its install command, the 1-R tick in `Phases.md`, and the consolidated `[CONTRACT]` message for Tanishq covering commits 1 to 11.

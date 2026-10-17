@@ -650,7 +650,7 @@ export default function Reader() {
             padding: "8px 12px",
             borderRadius: "var(--radius-md)",
             border: "1px solid var(--rule-default)",
-            background: selection?.type === "manual" ? "var(--anchor-50)" : "var(--paper-sheet)",
+            background: selection?.type === "manual" ? "var(--anchor-100)" : "var(--paper-sheet)",
             color: "var(--ink-primary)",
             fontSize: 14,
             fontWeight: 500,

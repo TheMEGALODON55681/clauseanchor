@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 /* Reads the real token file, so a later edit that drops a pair below the bar
    fails here. The pairs are the colour changes in FrontendDesign.md 5.4. */
@@ -105,6 +105,24 @@ test("light: plain status text reaches 4.5 on the sunken, selected and hovered r
 
 test("dark: plain status text reaches 4.5 on the sunken, selected and hovered rows", () => {
   for (const fg of plainStatus) check(dark, "dark", on(fg, rowSurfaces, 4.5));
+});
+
+/* A var() of a name that nothing declares draws nothing and raises no error: --anchor-50 left the
+   selected Manual review row with no fill. Every name a source file reads is declared somewhere under
+   src, in a stylesheet or as an inline custom property. A name cut off by a template hole, such as
+   var(--radius-${r}), must start a declared one. */
+test("every var() reads a custom property that is declared", () => {
+  const root = new URL("./", import.meta.url);
+  const sources = readdirSync(root, { recursive: true, encoding: "utf8" })
+    .filter((f) => /\.(css|tsx?)$/.test(f) && !f.endsWith(".test.ts"))
+    .map((f) => readFileSync(new URL(f.replace(/\\/g, "/"), root), "utf8"))
+    .join("\n");
+  const declared = new Set([...sources.matchAll(/(?<![\w-])["']?(--[a-z0-9-]+)["']?\s*:/g)].map((m) => m[1]));
+  assert.ok(declared.size >= 60, `found ${declared.size} declarations`);
+  const undeclared = [...sources.matchAll(/var\((--[a-z0-9-]+)(\$\{)?/g)]
+    .filter(([, name, hole]) => (hole ? ![...declared].some((d) => d.startsWith(name)) : !declared.has(name)))
+    .map(([, name]) => name);
+  assert.deepEqual([...new Set(undeclared)], []);
 });
 
 /* The reading measure (DesignSystem.md 3.4) is one token. The Reader sheet and the hero
