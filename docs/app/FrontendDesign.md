@@ -439,7 +439,7 @@ The sheet is the text column plus 48 px of padding on each side and a 1 px edge.
 
 **Large documents (amendment K).** The parser accepts up to 500,000 code points, and the mock sample is about 1,300 words. FE-5 renders a generated 500,000 code point document and checks that no main-thread task blocks for more than 200 ms while scrolling and selecting a finding. If one does, FE-5 asks for approval before adding any windowing. Measured in FE-5: no task blocks for 200 ms while scrolling or selecting, with memoisation and no windowing (17.5, AV).
 
-**Parser warnings.** The parser can return `PARTIALLY_SCANNED_PDF`, `UNSUPPORTED_DOCX_FEATURE` and `EMBEDDED_OBJECT`, with `coverage.partial` set. The mock's `warnings` array is the only slot today. FE-5 shows a notice above the sheet when the document carries any warning, with interim wording that waits for API.md (2-E) (17.5, AQ). A partial parse never reads as "nothing found": the zero-findings band is not shown then.
+**Parser warnings.** The parser can return `PARTIALLY_SCANNED_PDF`, `UNMAPPED_GLYPHS`, `UNSUPPORTED_DOCX_FEATURE` and `EMBEDDED_OBJECT`, with `coverage.partial` set. The mock's `warnings` array is the only slot today. FE-5 shows a notice above the sheet when the document carries any warning, with interim wording that waits for API.md (2-E) (17.5, AQ). A partial parse never reads as "nothing found": the zero-findings band is not shown then.
 
 ### 6.4 How it works (`/how-it-works`)
 

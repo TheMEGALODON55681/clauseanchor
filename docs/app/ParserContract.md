@@ -2,7 +2,7 @@
 
 The exact output of the parser, for the analysis core and the annotation tool. This file replaces every earlier contract message. If it disagrees with one of them, this file is right.
 
-`parser_version` is `1.0.0`. Code: `backend/app/parsing/`. The machine form of the output is `docs/app/parser_output.schema.json`, and a test keeps it equal to `app/parsing/schema.py`.
+`parser_version` is `1.1.0`, set by the rule in section 2.1. Code: `backend/app/parsing/`. The machine form of the output is `docs/app/parser_output.schema.json`, and a test keeps it equal to `app/parsing/schema.py`.
 
 ## 1. How to read this file
 
@@ -39,7 +39,7 @@ One item is not built yet: `name_span` on party nodes (section 8).
 class ParsedDocument:
     source_text: str
     text_sha256: str          # sha256 of source_text.encode("utf-8"), lowercase hex
-    parser_version: str       # "1.0.0"
+    parser_version: str       # "1.1.0"
     media_type: str           # "application/pdf" or the DOCX type below
     page_count: int | None    # None for DOCX
     blocks: tuple[Block, ...]
@@ -61,6 +61,23 @@ The DOCX media type is `application/vnd.openxmlformats-officedocument.wordproces
 | `coverage` | Section 6 | same |
 
 JSON form: `to_json` in `app/parsing/schema.py` turns a document into plain data with the same field names. Tuples become arrays and `bbox` is an array of four numbers or `null`. The command line `python -m app.scripts.parse_file FILE [--text] [--summary]` prints it. By default it leaves out `source_text`, `blocks[].text` and `nodes[].text`. It also leaves out every block's `locator.list_label` and sets the `label` of every `definition` node to `null`, because both hold words from the file (a numbering level can say anything, and a defined term is often a party or product name). The other node labels (`1.1`, `(a)`, `ARTICLE I`) follow a fixed grammar and stay. A result can then be shared without the contract. `--text` keeps all of it, and `to_json(doc, text=False)` does the same as the default. A file over 10 MiB is refused with `FILE_TOO_LARGE` before it is read. A rejected file prints its code to stderr and exits with status 2. Every offset is present either way. **new**
+
+### 2.1 Versioning
+
+`parser_version` is `major.minor.patch`. Every `ParsedDocument` carries the version of the code that made it. **new**
+
+| Bump | When |
+|---|---|
+| Major | An existing field, an offset or `source_text` breaks: the same file gives other text or other offsets, or a field changes meaning or type, or disappears |
+| Minor | A new field, a new enum value (error code, warning code, block kind or node kind), or a behaviour fix that breaks none of the above |
+| Patch | The output does not change: a refactor, a speed-up, a test or a doc fix |
+
+A fix that moves `source_text` or an offset is major, whatever its reason, because every stored offset is a code point into the old text. `text_sha256` says whether stored offsets still fit: the same hash is the same text. A minor or patch release never moves `source_text`, but it can change blocks, nodes and warnings, so re-parse a file to get the new ones.
+
+- **1.0.0**, parts 1-A to 1-F: the contract as first sent.
+- **1.1.0**, part 1-R. New: the warning `UNMAPPED_GLYPHS` (sections 6 and 10) and the locator key `list_level` (4.3). Fixed: a Word numeral list under a letter on a deeper level (7.4), and a PDF with bytes in front of its header, which now parses (section 9). New errors for files that used to parse: a DOCX member with another compression method, a PDF stream with two growing filters, more than 100,000 DOCX paragraphs, a DOCTYPE and a bad note id (sections 9 and 11). The text-free form drops `list_label` and definition labels (section 2). `ParsedDocument` and the full form keep both, so that is not a break.
+
+Output stamped `1.0.0` predates 1-R. Re-parse it.
 
 ## 3. Text and offsets
 
@@ -345,7 +362,7 @@ Each outermost DOCX table is one `table` node, one level below its container. A 
 
 ## 8. Party nodes and `name_span`
 
-**Status: required, not built.**
+**Status: required, not built.** Part 2-0C of `Phases.md` builds it, after Tanishq confirms the shape below, and ships it as `parser_version` 1.2.0 (2.1).
 
 The frontend lists the parties of a contract and must never cut a name at a comma, so the parser decides where a name ends (`FrontendDesign.md` 17.7, BR). The requirement:
 
@@ -354,7 +371,7 @@ The frontend lists the parties of a contract and must never cut a name at a comm
 - `name_span` lies inside the node's range and covers the party's name alone (`ABC Technologies, Inc.`), not the defining phrase around it (`(the "Supplier")`).
 - A party node with no span reads as its whole text.
 
-Today `StructureNode` has no `party` kind and no `name_span` field, and the JSON Schema has neither. API.md defines the field on the document node and tags it `[CONTRACT]` (`Phases.md`, 2-E). The parser gains it first. Send back any change to the shape before then.
+Today `StructureNode` has no `party` kind and no `name_span` field, and the JSON Schema has neither. API.md defines the field on the document node and tags it `[CONTRACT]` (`Phases.md`, 2-E). Part 2-0C gives the parser the field before 2-E starts. Send back any change to the shape before 2-0C starts.
 
 ## 9. Errors
 
@@ -405,7 +422,7 @@ A warning is `ParseWarning(code, page, detail)`. `page` is a 1-based PDF page or
 | DOCX paragraphs, every part together, empty ones included | 100,000 | `TOO_MUCH_TEXT` | new |
 | DOCX archive, total uncompressed size, counted as the members are read | 100 MiB | `ARCHIVE_TOO_LARGE` | refined |
 
-The budget bounds size, not time. The API runs each parse in a child process with a wall-clock kill (Phase 2, part 2-C).
+The budget bounds size, not time. The API runs each parse in a child process with a wall-clock kill and a memory cap (Phase 2, part 2-C).
 
 ## 12. Ceilings: what the parser cannot see or fix
 
@@ -432,6 +449,8 @@ The first message listed no ceilings, so this whole section is new. The last col
 | `w:noBreakHyphen` becomes ASCII `-` | No (listed in 3.3) |
 | PDF space runs collapse and U+00A0 becomes U+0020 | No (listed in 3.3) |
 | Up to 25 percent of a PDF page's glyphs can have no text mapping. Each shows in `source_text` as `(cid:N)`, with no warning | No |
+| A PDF font whose Unicode map is wrong gives plausible letters that are the wrong ones. There is no `(cid:N)`, so nothing sees it | No |
+| DOCX hidden text (`w:vanish`) is read like any other text, so `source_text` holds what the author hid. An `mc:AlternateContent` with more than one `mc:Choice` gives the text of every branch, because `Requires` is not evaluated. Only `mc:Fallback` is skipped | No |
 
 ### 12.3 PDF reading order and blocks
 
@@ -451,8 +470,8 @@ The first message listed no ceilings, so this whole section is new. The last col
 
 | Case | Marked |
 |---|---|
-| Only Flate streams are measured, behind any leading ASCII85 or ASCIIHex filter. A stream whose only growing filter is LZW or RunLength counts its stored length. Font programs, ToUnicode maps and object streams are not budgeted | No |
-| The budget bounds size and not time. A 16 KB file that decodes to 16 MB took 186 s. The Phase 2 child process kill is the real bound | No |
+| Only Flate streams are measured, behind any leading ASCII85 or ASCIIHex filter. A stream whose only growing filter is LZW or RunLength counts its stored length. Font programs, ToUnicode maps and object streams are not budgeted: one 64 MiB font program added 64 MiB. The Phase 2 child process memory cap is the bound | No |
+| The budget bounds size and not time. A 16 KB file that decodes to 16 MB took 186 s, and nothing bounds the number of text operations either: 3,000 gaps on one page took 9.3 s, all of it in pdfminer. The Phase 2 child process kill is the real bound | No |
 | A DOCX part is parsed in full before the paragraph limit applies, so a large part costs memory: a 12 MB part of empty paragraphs took 279 MiB, which is about 2.3 GB for a 100 MiB part (computed). The Phase 2 child process memory cap is the bound | No |
 | An owner-password PDF parses. The parser does not enforce usage permissions | No |
 | An encrypted DOCX reports `UNSUPPORTED_TYPE`, not `ENCRYPTED_PDF`, because it is not a ZIP | Yes, by the error |
@@ -477,7 +496,7 @@ These are the cases where the tree is wrong or coarse and offsets are still exac
 | A short all-capitals line is a heading and closes open nodes. Seen: signature block names, formula words (`MULTIPLIED BY`), and a page header that was not marked as furniture | Nodes end early |
 | A party list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay | Two false nodes |
 | A Word list whose first item is an empty numbered paragraph is not read when it is a nested decimal (`1.1` empty, `1.2` first), a letter list or a numeral list. A top-level decimal list is read. A gap in the middle of any list is read (7.5) | A list is missed |
-| In a PDF, and in a DOCX whose list is typed, a numeral list that opens right after `(h)` reads `(i)` as the ninth letter, because there is no Word level to tell the two apart. Its other numerals stay inside that node. A Word list is read right (7.4). Seen in a state government services template (`(h) a reference to:` then `(i)` to `(iv)`), which now gives `(h)` four numeral children | One coarse node, wrong level |
+| In a PDF, and in a DOCX whose list is typed, a numeral list that opens right after `(h)` reads `(i)` as the ninth letter, because there is no Word level to tell the two apart. Its other numerals stay inside that node. A Word list is read right (7.4), unless letters and numerals share one level in different lists, which the parser cannot tell apart because the number format is not passed on. Seen in a state government services template (`(h) a reference to:` then `(i)` to `(iv)`), which now gives `(h)` four numeral children | One coarse node, wrong level |
 | Numbers inside a table cell are not read, so a contract laid out as one large table has a `table` node and no clauses | No clauses |
 | A contents page with neither a dot leader nor a trailing page number is read as clauses | False nodes |
 | A definition in a form that is not listed (`X shall be construed as`) is not found, and a quoted term at the end of one block with its verb at the start of the next is missed | Missed definition |
@@ -543,6 +562,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 - Structure: node kinds and label format, the run of 3, the prefix rule, schedules clearing sequences, typed numbers never skipping ahead, Word lists opening above 1, the gap rule of 1-F, capitals headings, titles, contents lines, bare numbers, definitions, tables, and header, footer and footnote blocks never read (section 7).
 - The DOCX paragraph limit (section 11).
 - The `UNMAPPED_GLYPHS` warning (sections 6 and 10).
+- `parser_version` 1.1.0 and the versioning rule (2.1).
 - The ceilings (section 12), the command line and the schema (section 2). The text-free form also leaves out `list_label` and sets a definition's label to `null`.
 
 **Refined** (stated before, now exact or changed):

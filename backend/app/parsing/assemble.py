@@ -6,7 +6,7 @@ from collections.abc import Collection, Mapping, Sequence
 from app.parsing.errors import MAX_TEXT_CHARS, ErrorCode, ParseError
 from app.parsing.model import Block, BlockKind, Coverage, ParsedDocument, ParseWarning
 
-PARSER_VERSION = "1.0.0"
+PARSER_VERSION = "1.1.0"
 
 
 class TextAssembler:

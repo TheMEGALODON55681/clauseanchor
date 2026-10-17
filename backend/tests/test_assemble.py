@@ -159,7 +159,7 @@ def test_coverage_and_metadata_for_a_pdf() -> None:
     add(asm, "three", page=3)
     warning = ParseWarning(WarningCode.BLANK_PAGE, page=2)
     doc = asm.build(media_type=PDF, page_count=3, warnings=[warning], partial=True)
-    assert (doc.parser_version, doc.media_type, doc.page_count) == ("1.0.0", PDF, 3)
+    assert (doc.parser_version, doc.media_type, doc.page_count) == ("1.1.0", PDF, 3)
     assert doc.nodes == ()
     assert doc.warnings == (warning,)
     assert (doc.coverage.pages_total, doc.coverage.pages_with_text) == (3, 2)

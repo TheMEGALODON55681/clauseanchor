@@ -25,7 +25,7 @@ flowchart TD
 
 1. The browser creates an anonymous session and gets a bearer token (Phase 2).
 2. It uploads one PDF or DOCX with the user's role and review scope.
-3. The upload is validated by magic bytes, size and archive safety, then parsed in a child process that a wall-clock timer can kill (planned, Phase 2).
+3. The upload is validated by magic bytes, size and archive safety, then parsed in a child process with a wall-clock kill and a memory cap (planned, Phase 2).
 4. The parser returns a `ParsedDocument`: canonical `source_text`, its SHA-256, text blocks with source locators, a structure tree and warnings. The uploaded bytes are dropped.
 5. The analysis job passes `source_text` and an `AnalysisContext` to the core `Analyzer` from `ml/clauseanchor_core` and gets back category decisions with spans.
 6. The backend applies polarity from the user's role and party binding. The core never sees the user's side.
@@ -57,7 +57,7 @@ flowchart TD
 | Structure: headings and contents | A short block of capitals (80 characters, every line 60 percent capitals) is an unnumbered level 1 heading that closes open nodes, unless it directly follows a block that is only a label, where it is that label's title. A block with a dot leader, or a one-line block that ends in a page number, is a contents entry and is ignored. A bare number with no full stop is a page number | The contents page repeats every heading, and 1-C does not mark a page number printed mid-page. A title must not close the node it names. A line of redaction marks must not turn a notice into a heading |
 | Structure: tables and definitions | An outermost table is one `table` node, and nothing inside it is read as a label or heading. A quoted term followed by `means`, `shall mean`, `has the meaning`, `refers to`, or in brackets as `(the "T")`, is a `definition` node that spans the term with its quotes, one level below the innermost open node or the table | A table has no clause order to read. A definition node lets the core point at the term itself, and the container gives its scope |
 | Database | SQLite only, `create_all()` | Nothing durable is stored; no migrations tool needed |
-| Worker model | One API process, one bounded analysis worker, one executor thread. Each parse job runs in a child process with a wall-clock kill (planned, part 2-C) | Fits a laptop and a free host; no Redis or Celery. The kill stops a parse that the content budget cannot bound |
+| Worker model | One API process, one bounded analysis worker, one executor thread. Each parse job runs in its own child process with a wall-clock kill and a memory cap (planned, part 2-C) | Fits a laptop and a free host; no Redis or Celery. The kill stops a parse that the content budget cannot bound in time, and the cap stops one it cannot bound in memory. One parse per child, because the DOCX reader changes the process-wide warnings filter |
 | User content storage | RAM only, 60-minute absolute TTL | Matches the synopsis promise; nothing on disk |
 | Review scope | Fixed category catalogue, a fixed scope notice on every result, no safety score or overall verdict anywhere | The system checks listed categories only. A highlight-free passage is not a safe passage, and the output must never imply it is |
 | Completeness | Processing completion, decision coverage and highlight extent are separate fields | Each answers a different question; merging them would read as "share of risk found", which nothing measures |
@@ -96,7 +96,7 @@ backend/
       memory_store.py       # RAM-only content with TTL
       sessions.py           # capability tokens
       jobs.py               # bounded queue, progress, cancel
-      documents.py          # upload validation, parse jobs (child process, wall-clock kill)
+      documents.py          # upload validation, parse jobs (child process, wall-clock kill, memory cap)
       analysis.py           # core adapter and result validation
       polarity.py           # (Phase 3) party binding and polarity
       report.py             # (Phase 3) ReportLab report
@@ -126,7 +126,7 @@ Fixtures are generated at test time, so no binary files are committed.
 class ParsedDocument:
     source_text: str
     text_sha256: str             # sha256 of source_text.encode("utf-8"), lowercase hex
-    parser_version: str          # "1.0.0"
+    parser_version: str          # "1.1.0"
     media_type: str              # "application/pdf" or the DOCX mime type
     page_count: int | None       # None for DOCX
     blocks: tuple[Block, ...]    # every text block, in reading order

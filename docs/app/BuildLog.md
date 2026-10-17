@@ -1856,3 +1856,64 @@ Blockers: none.
 - Commit 10: none. Frontend only, and no parser output moved.
 
 Next action: commit with `fix(frontend): fill selected manual review button, clear pending reveal`, then reply `next` for commit 11, the docs commit: the `graphify` refresh, a line in `Rules.md` section 4 for `backend/constraints.txt` and its install command, the 1-R tick in `Phases.md`, and the consolidated `[CONTRACT]` message for Tanishq covering commits 1 to 11.
+
+
+## 2026-10-17: Part 1-R, step 2, commit 11 of 11: docs and close
+
+Part: 1-R step 2, theme 11 of 11. It closes 1-R and Phase 1. It is docs, plus one constant and the test that asserts it: `parser_version` moves from 1.0.0 to 1.1.0. No dependency changed, and no browser or server ran. `[CONTRACT]`: the new version string and the versioning rule (`ParserContract.md` 2.1). The ceiling rows added to `ParserContract.md` write down behaviour that already existed. Commit 10 is `d706da8`, and the tree was clean and level with `origin/main` before this part started.
+
+Files changed:
+- `docs/app/Rules.md`: section 4 names `backend/constraints.txt`, the install command (`pip install -r requirements-dev.txt -c constraints.txt`, or `requirements.txt` for the runtime packages alone) and the rule that a dependency change regenerates the file from a clean venv freeze in the same commit.
+- `backend/app/parsing/assemble.py`: `PARSER_VERSION` is `"1.1.0"`.
+- `backend/tests/test_assemble.py`: the metadata test expects `"1.1.0"`. It was changed first and failed against 1.0.0 (1 failed, 24 passed in the file), then passed with the constant.
+- `docs/app/Phases.md`: 1-R ticked with a closing description, a Phase 1 status line, the table of open ceilings with their Phase 2 owners, the 2-0A counts, the new part 2-0C, and the stale lines listed below.
+- `docs/app/ParserContract.md`: a versioning section (2.1) with the history of 1.0.0 and 1.1.0, the version in the header and the document block, a pointer to 2-0C in section 8, and the stale lines listed below.
+- `docs/app/Architecture.md`, `docs/app/FrontendDesign.md`: the stale lines listed below, and in `Architecture.md` the version comment and the `name_span` note.
+- `docs/app/BuildLog.md`: this entry.
+- `backend/graphify-out/` is new and ignored by `backend/.gitignore`. It holds the graph and is not part of the commit.
+
+The graph. Rules section 7 asks for it at the end of a phase, and step 1 deferred it to this commit. None existed, so this run is a first build and there is no earlier graph to compare with. Corpus: 24 files under `backend/`, 21 code and 3 text (`requirements.txt`, `requirements-dev.txt`, `constraints.txt`). Only the code went through extraction. A module and call graph gains nothing from pinned versions, and the semantic pass for text files is a model pass that this commit did not run. Result: 650 nodes, 2,053 edges and 16 communities. 95 percent of the edges are read straight from the source, the rest are inferred, none is ambiguous, and there is no import cycle. The most connected nodes are `parse_pdf` (58 edges), `parse_docx` (54), `TextAssembler` (48), `ParsedDocument` (42), and `ParseError` and `ParseWarning` (39 each). Two test helpers sit in that list (`structure()` at 91 and `labels()` at 48, both in the structure tests). Against `Architecture.md`, the folder tree matches the 21 code files and the import edges agree with what it says. `structure.py` imports only `model` and `errors`, so the tree is built from blocks alone. `pdf.py` imports `detect` for `pdf_start` and `assemble` for the text, `docx.py` imports `assemble`, `schema.py` imports no reader, and the entry point imports `detect`, `pdf`, `docx` and `structure`. No edit to `Architecture.md` came from the graph. The edits to it come from the sweep. The HTML view was not built.
+
+The review in one place (step 1 findings, with the commit that closed each):
+- Fixed: B1 `ede388a`, B2 `2a986b9`, B4 `1f0c3ec`, B6 `dcc48f1`, B7 and B12 `54b0230`, B8 and B11 `4786084`, B10 `74124dd`, B14 `5a1df05`, B16 and B17 `d706da8`. B5 is fixed for the paragraph count in `4786084`. The Word level carrier approved in step 1 is `626376a`.
+- Left as ceilings: B3 and B15 (size and time, 2-C), the parse memory half of B5 (2-C), B13 (2-C, one parse per child) and B9 (hidden DOCX text, written in `ParserContract.md` 12.2 with no owner). The PDF case of the Word level, the unused Word number format and fused unspaced paragraphs go to 2-0A. It counts them across contracts 001 to 025 and adds a fix part only if the counts justify one. The unbuilt `name_span` goes to a new part, 2-0C, which Aryan builds after Tanishq confirms the shape and before 2-E, as `parser_version` 1.2.0. `Phases.md` has the table.
+
+The version. `parser_version` was `1.0.0` in `assemble.py`, in the test that asserts it, twice in `ParserContract.md` and once in `Architecture.md`. `schema.py` and `parser_output.schema.json` type the field as a string and pin no value, and no fixture, golden file or frontend file holds it. Older BuildLog entries keep 1.0.0, because they describe what was true then. `ParserContract.md` had no versioning rule, so section 2.1 adds one. 1-R is minor. It adds a warning code and a locator key and fixes behaviour, and no file that still parses gives other text. Commit 6 took two fields out of the text-free form, and the contract counts that as minor, because `ParsedDocument` and the full form keep both.
+
+Fused paragraphs. `_blocks` in `pdf.py` only groups lines that are already read and ordered, and `add_block` joins the lines of a block with `\n`, the same separator that sits between blocks. A fix to where blocks are cut therefore leaves `source_text` and `text_sha256` as they are, and changes `blocks`, `nodes` and the `block` number in the locator. A probe in the session scratchpad confirmed it on a two page fixture of eight unspaced lines a page. With `_blocks` replaced in memory by a cut after every line, blocks went from 2 to 16, and `source_text`, `text_sha256`, `decorations` and `chars` stayed equal. A fix that moved or joined a line (a rewrap, a dehyphenation) would change the text, and none is planned. So this ceiling gets the same rule as the two Word level rows: 2-0A counts, and a part follows only if the counts justify one.
+
+Stale lines fixed by the sweep:
+1. `Phases.md`: 1-R was unticked. Phase 1 had no status line.
+2. `Phases.md`, "Sync with Tanishq": it still said to send items before 1-B and apply his changes before 1-F.
+3. `Phases.md`, Process: "his changes land before 1-F", and the review base commit read `<commit before 1-A>`. The run used `1077d25`, the 1-A commit.
+4. `Phases.md`, Phase 2 intro and 2-C: they named the wall-clock kill and no memory cap, which call 2 of step 1 asked for.
+5. `Phases.md`, FE-4 "(17 tests)" and FE-6 "(53 tests)": both read as current. They now say what they were at the part and what the count is now (19 and 68).
+6. `Architecture.md`: flow step 3, the Worker model row and the `documents.py` line named only the kill.
+7. `ParserContract.md`: the note under section 11 named only the kill. In section 12, the unbudgeted-streams and time rows lacked the memory cap and the 9.3 s figure, 12.2 lacked the wrong font map (commit 5) and hidden or alternate DOCX text (B9), and 12.6 lacked the shared-level case (commit 7).
+8. `FrontendDesign.md` 6.3: the list of warnings that set `partial` left out `UNMAPPED_GLYPHS`.
+9. `ParserContract.md`, `Architecture.md`, `assemble.py`: `parser_version` read 1.0.0 after eight commits that changed the output, and the contract had no rule for when to bump it.
+
+Checked and current: the 12 error codes in section 9 and the 10 warning codes in section 10 match `errors.py` (the warning list also matches the schema file), the limits in section 11 match `errors.py`, `parser_version` was `1.0.0` in code and contract and is `1.1.0` in both now, and the `Architecture.md` frontend test row adds up to 68. No doc states the backend test count.
+
+Checks, run on the final tree:
+- `ruff format --check`: 20 files already formatted. `ruff check`: all checks passed. `pytest`: 769 passed, 0 failed, 0 skipped (769 before: one assertion changed, no test added). The version test ran red first (1 failed, 24 passed in `test_assemble.py`) and green after the constant moved. `pnpm test`: 68 passed in the first pass of this part and not rerun, because no frontend file has changed since. Typecheck and build were not run.
+- The Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/`: no output. The tool-name grep over `frontend/` and `README.md`: no output. The same grep over the added lines of this diff found the two `Phases.md` lines that already named a review command (the 1-R title and the review bullet) and the `backend/graphify-out/` path above, and no new name. The dash scan over the added lines found nothing, and it found both dashes in a control string.
+- The three copy passes ran over the prose of the docs and of this entry, in order, and ran again over the version rule, the ceiling rows and 2-0C. The first run changed two sentences in `Phases.md` (the status line and the sync note) to name the actor instead of using a passive verb. The second changed "or goes" to "or disappears" in the rule, moved the `[CONTRACT]` tag of 2-0C to the front, and made two passive verbs active.
+- Over-engineering review of the diff: cut the commit list from the 1-R description (this entry holds it), the figures repeated in the ceiling table (they stay in `ParserContract.md` 12.4 and in 2-C), and a parenthetical in the `Architecture.md` Worker model row. On the second pass it cut the 2-0C pointer from `Architecture.md` (`Phases.md` and `ParserContract.md` section 8 carry it), the sentence in 2-0A that repeated the post-table rule, the `text_sha256` clause in the fused row, and the restated rule in the version paragraph above. Not added: a test that checks `ParserContract.md` and `Architecture.md` for the current version. Add one if the pins drift again. Nothing left unfixed.
+
+Not verified:
+- A scan of the pinned set with `pip-audit`, the open note from step 1. It is not installed, and this part adds nothing.
+- The three text files in the graph, which had no semantic pass.
+- Linux and macOS wheels for the pins (commit 9).
+- The Tanishq message is printed, not sent.
+- That a block cut leaves `source_text` alone is read from the code and probed on one synthetic fixture. It was not run against the 25 contracts.
+
+Processes. Started 14, closed 14, confirmed by a process listing at the end: 13 Python (a version query, the graph import check, four graph steps, `ruff format --check`, `ruff check`, two pytest runs and the dash scans) and 1 `pnpm test`. The first pytest run sat in a background shell that ended before it did, and the listing found no process left from it. The second ran in the foreground. No browser, no server. Short read-only shell commands (git, grep, ls, cat) are not counted.
+
+The second pass (version bump and ceiling owners) started 6 and closed 6, confirmed by a process listing at the end that found no Python, ruff or pytest process: 6 Python (the red and the green run of `test_assemble.py`, the fused paragraph probe, `ruff format --check`, `ruff check` and the full pytest run). The scrubs were grep. No browser, no server, no `pnpm`.
+
+Blockers: none.
+
+`[CONTRACT]`, commits 1 to 11: the consolidated message for Tanishq is printed in chat at the end of this part and is not stored in a file. The held lists at the end of the entries above (each repeats the list so far) and `ParserContract.md` are the record. Commit 11: `parser_version` is 1.1.0 and `ParserContract.md` 2.1 holds the versioning rule. Output stamped 1.0.0 predates 1-R, so it should be re-parsed.
+
+Next action: commit with `docs(docs): close phase 1, bump parser to 1.1.0, assign open ceilings`, then send the message to Tanishq. Phase 2 starts with the phase-start spec review that Rules section 7 asks for, then 2-0A, which counts the Athens, level, number format and fused paragraph ceilings across contracts 001 to 025. 2-0B waits for Tanishq's JSONL fields. 2-0C (Aryan) waits for Tanishq to confirm the `name_span` shape and lands before 2-E as `parser_version` 1.2.0.

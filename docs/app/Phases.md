@@ -31,6 +31,8 @@ Adopted on 1 October 2026 from the team plan, revision 1.1 (sections 2.5, 10.7 a
 
 Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause structure tree and honest warnings. No API yet. Depends on nothing from the ML track.
 
+Status: complete. Every part is ticked. The ceilings it leaves open follow the part list, each with the Phase 2 part that owns it.
+
 - [x] **1-A** Package scaffold and the parsed-document model
   `chore(backend): set up package, tooling and parsed document model`
 - [x] **1-B** PDF text extraction in reading order
@@ -51,9 +53,28 @@ Goal: turn a PDF or DOCX into one canonical text with exact offsets, a clause st
 - [x] **1-F** Public entry point, CLI and parser contract
   `feat(parser): add parse entry point, CLI and parser contract`
   Adds `parse_document`, `schema.py`, `scripts/parse_file.py` and `ParserContract.md` with A23 and A24, and closes the Word-list gap that 1-E left open. Deviations and ceilings are listed under the 1-F amendments below.
-- [ ] **1-R** Phase review: `/gstack-cso`, `/coderabbit:code-review`, `/gstack-review`; fixes as separate commits
+- [x] **1-R** Phase review: `/gstack-cso`, `/coderabbit:code-review`, `/gstack-review`; fixes as separate commits
+  `docs(docs): close phase 1, bump parser to 1.1.0, assign open ceilings`
+  Step 1 reviewed `1077d25..a37cbec` and logged findings B1 to B17. Step 2 fixed them in eleven commits, this one last. The BuildLog entries of 16 and 17 October 2026 list each commit and finding. Both P1 findings are closed. B3, B9, B13 and B15 stay as ceilings, with the parse memory half of B5 and the PDF case of the Word level. The last commit also moves `parser_version` from 1.0.0 to 1.1.0 and adds the versioning rule (`ParserContract.md` 2.1).
 
-**Sync with Tanishq:** send the `[CONTRACT]` items below before 1-B and apply his changes before 1-F. After 1-F, share `docs/app/ParserContract.md` and agree separators, offsets and warnings.
+**Open ceilings handed to Phase 2.** Each row names the part that measures or fixes the ceiling. `ParserContract.md` section 12 holds the ceilings themselves.
+
+| Ceiling | Phase 2 part | What the part does |
+|---|---|---|
+| The 120 s wall-clock kill is provisional (A11), and the budget bounds size and not time (B15) | 2-C | Times the dense 8 MiB PDF on the Phase 2 host and fixes the constant |
+| lxml parses a whole DOCX part before the paragraph limit applies, and PDF streams the budget never visits are not counted (B3, B5) | 2-C | Gives the parse child a memory cap next to the kill, and measures a 100 MiB DOCX against it |
+| Athens-style lists: a numbered list inside a section takes the section's numbers | 2-0A | Counts the affected files among contracts 001 to 025 and decides whether to key the sequences by label style. A fix would be parser work, and no part is planned for it |
+| `docx._read` changes the process-wide warnings filter, so two parses on two threads of one process are unsafe (B13) | 2-C | Runs each parse in its own child process, never two in one |
+| In a PDF and in a typed list, `(i)` after `(h)` reads as the ninth letter, because there is no Word level | 2-0A | Counts the files where a numeral list follows a letter list and the tree comes out wrong. A later fix moves no offset, because labels live on the node and not in `source_text` |
+| The Word number format (`lowerLetter` or `lowerRoman`) is not passed on, so two lists that share a level are not told apart | 2-0A | Counts the Word files where letters and numerals share one level in different lists and the tree comes out wrong. A later fix moves no offset, for the same reason |
+| Fused unspaced paragraphs in a PDF: one block per page when nothing in the geometry separates them | 2-0A | Counts the PDFs where a page body fuses two or more paragraphs into one block, and the pages affected. A fix changes where `_blocks` cuts and no character of `source_text`, because both separators are `\n`. A fix that is wanted lands before 3-D, which builds its display units from these blocks |
+| Party nodes and `name_span` are not built. 2-E defines the API field and expects the parser to hold it first | 2-0C | Aryan builds the `party` kind and `name_span` after Tanishq confirms the shape (`ParserContract.md` section 8), and before 2-E starts. It ships as `parser_version` 1.2.0 |
+
+2-0A counts the Athens, level, number format and fused paragraph ceilings in one pass over contracts 001 to 025. A fix part follows only where a count justifies one.
+
+The other ceilings in section 12 have no owner here either. Which of them need a warning from the parser is item 4 of `ParserContract.md` section 15, and Tanishq answers it.
+
+**Sync with Tanishq:** earlier parts sent their `[CONTRACT]` items one at a time, and the 1-F `docs/app/ParserContract.md` replaced those messages. 1-R held its items and sends one message for all eleven commits at its end. Section 15 of the contract lists what is still to agree.
 
 ### Spec amendments (Phase 1)
 
@@ -263,25 +284,29 @@ Known ceilings of 1-F, none of them silent unless noted:
 #### Process
 
 - Commit 0-A before 1-A starts.
-- The Tanishq message lists every `[CONTRACT]` item. Work continues without waiting for a reply, and his changes land before 1-F.
+- The Tanishq message lists every `[CONTRACT]` item. Work continues without waiting for a reply. From 1-R on, each commit holds its items and updates `ParserContract.md`, and one message goes out at the end of the phase.
 - One independent second review runs at phase end, next to the other phase-end reviews. No per-part run.
-- The correctness review at 1-R is `/coderabbit:code-review` with `--base-commit <commit before 1-A>`. `/coderabbit:review` does not exist (see BuildLog, 0-B).
+- The correctness review at 1-R ran as `/coderabbit:code-review` with `--base-commit 1077d25`, the 1-A commit, so it covers 1-B to 1-F. `/coderabbit:review` does not exist (see BuildLog, 0-B).
 
 ## Phase 2: API skeleton
 
 Depends on: Phase 1. Part 2-D also needs `ml/clauseanchor_core` at contract version 2.0 on `main`. If it is not there, 2-A to 2-C still go ahead and 2-D waits.
 
-Parse jobs run in a child process with a wall-clock kill (Phase 1 amendment A11). Plan this into 2-C.
+Parse jobs run in a child process with a wall-clock kill (Phase 1 amendment A11) and a memory cap (the 1-R review, B3 and B5). Plan both into 2-C.
 
-Parts 2-0A and 2-0B hold the annotation work from plan v1.1 Phase 3. Both need only the parser, so they come first. Aryan annotates contracts 001 to 025 of the Indian set, and that set gates Tanishq's evaluation. The 0 ids keep the 2-A to 2-D references stable.
+Parts 2-0A and 2-0B hold the annotation work from plan v1.1 Phase 3. Both need only the parser, so they come first. Aryan annotates contracts 001 to 025 of the Indian set, and that set gates Tanishq's evaluation. The 0 ids keep the 2-A to 2-D references stable. Part 2-0C is parser work. It waits for Tanishq and lands before 2-E.
 
 - [ ] **2-0A** Annotation guidelines
   `docs(docs): add annotation guidelines for the Indian contract set`
   Writes `docs/app/AnnotationGuidelines.md`. It covers the label set (core v2.0 categories, multi-span), span boundary rules, overlap rules, offsets as code points into the parser's `source_text`, worked examples, and every topic plan v1.1 section 4.3 lists: inclusion and exclusion, complete operative spans, overlapping categories, multiple occurrences, cross-references, schedules, definitions, negation, amended provisions, missing clauses, illegible text and disagreement resolution. It separates `absent` from `unassessable` and never labels stamp payment, enforceability or a case outcome from contract text.
   Measure on the Indian contracts (a Phase 1 ceiling, listed under the 1-E ceilings and in `ParserContract.md` 12.6): the Athens-style list. A numbered list inside a section that shares numbers with the section sequence takes those numbers. In the Athens agency agreement a definitions list `1.` to `6.` inside Section 4 took 5 and 6, so Sections 5 and 6 were missed and two false nodes appeared. While annotating contracts 001 to 025, count the files where a numbered list sits inside a section and the section tree comes out wrong (missed or false sections), and note the numbering style of each (typed numbers, a heading word such as `Section 5`, or a Word list). The count decides whether to key the sequences by label style, which would split the two but would open the list items as level 1 nodes unless the rule says more.
+  Count three more ceilings in the same pass, each as a number of files (`ParserContract.md` 12.3 and 12.6): PDFs where a page body fuses two or more paragraphs into one block, with the pages affected; PDF or typed-list files where a numeral list follows a letter list and the tree comes out wrong; and Word files where letters and numerals share one level in different lists. None of the three fixes moves `source_text`. The fused paragraph fix changes where blocks are cut, and the other two change nodes, so a fix part added after the count leaves every annotated offset valid.
 - [ ] **2-0B** Offline annotation tool
   `feat(annotator): add offline annotation tool`
   Builds `backend/tools/annotator/`. It runs locally with no network, loads parser output, lets the annotator select spans and exports JSONL with code-point offsets checked against the parser's `source_text` (plan v1.1 section 4.3). `[CONTRACT]` The export schema must match what Tanishq's `ml/` code consumes; agree it with him before this part starts. Needs Phase 1 complete. Any new dependency needs Aryan's approval at the start of the part.
+- [ ] **2-0C** Party nodes and `name_span`
+  `feat(parser): add party nodes and name_span`
+  `[CONTRACT]` Aryan builds it. It starts after Tanishq confirms the shape in `ParserContract.md` section 8 (section 15, item 3) and lands before 2-E, which defines the API field on top of it. It adds the node kind `party` and the field `name_span` to `StructureNode`, `schema.py`, the JSON Schema and the contract. It ships as `parser_version` 1.2.0, because a new field and a new node kind are a minor bump (`ParserContract.md` 2.1).
 - [ ] **2-A** FastAPI app, config, error envelope, health, readiness, capabilities
   `feat(api): add app with health, readiness and capabilities`
   Capabilities include the scope notice, the catalogue version and every category's support status (plan v1.1).
@@ -290,13 +315,14 @@ Parts 2-0A and 2-0B hold the annotation work from plan v1.1 Phase 3. Both need o
 - [ ] **2-C** Upload validation, parse jobs, document read and delete
   `feat(api): add document upload with validation and parse jobs`
   Open item from Phase 1: time the dense case. An 8 MiB Flate stream of operators and text is the largest stream `MAX_DECODED_CONTENT_BYTES` accepts, and it has not been measured (8 MiB of white space took 0.05 s, BuildLog "Checks before 1-D"). Neither has a DOCX whose `document.xml` approaches 100 MiB, which lxml parses whole before the 500,000 character stop. Measure both on the Phase 2 host. Until then the wall-clock kill is provisionally 120 s, one named constant in the 2-C config. That figure is about twice 0.55 s per page for 100 pages, from one run per file in the 1-C smoke check, so it bounds cost and is not a number a bomb was shown to reach. Re-measure before fixing it.
+  The same child also gets a memory cap, because the content budget bounds neither the PDF streams it never visits (font programs, ToUnicode maps and object streams: one 64 MiB font stream added 64 MiB) nor a DOCX part, which lxml parses whole before the paragraph limit applies (a 12 MB part of empty paragraphs took 279 MiB, about 2.3 GB for 100 MiB, computed). Choose the cap from the 100 MiB DOCX measurement above. Each child runs one parse, because the DOCX reader changes the process-wide warnings filter.
 - [ ] **2-D** Analysis jobs through the core analyzer (stub), progress, cancel, partial results
   `feat(jobs): run analysis jobs through the core analyzer`
   The analysis response carries the scope notice and reports processing completion and decision coverage as separate fields. Cancelled, timed-out or partially parsed work is reported as incomplete, never as absent. No safety or risk-score field (plan v1.1).
 - [ ] **2-E** OpenAPI export and API.md
   `docs(api): export OpenAPI schema and document endpoints`
   The frontend mock uses names that plan section 9 does not have: `scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage {resolved, requested}`, `ReviewUnit`, `ManualReview` and `getManualReview`. 2-E fixes the final names in API.md. The frontend adapter follows API.md, and plan section 9 copies from API.md, not the other way round.
-  Party nodes carry a `name_span` (`FrontendDesign.md` 17.7, BR). API.md must define it on a document node of kind `party`, tagged `[CONTRACT]`: `{start, end}` in code points into `source_text`, the same coordinates as the node's own `start` and `end`, inside that range and covering the party's name alone ("ABC Technologies, Inc."), so the frontend never cuts a name at a comma. The parser's output gains the field first (`Architecture.md` section 4). The mock sets it today, and the frontend reads a node with no span as its whole text.
+  Party nodes carry a `name_span` (`FrontendDesign.md` 17.7, BR). API.md must define it on a document node of kind `party`, tagged `[CONTRACT]`: `{start, end}` in code points into `source_text`, the same coordinates as the node's own `start` and `end`, inside that range and covering the party's name alone ("ABC Technologies, Inc."), so the frontend never cuts a name at a comma. Part 2-0C gives the parser's output the field first (`Architecture.md` section 4). The mock sets it today, and the frontend reads a node with no span as its whole text.
 - [ ] **2-R** Phase review
 
 ## Phase 3: Polarity, reports, remaining endpoints
@@ -354,7 +380,7 @@ Part ids and commit messages are suggestions, like the backend parts. Every part
   Deviations: an interim `/start` page ships here, the baseline form moved out of `Home`, so the buttons have a destination, and FE-4 rebuilds it. The hero ruler is hidden below 640 px. LCP is not measured in this part, because the capture run was blocked, so it moves to the FE-R measurements unless it is rerun first. The heading "Nothing is kept after your session" was open for Aryan to confirm and became "Your contract is deleted within 60 minutes." at the start of FE-4 (17.4, AA).
 - [x] **FE-4** The `/start` stepped flow
   `feat(frontend): add stepped review start flow`
-  `/start` is three steps, one decision each: upload the contract, say which side you are, confirm the scope. The step lives in `?step=`. The flow state is a pure reducer written test first (17 tests). Role and party are native radio groups with nothing preselected, and "None of these" is the last party option. The four upload refusals show inline. The header gains the primary "Review a contract" button, hidden on `/start` and in the Reader. The summary rail shows from 1280 px. Scope and acceptance: `FrontendDesign.md` section 14. Amendments AA to AO are in 17.4.
+  `/start` is three steps, one decision each: upload the contract, say which side you are, confirm the scope. The step lives in `?step=`. The flow state is a pure reducer written test first (17 tests at FE-4, 19 now). Role and party are native radio groups with nothing preselected, and "None of these" is the last party option. The four upload refusals show inline. The header gains the primary "Review a contract" button, hidden on `/start` and in the Reader. The summary rail shows from 1280 px. Scope and acceptance: `FrontendDesign.md` section 14. Amendments AA to AO are in 17.4.
   Deviations: the step is not in the reducer state, because a copy there and a copy in the address raced on browser Back (AD). The rail starts at 1280 px and has no Change link (AE). The carry-over fixes from FE-3 landed here: the privacy heading, the hero panel at full width from 768 to 1279 px, and the judgment card's authority label (AA to AC). A loading `Button` now ignores clicks, after "Start review" called the analysis once per click (AK). The end of the part added the meta description wording, a 66ch cap on the hero subline, a Fail parse switch in the Preview controls, the copy passes and a second ponytail-review (AL to AO). Still open: LCP and CLS for `/` (FE-R), and whether the hero sheet and quote get a cap too (Aryan).
 - [x] **FE-5** Reader composition and motion
   `refactor(frontend): recompose reader with motion`
@@ -362,7 +388,7 @@ Part ids and commit messages are suggestions, like the backend parts. Every part
   Deviations: the panel is a bottom sheet below 1280 px and not a right drawer (AS). Only a pointer pick cross-fades (AT), and the root is out of that transition (AU). The sheet header carries only Peek or Open (AS). The judgment card's words are interim and wait for a definition of `authority_status` (AP), and so does the partial-read notice for the parser codes (AQ). The hero sheet is capped by the same measure token (AR). Still open: LCP and CLS for `/` (FE-R), the authority wording (Tanishq, Aryan), the 4 px rule on three components (FE-6).
 - [x] **FE-6** How it works, Accuracy, Expired, NotFound
   `refactor(frontend): rebuild secondary pages`
-  How it works, Accuracy, Expired and NotFound sit on the margin grid. How it works has a sticky contents list in the margin and real components beside the text, and the footer's Credits link opens the Credits section. Accuracy shows an example banner under the notice, a sticky header from 768 px and a stacked block per category below it. Expired and NotFound share one plain page. The delete confirmation, the menu and the toast enter with the existing motion tokens, and the plain status text is contrast tested on the sunken and selected rows (53 tests).
+  How it works, Accuracy, Expired and NotFound sit on the margin grid. How it works has a sticky contents list in the margin and real components beside the text, and the footer's Credits link opens the Credits section. Accuracy shows an example banner under the notice, a sticky header from 768 px and a stacked block per category below it. Expired and NotFound share one plain page. The delete confirmation, the menu and the toast enter with the existing motion tokens, and the plain status text is contrast tested on the sunken and selected rows (53 tests in all at FE-6, 68 now).
   Deviations: the Accuracy table stays in the main column and the aside holds the glossary (BD). The Credits link target is `?at=credits` and not router state (BE). The menu enters over `--dur-press`, 120 ms and not 150 (BC). Expired drops its dashed card (BF). Closed with no change: tabular numerals on metric cells, which are already mono (BH). Still open: LCP and CLS for `/` (FE-R), the authority wording (Tanishq, then Aryan) and the parser warning codes (2-E).
 - [x] **FE-R** Phase-end review
   `fix(frontend): close keyboard findings from the final sweep` is the last of eight step 2 commits. Step 1 reviewed `1077d25..f24d382` (R1 to R22) and every P1 is fixed. The quality bars are measured, in the BuildLog entry of 2026-10-15: `/` scores 96 to 97 with an LCP of 2.17 to 2.26 s, axe reports no violation in 154 captures, and the keyboard run found four defects (S1, S3, S3b, S4), fixed in code. Open and listed in `FrontendDesign.md` 17.7: LCP over 2.5 s on `/start` and `/accuracy`, the mock in the build (4-C) and the authority wording. `/coderabbit:code-review` did not run and Aryan accepted it as not run.

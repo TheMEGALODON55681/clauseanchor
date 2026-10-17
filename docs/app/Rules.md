@@ -71,6 +71,8 @@ Commit message rules: Conventional Commits (`feat`, `fix`, `test`, `refactor`, `
 
 Pin exact versions in `requirements.txt` / `requirements-dev.txt` as resolved at install time, and record them in `docs/app/BuildLog.md`.
 
+`backend/constraints.txt` pins every installed package, the ones those files pull in included. Install with `pip install -r requirements-dev.txt -c constraints.txt`, or with `requirements.txt` in place of the dev file for the runtime packages alone. A dependency change regenerates `constraints.txt` from a freeze of a clean venv in the same commit.
+
 | Purpose | Allowed | Notes |
 |---|---|---|
 | PDF text | `pdfplumber` | MIT. Accepts a file-like object, so bytes stay in RAM |
