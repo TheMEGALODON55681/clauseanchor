@@ -2005,3 +2005,53 @@ Blockers: none for the review. 2-0B and 2-0C wait for Tanishq, 2-E for 2-0C.
 - Correction in his file: `docs/ml/Interface.md` line 50 says the parser's nodes carry page and source locator. They do not.
 
 Next action: commit with the message printed in chat, then answer D1 to D9 (D9 first for 2-0B, D1 to D3 for 2-C), then start 2-0A.
+
+
+## 2026-10-17: Part 2-0A, annotation guidelines (draft 0.1)
+
+Part: 2-0A, the guideline half. Docs only: no code, no dependency, no browser, no server. No parser output moved, so `parser_version` stays 1.1.0 and no `[CONTRACT]` item changed (the record keys below go to Tanishq with the 2-0B questions). Start: `main` at `e10ffc2`, tree clean, level with `origin/main`. The part stays `[~]`: the ceiling counts have not run.
+
+Files changed:
+- `docs/app/AnnotationGuidelines.md`: new. Nine sections: states and ground rules; the ten labels with a definition, an in test and an out test each; spans (start and end, the answer test, several spans for one finding, overlap, multiple occurrences, what never goes in a span); offsets with one worked calculation; following a provision to other text (cross-references, schedules, definitions); hard cases (negation, amended provisions, missing clauses, unreadable text); disagreement resolution; the ceiling count procedure, script description and threshold; open items. Twelve examples, all made up.
+- `docs/app/Phases.md`: 2-0A ticked `[~]` with a status line; the 2-0A commit line is now `docs: add annotation guidelines for the Indian contract set` (no scope, as the Phase 2 start review commit); "core v2.0 categories" in the 2-0A scope line, which the start review had left stale, now names the ten categories of plan 4.3; the open-ceilings paragraph gains the 3-file threshold and a pointer; the 2-0B open record questions gain span grouping and the two attribute keys.
+- `docs/app/BuildLog.md`: this entry.
+
+Read: Rules, Phases (2-0A, the ceiling table, D1 to D9), ParserContract sections 1 to 8, 12 and 15, the Phase 2 start review entry, plan v1.1 section 4.3 in Downloads (also 2.3, 2.5, the category table and the Section 27 and stamp notes), `ml/clauseanchor_core/contract.py`, `docs/ml/Interface.md` line 52 and `backend/app/scripts/parse_file.py`.
+
+Decisions that the plan does not make, for Aryan to confirm or change:
+1. Completeness rule: the sentence is the default unit, and the answer test decides the rest (a reader who sees only the span can answer the label's fixed question; drop any sentence that leaves the answer unchanged).
+2. Several spans for one finding are limited to five cases (a lead-in and one list item, a page break around furniture, a value from another passage, a partial amendment, a footnote). A core v2.0 `ClauseFinding` holds one span (`contract.py`, `span: Span`), while the plan's sample record has a `spans` list per annotation. Grouping and scoring are an open question for Tanishq.
+3. Negation: a sentence that denies a provision is `present` with a proposed attribute `negated`. Where the set has the opposite label (cap and uncapped), that label is used instead.
+4. `in.seat_venue` attribute `designation`: `seat`, `venue` or `ambiguous` from the words alone. "Seat and venue" for one place is `seat`. The key name is a proposal.
+5. `unassessable`: the label has no span and part of the text is missing or unreadable, or its answer lives only in text that is not in the file. This follows the rule in `ParserContract.md` section 6 for the core ("not checked", never "not found"). A scanned or blank page that holds no provisions changes nothing.
+6. Follow a cross-reference, schedule or definition only for a value (an amount, a period, a territory, a place or a payer).
+7. Stamp certificate pages are proposed as `in.stamping_registration` text that records existence only. The pilot checks whether it floods the label.
+8. Fix threshold for the ceiling counts: 3 or more files per ceiling, set before any count.
+9. Guideline version 0.1 until the pilot ends and Tanishq answers the open items, then 1.0.
+10. The five CUAD definitions are in the guidelines' own words and are not the CUAD category descriptions. They stand in for Tanishq's fixed questions.
+
+Checks (docs only; no code changed, so ruff and pytest were not run):
+- The worked offset example was computed by hand and checked with one Python run: `source_text` has 102 code points, the span is 57 to 102 in the typed text and 50 to 95 in the Word variant (7 less, the length of `5. ` and `5.1 `), the code points before the span are 57, the bytes 59 and the UTF-16 units 57.
+- The Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/`, the tool-name grep over `AnnotationGuidelines.md`, and a dash scan over `docs/app` with a control file that holds both dashes (the control matched, `docs/app` did not): no output.
+- Copy passes: `copywriting`, `copy-editing` and `stop-slop` ran in that order over the guidelines. They changed three sentences: a passive "are agreed with Tanishq" now names the move to Tanishq, "A major release may not" now says "may move it", and "Both annotate 10 documents" says "the same 10".
+- ponytail-review of the diff: cut the open-items bullet list in the guidelines' opening (section 9 carries it), two bullets in 3.6 that repeated 3.1, and a sentence in the 2-0A scope text that repeated the pointer under the ceiling table. Kept: the overlap row for liquidated damages and a cap, which has no example but is a known overlap, and the counting script description, which Aryan asked for. Nothing left unfixed.
+
+Not verified:
+- Nothing has been tried on a contract. No contract file is on this machine (`data/` holds `cuad_smoke` and `docx_smoke`). The rules stay untested for annotator agreement until the pilot.
+- The counts. The script is described in section 8 and not written. It waits for Aryan's approval.
+- That the annotation tool of 2-0B can show `list_label` beside a block and refuse spans over `decorations`. Both are stated as requirements in the guidelines and Phases.
+- The definitions of the five CUAD labels against Tanishq's fixed questions.
+
+Processes. Started 1, closed 1: one Python run for the offset check, in the foreground, which exited. No browser, no server, no `pnpm`. Short read-only shell commands (git, grep, ls, cat, od) are not counted.
+
+Blockers: none for this part. The counts need contracts 001 to 025 as files and the script needs approval.
+
+Held `[CONTRACT]` items for Tanishq, with the ones from the Phase 2 start review that are still unsent:
+- 2-0A: the ten annotation ids with their fixed questions, confirmation of `cuad.uncapped_liability` and `cuad.governing_law`, and contracts 001 to 025 as files.
+- 2-0B: the JSONL record fields (the open points in the start review table), plus: the attribute keys `designation` and `negated`, the state names, the adjudication status values, and whether the record groups the spans of one finding, given that a core v2.0 `ClauseFinding` holds one span.
+- 2-A: the catalogue of 46 ids with names, source, support status and version.
+- 2-0C: the `name_span` shape, including `null`, and the unspecified detection points in `ParserContract.md` section 8.
+- 2-D: whether `AnalysisContext` gains `decorations`, and what `parser_complete` and `warnings` must hold.
+- Correction in his file: `docs/ml/Interface.md` line 50 says the parser's nodes carry page and source locator. They do not.
+
+Next action: commit with `docs: add annotation guidelines for the Indian contract set`. Then Aryan approves or changes the counting script and the 3-file threshold, and puts contracts 001 to 025 under `data/`; the counts run after that and close the part. 2-A waits for D1 to D5 and the catalogue.
