@@ -1109,7 +1109,7 @@ Run again at the end of the part, on the final code:
 | The 4 px rule on `ErrorCard`, `Toast` and `PerformanceTableRow` | FE-6 |
 | Tabular numerals on `MetricCell` | FE-6 |
 | The words and the colours of the authority status, and its definition in the contract | Tanishq, then Aryan |
-| Parser warning wording and codes | 2-E (API.md) |
+| Parser warning wording and codes, and a partial-read notice keyed on `coverage.partial`, because two partial triggers raise no warning (`ParserContract.md` 6) | 2-E (API.md) |
 | Whether the real API accepts a sample id while uploads are on (D8) | 4-C |
 | The `/gallery` overflow at 1280 and 375 px, development only. At 375 the cause is its two 520 px specimen panes, in code FE-5 did not change. At 1280 it was not examined | FE-R |
 | Contrast of the plain status on sunken and `anchor-100` surfaces, added to `tokens.test.ts` | FE-R |
@@ -1156,7 +1156,7 @@ Run again at the end of the part, on the final code:
 |---|---|
 | LCP and CLS for `/` | FE-R |
 | The words and the colours of the authority status, and its definition in the contract | Tanishq, then Aryan |
-| Parser warning wording and codes (17.5, AQ) | 2-E (API.md) |
+| Parser warning wording and codes (17.5, AQ), and the notice keyed on `coverage.partial` (`ParserContract.md` 6) | 2-E (API.md) |
 | Whether the real API accepts a sample id while uploads are on (D8) | 4-C |
 | The `/gallery` overflow at 1280 and 375 px, development only | FE-R |
 | The hero ruler wrapper that stretches its child (`[&>div]:flex-1` in `HeroDemo.tsx`), not examined | FE-R |

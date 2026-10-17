@@ -98,6 +98,7 @@ Adding any dependency not in this table requires: a one-line justification in `B
 - **Never normalise Unicode** (no NFC, NFD, NFKC). Never alter characters in the canonical text after offsets exist.
 - **Privacy:** uploaded bytes and extracted text never touch disk, logs, exception messages or temp files. Parse from `io.BytesIO`. Errors carry a fixed code and safe metadata only (page number, counts), never document text.
 - **Errors:** raise typed exceptions with a fixed machine code from the phase spec. No bare `except:`. No `except Exception: pass`.
+- **Parser version.** A part that changes parser output bumps `parser_version` under `ParserContract.md` 2.1 in the same commit, and a test asserts the new value.
 - Comments explain **why**, not what. No commented-out code. No TODOs without a matching line in `docs/app/Phases.md`.
 - Follow ponytail's Full-level ladder: skip it if not needed, then stdlib, then an existing dependency, then the smallest new code. No speculative abstraction, no plugin systems, no base classes with one subclass.
 

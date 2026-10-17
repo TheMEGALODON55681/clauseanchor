@@ -369,9 +369,11 @@ The frontend lists the parties of a contract and must never cut a name at a comm
 - `StructureNode.kind` gains the value `party`.
 - Every node of kind `party` carries `name_span`: `{"start": int, "end": int}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`.
 - `name_span` lies inside the node's range and covers the party's name alone (`ABC Technologies, Inc.`), not the defining phrase around it (`(the "Supplier")`).
-- A party node with no span reads as its whole text.
+- `name_span` is `null` when the parser cannot isolate the name, and a null span reads as the whole node text. Nodes of other kinds have no `name_span` key.
 
 Today `StructureNode` has no `party` kind and no `name_span` field, and the JSON Schema has neither. API.md defines the field on the document node and tags it `[CONTRACT]` (`Phases.md`, 2-E). Part 2-0C gives the parser the field before 2-E starts. Send back any change to the shape before 2-0C starts.
+
+Not specified yet, and needed before 2-0C starts: which text makes a party node (a `BETWEEN` and `AND` list, a `by and between` sentence, or a `hereinafter referred to as` anchor, which none of the definition forms in 7.7 match), the node's own range, its level and parent when no node is open, and what a file with no recognisable party gives.
 
 ## 9. Errors
 
@@ -575,6 +577,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 ## 15. To agree
 
 1. The separators and offsets in section 3, which the core reads without change.
-2. How the core treats `decorations` (mask them) and `partial` (report "not checked", never "not found").
+2. How the core treats `decorations` (mask them) and `partial` (report "not checked", never "not found"). Core v2.0's `AnalysisContext` has no field for `decorations`, so either it gains one or the core ignores furniture.
 3. The shape of `name_span` in section 8, before the parser builds it.
 4. Which ceilings in section 12 the core wants a warning for. Each one needs a signal the parser does not have today.
+5. What `AnalysisContext.parser_complete` and `warnings` must hold. The backend sends `not coverage.partial` and the warning codes (`Phases.md`, 2-D).

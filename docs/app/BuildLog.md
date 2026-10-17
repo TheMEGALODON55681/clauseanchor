@@ -1917,3 +1917,91 @@ Blockers: none.
 `[CONTRACT]`, commits 1 to 11: the consolidated message for Tanishq is printed in chat at the end of this part and is not stored in a file. The held lists at the end of the entries above (each repeats the list so far) and `ParserContract.md` are the record. Commit 11: `parser_version` is 1.1.0 and `ParserContract.md` 2.1 holds the versioning rule. Output stamped 1.0.0 predates 1-R, so it should be re-parsed.
 
 Next action: commit with `docs(docs): close phase 1, bump parser to 1.1.0, assign open ceilings`, then send the message to Tanishq. Phase 2 starts with the phase-start spec review that Rules section 7 asks for, then 2-0A, which counts the Athens, level, number format and fused paragraph ceilings across contracts 001 to 025. 2-0B waits for Tanishq's JSONL fields. 2-0C (Aryan) waits for Tanishq to confirm the `name_span` shape and lands before 2-E as `parser_version` 1.2.0.
+
+
+## 2026-10-17: Phase 2 phase-start spec review (docs only)
+
+Part: the review that Rules section 7 asks for before the first part of a phase. It covers 2-0A, 2-0B, 2-0C and 2-A to 2-E. Docs only: no code, no dependency, no browser, no server. No parser output moved, so `parser_version` stays 1.1.0 and no `[CONTRACT]` item changed. Start: `main` at `e89efb9`, tree clean, level with `origin/main`.
+
+Files changed:
+- `docs/app/Rules.md`: one line in section 5 (Parser version): a part that changes parser output bumps `parser_version` under `ParserContract.md` 2.1 in the same commit, and a test asserts the new value.
+- `docs/app/Phases.md`: the Phase 2 intro (core status, the 2-0A and 2-0B dependencies), a list of endpoints by part, added scope lines under 2-0A, 2-0B, 2-0C, 2-A, 2-B, 2-C, 2-D and 2-E, and a table of nine open decisions after 2-R.
+- `docs/app/Architecture.md`: flow steps 2 and 5, and section 5 (core status, `AnalyzerProtocol`).
+- `docs/app/ParserContract.md`: section 8 (null `name_span`, the unspecified detection points) and section 15 (items 2 and 5).
+- `docs/app/FrontendDesign.md`: the two rows in the open tables that name the warning wording now also name the `coverage.partial` notice.
+- `docs/app/BuildLog.md`: this entry.
+
+Read: Rules, Phases (all of Phase 2, the ceiling table), ParserContract sections 2.1, 6, 7, 8, 9 to 12 and 15, Architecture, the 1-R entries of this log. For the edges of the phase: `docs/ml/` (Interface, Phases, ScopeFixtures), `ml/clauseanchor_core`, `ml/fixtures`, `frontend/src/api`, and plan v1.1 sections 2.5, 4.3, 5, 9, 13 and 14 with the v1.2 change list (all in Downloads). Skills (Rules section 7): every skill the table lists is installed, so nothing is missing. The review ran by hand against the docs. The plan-review skill was not invoked, because its first step starts a helper process and writes state outside the repo, and this part allows no process. Run it if you want its second opinion.
+
+What changed in the starting picture:
+1. Core v2.0 is already on `main`: Tanishq's commit `d9e4c6a` (1 October 2026) added `ml/clauseanchor_core` with `CONTRACT_VERSION = "2.0"`. The 2-D blocker is cleared. The stale lines in the Phase 2 intro and `Architecture.md` section 5 said otherwise and named an `Analyzer` class that does not exist (the export is `AnalyzerProtocol`).
+2. The stub is fixture-bound. It accepts only `sample_contract.txt` (which ends in a newline and holds an emoji), `parser_complete` true, no warnings and four category ids. No upload can reach it, and it rejects the partial parse that 2-D must report as incomplete. Tanishq's scope fixtures say the same: do not route them through `StubAnalyzer.analyze()`.
+3. The core has no label set. `taxonomy.py` is planned in plan 14 and absent, so "core v2.0 categories" in 2-0A points at nothing. The annotation set is the ten categories of plan 4.3.
+4. `AnalysisContext` has `jurisdiction_scope`, `parser_complete`, `structure_nodes` and `warnings`. It has no field for `decorations`, while `ParserContract.md` section 15, item 2, expects the core to mask them.
+5. The frontend and plan section 9 disagree in six places, and 2-E settles them (list under 2-E). Two of them reach back to 2-C: where role and scope travel, and the upload body.
+6. `partial` is true without any warning in two cases (a searchable scan page, a PDF annotation with text). `FrontendDesign.md` 6.3 shows the partial-read notice only when a warning exists.
+
+Per part. "Needs" is the dependency, "Blocked" is whether the part can start today.
+
+| Part | Needs | Blocked | Gaps found | From Tanishq |
+|---|---|---|---|---|
+| 2-0A | Parser 1.1.0 (done), plan 4.3 | No. The guideline text starts now. The counts need contracts 001 to 025 as files, and `data/` holds only the CUAD and DOCX smoke sets | The label set is the ten of plan 4.3 (five `in.` ids, five `cuad.` ids; `cuad.uncapped_liability` and `cuad.governing_law` appear nowhere in the repo). The spec says "while annotating", but annotating needs 2-0B, and the counts are a parser pass that needs no tool. A list label is not in `source_text`, so no span includes it | The ten ids with their fixed questions. Not a start blocker |
+| 2-0B | 2-0A (guideline version), parser, his fields | Yes, on the record fields | The plan's sample record leaves open: `state` values, where `group_id`, `source_type`, `source_url`, `permission_status` and `split` come from, the `parser_version` format (`1.0` against `1.1.0`), one record per annotator or merged, the actor-binding subset, span keys. Node ids shift across minor releases, so records hold spans only. Rules section 5 forbids the export it must write (D9) | The record schema (`[CONTRACT]`) |
+| 2-0C | His confirmation of section 8, a detection design | Yes, on the shape. Also missing: which text makes a party, the node's range, level and parent, and the no-party result | Section 8 said both "every party node carries `name_span`" and "no span reads as the whole text": now `null`, other kinds have no key. `hereinafter referred to as` matches no definition form. 1.2.0 is right under 2.1 (new kind and field are minor; node ids shift, offsets do not). Best run after the 2-0A pass, with contracts 001 to 025 as the test set | The shape, including the null |
+| 2-A | Phase 1 for constants | No. The `categories` array waits for ids | Needs the catalogue (46 ids, names, source, support, version). Frontend ids differ from the plan's stable ids. Rules section 6 wants API.md updated per part, and 2-E was the first to write it: 2-A creates it. Config names differ between plan 14.1 and Architecture (D8). The default 422 body can echo input. First install needs a compiled-package import check on this laptop | The catalogue |
+| 2-B | 2-A | No | Sessions endpoints belonged to no part. SQLite holds nothing that survives a restart (D4). Document and session lifetime (D5). Filename stays in RAM (plan 5) | None |
+| 2-C | 2-A, 2-B | No, after D1 to D3 | Role and scope placement (D1). `resource` is Unix only, so the memory cap has no stdlib route on Windows (D2). The default upload type spools to disk past 1 MiB (D3). `GET /jobs` belonged to no part. Size and type checks reject at upload, the rest arrive on the job. Timeout and memory kill are API codes. Concurrency of parse children was unspecified. The "Phase 2 host" for the two measurements was undefined: this laptop first | None |
+| 2-D | 2-B, 2-C, core | No (cleared) | Stub fixture-bound (D7). Context mapping and decorations (D6). How the backend installs the core, and `constraints.txt` with it. `processing_complete` and `resolved` need definitions: the mock counts `abstained` as resolved | The context fields (`[CONTRACT]`) |
+| 2-E | 2-A to 2-D, 2-0C | Yes, on 2-0C for `name_span` | The six mock-against-plan differences (role and scope, analysis keyed by document or analysis id, party binding shape, warnings as objects or strings, node `page` and locator, `coverage.partial`). Reserved names for the Phase 3 manual-review endpoint may change at 3-D | `name_span` tag; `docs/ml/Interface.md` line 50 says parser nodes carry page and locator, which they do not |
+
+Order for the unblocked parts, and the first to start:
+1. 2-0A first. It has no blocker, it is docs only, and it is on the critical path: the 25 annotated contracts gate Tanishq's evaluation, and the pilot refines the guidelines. Ask for the ten ids and the contract files the day it starts.
+2. 2-A, then 2-B, then 2-C. These need only the decisions D1 to D5 and the catalogue. 2-A can start with the catalogue shaped and the ids pending.
+3. 2-0B the moment his fields arrive, ahead of whatever part is next. Annotation is manual and long, and nothing else gates it.
+4. 2-D after 2-C.
+5. 2-0C when the shape is confirmed and the 2-0A pass has shown the preamble forms, and always before 2-E.
+6. 2-E last, then 2-R. 2-R includes the security review, because Phase 2 handles uploads.
+
+Fixes made (each is a doc edit):
+1. `Rules.md` section 5: the parser version line.
+2. `Phases.md` intro: core on `main`, stub limit (the old text said 2-D waits).
+3. `Phases.md`: "Both need only the parser" now names the 2-0B and contract-file dependencies.
+4. `Phases.md`: an endpoints-by-part line (sessions and `GET /jobs` had no part, `GET /passages` still has none).
+5. `Phases.md` 2-0A: label set, list label rule, counts need files.
+6. `Phases.md` 2-0B: waits for fields, the open record questions, design points.
+7. `Phases.md` 2-0C: detection design needed first.
+8. `Phases.md` 2-A: catalogue, API.md created here, compiled-package check, 422 body.
+9. `Phases.md` 2-B and 2-C: the endpoints each owns, error split, concurrency default.
+10. `Phases.md` 2-D: core install, test double, context mapping, definitions.
+11. `Phases.md` 2-E: the six differences and the `coverage.partial` requirement.
+12. `Phases.md`: nine open decisions (D1 to D9) with the part that needs each and a default.
+13. `Architecture.md`: flow step 2 (role and scope placement is open), flow step 5 and section 5 (`AnalyzerProtocol`, core status).
+14. `ParserContract.md` section 8: null `name_span` and the unspecified points. Section 15: decorations gap in item 2, new item 5.
+15. `FrontendDesign.md`: the two open-table rows now carry the `coverage.partial` notice.
+
+Not changed, for your call: Rules section 5 (D9 relaxes a privacy rule), and `docs/ml/Interface.md` (Tanishq's file).
+
+Checks (docs only; no code ran, so ruff and pytest were not run):
+- The Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/`, and the tool-name grep over `frontend/` and `README.md`: no output. The dash scan over `docs/app` and `README.md` (8 files, with a control string that holds both dashes): the control was found, no hit. The first scrub run matched a path in this entry's own skills sentence, and the sentence was cut. The tool-name grep over the added doc lines finds `ponytail-review` once, the name Rules section 2 and earlier entries use.
+- Copy passes: `copywriting`, `copy-editing` and `stop-slop` ran in that order over the added prose. They cut a meta opener ("the part carries these design points"), two vague clauses ("does not obviously include"), and moved the passive "Tanishq corrects it" to the owner.
+- ponytail-review of the diff: cut the repeated stub description from the intro and 2-D (it stays in `Architecture.md` section 5), the detection list from 2-0C (it stays in `ParserContract.md` section 8) and a "no new dependency" clause that 2-0B already states. Kept: the nine decisions (each blocks a part), the endpoints line (three endpoints had no owner).
+
+Not verified:
+- The FastAPI upload spool (D3): FastAPI is not installed. The claim comes from its documented behaviour and is marked "confirm against the pinned Starlette".
+- The job-object route for the memory cap (D2): not tried on this laptop.
+- That `cuad.uncapped_liability` and `cuad.governing_law` are the stable ids. They follow the pattern of three ids that appear in the plan and the fixtures.
+- Whether contracts 001 to 025 exist outside `data/`.
+
+Processes. Started 6, closed 6: 6 Python runs (one read of the stub fixture, four doc edit scripts, the dash scan). Each ran in the foreground and exited. No browser, no server, no `pnpm`. Short read-only shell commands (git, grep, ls, cat, sed, wc) are not counted.
+
+Blockers: none for the review. 2-0B and 2-0C wait for Tanishq, 2-E for 2-0C.
+
+`[CONTRACT]` items to send Tanishq, held with the 1-R message that is still printed and unsent:
+- 2-0A: the ten annotation ids with their fixed questions, and contracts 001 to 025 as files.
+- 2-0B: the JSONL record fields (the open points in the table above).
+- 2-A: the catalogue of 46 ids with names, source, support status and version.
+- 2-0C: the `name_span` shape, including `null`, and the unspecified detection points in `ParserContract.md` section 8.
+- 2-D: whether `AnalysisContext` gains `decorations`, and what `parser_complete` and `warnings` must hold (`ParserContract.md` section 15, items 2 and 5).
+- Correction in his file: `docs/ml/Interface.md` line 50 says the parser's nodes carry page and source locator. They do not.
+
+Next action: commit with the message printed in chat, then answer D1 to D9 (D9 first for 2-0B, D1 to D3 for 2-C), then start 2-0A.

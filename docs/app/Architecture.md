@@ -24,10 +24,10 @@ flowchart TD
 ```
 
 1. The browser creates an anonymous session and gets a bearer token (Phase 2).
-2. It uploads one PDF or DOCX with the user's role and review scope.
+2. It uploads one PDF or DOCX. Where the user's role and review scope travel is open (`Phases.md`, Phase 2 open decisions, D1).
 3. The upload is validated by magic bytes, size and archive safety, then parsed in a child process with a wall-clock kill and a memory cap (planned, Phase 2).
 4. The parser returns a `ParsedDocument`: canonical `source_text`, its SHA-256, text blocks with source locators, a structure tree and warnings. The uploaded bytes are dropped.
-5. The analysis job passes `source_text` and an `AnalysisContext` to the core `Analyzer` from `ml/clauseanchor_core` and gets back category decisions with spans.
+5. The analysis job passes `source_text` and an `AnalysisContext` to the core analyzer (`AnalyzerProtocol`) from `ml/clauseanchor_core` and gets back category decisions with spans.
 6. The backend applies polarity from the user's role and party binding. The core never sees the user's side.
 7. Everything text-bearing lives in RAM with a 60-minute TTL. SQLite holds only metadata (ids, statuses, counts, offsets).
 8. Every capabilities response, analysis response and report carries the fixed scope notice (Phases.md, "Review scope"). After a complete analysis, the manual-review endpoint (planned, Phase 3) labels each display unit by its overlap with accepted findings, so text without findings is easy to reach.
@@ -150,7 +150,7 @@ Nodes. `StructureNode` holds `id` (`n0001`, `n0002` and on, in order of start an
 
 ## 5. Interface to the core (planned, Phase 2)
 
-The backend imports only public names from `clauseanchor_core`: `CONTRACT_VERSION`, the result dataclasses, `Analyzer` and `StubAnalyzer`. It never imports training, extraction or retrieval internals. Contract version **2.0** (multi-span findings) must be present before the analysis part of Phase 2 starts. The switch is `CLAUSEANCHOR_ANALYZER=stub|real`; a real run with missing artifacts fails readiness instead of falling back to the stub.
+The backend imports only public names from `clauseanchor_core`: `CONTRACT_VERSION`, the result dataclasses, `AnalyzerProtocol` and `StubAnalyzer`. It never imports training, extraction or retrieval internals. Contract version **2.0** (multi-span findings) is on `main` (`ml/clauseanchor_core`, Tanishq's commit `d9e4c6a`). Its stub accepts only the fixture text, a parse with no warnings and four category ids, and `AnalysisContext` has no field for `decorations` (`Phases.md`, D6 and D7). The switch is `CLAUSEANCHOR_ANALYZER=stub|real`; a real run with missing artifacts fails readiness instead of falling back to the stub.
 
 ## 6. Backend tech stack
 
