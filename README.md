@@ -15,10 +15,10 @@ From the repository root:
 cd backend
 python -m venv .venv
 source .venv/Scripts/activate
-pip install -r requirements-dev.txt
+pip install -r requirements-dev.txt -c constraints.txt
 ```
 
-On macOS or Linux, activate with `source .venv/bin/activate`. `requirements.txt` pins the runtime packages, and `requirements-dev.txt` adds the pinned test and lint tools.
+On macOS or Linux, activate with `source .venv/bin/activate`. `requirements.txt` pins the runtime packages, and `requirements-dev.txt` adds the pinned test and lint tools. `constraints.txt` pins everything those two pull in. For a runtime-only install, use `requirements.txt` in place of `requirements-dev.txt`.
 
 ### Run
 

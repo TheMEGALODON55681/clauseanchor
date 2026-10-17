@@ -1742,3 +1742,57 @@ Blockers: none.
 - Commit 8: `UNSUPPORTED_TYPE` no longer means "does not start with `%PDF-`". A PDF with bytes in front of the header (a newline, a byte order mark, junk) now parses when `%PDF-` ends inside the first 1,024 bytes, and gives the same output as the plain file. A header after that is still `UNSUPPORTED_TYPE`. A ZIP signature is checked first. Nothing in the output format changes.
 
 Next action: commit with `fix(parser): accept a PDF header anywhere in the first 1,024 bytes`, then reply `next` for commit 9, the constraints file (B14: pin the transitive runtime packages from a clean install, no new dependency).
+
+
+## 2026-10-17: Part 1-R, step 2, commit 9 of 11: the constraints file (B14)
+
+Part: 1-R step 2, theme 9 of the eleven. Fixes B14, the P3 finding that the packages the direct dependencies pull in were not pinned, so a clean install could resolve newer ones. No code changed and no dependency was added. `[CONTRACT]`: none. Commit 8 landed as `74124dd`, and the tree was clean before this part started.
+
+Files changed:
+- `backend/constraints.txt` (new): 20 pins, the full result of a clean `requirements-dev.txt` install, with a four line header (what it is, the install command, how to refresh it).
+- `README.md`: the install command takes `-c constraints.txt`, and one sentence says what the file pins and how to install the runtime packages alone.
+- `docs/app/Architecture.md` (the folder tree), `docs/app/Phases.md` (a resolution under the 1-D2 line that pinned `lxml` and `pdfminer.six`), `docs/app/BuildLog.md` (this entry).
+- `docs/app/ParserContract.md` and the JSON schema did not change: the output format is the same.
+
+Install command, from the repository root:
+- `cd backend`, `python -m venv .venv`, `source .venv/Scripts/activate`, then `pip install -r requirements-dev.txt -c constraints.txt`.
+- Runtime only: `pip install -r requirements.txt -c constraints.txt`. Entries for packages that are not installed are ignored, so one file serves both.
+
+Findings during the part:
+- B14 reproduced. A fresh venv with `pip install -r requirements-dev.txt` and no constraints resolved 20 packages, and 11 of them had no pin anywhere: `cffi`, `charset-normalizer`, `colorama`, `cryptography`, `iniconfig`, `packaging`, `pluggy`, `pycparser`, `Pygments`, `pypdfium2` and `typing_extensions`. A runtime-only install resolves 12, of which 7 are free: the seven B14 names, with Pillow among them (`requirements-dev.txt` pins it, `requirements.txt` does not, and `pdfplumber` requires it).
+- The working `.venv` has already drifted. The fresh install differs from it in four packages: `iniconfig` 2.3.1 (was 2.3.0), `pluggy` 1.7.0 (1.6.0), `pycparser` 3.11 (3.0) and `pypdfium2` 5.14.0 (5.13.0). The pins are the fresh install's, as Rules section 4 says (pin what the install resolved), and the existing `.venv` was left alone. It still has the four older versions, and `pip install -r requirements-dev.txt -c constraints.txt` inside it brings it level.
+- The file is the full freeze, direct dependencies included (9 of the 20 repeat a pin from `requirements.txt` or `requirements-dev.txt`). A refresh is then one `pip freeze`, and a disagreement between the two files fails the install (checked below), so the repeats cannot drift without notice.
+- `pip freeze` prints CRLF on Windows, so the comparison with the file stripped the carriage returns. The file is LF, like the two requirements files. pip 25.0.1, the version Python 3.12.10 bundles, was used and not upgraded. pip itself is not pinned.
+
+Checks, in clean virtual environments outside the repo, each built with `pip install --no-cache-dir`:
+- Dev install with the file: `pip check` reports no broken requirements, and `pip freeze` is identical to the file. From `backend/`: `ruff format --check` (20 files already formatted), `ruff check` (all passed) and `pytest -q -p no:cacheprovider`: 769 passed in 10.2 s, the count of commit 8.
+- Runtime install with the file: 12 packages, all in the file and none outside it, `pip check` clean.
+- Output sweep: `parse_document` and `to_json(text=True)` over the 92 generated fixtures (65 parse, 27 end in a `ParseError` by design), one hash per file. The runtime install, the dev install and the existing `.venv` (the four older versions) give the same 92 lines, and `sklearn` is not in `sys.modules` after the sweep.
+- Two mutations, as dry runs of `pip install`. A copy of the file with `pycparser` 3.0 and `pypdfium2` 5.13.0 makes pip choose those two versions, so the file decides. A copy with `lxml` 6.1.2 against the 6.1.3 in `requirements.txt` ends in `ResolutionImpossible` with exit status 1. The README command, run from `backend/` against the final file, exits 0.
+
+ponytail-review: cut the file header from 9 comment lines to 4 (the README carries the install commands), a README sentence that only repeated the point, and a few words in the Architecture and Phases lines. Not changed: the 9 repeated pins. A file with only the 11 transitive pins is 9 lines shorter, but a refresh then needs a `pip freeze` and hand filtering, and the mismatch failure above stops the repeats drifting silently. Nothing else left unfixed.
+
+Commands run, with the interpreter of each scratch venv (all under the session scratchpad, outside the repo): `python -m venv` three times; `pip install` unconstrained (dev) and constrained (dev, runtime); `pip check`, `pip freeze`; `ruff format --check`, `ruff check`, `pytest`; one fixture build with `tests.fixtures.build.build_all`; the three sweeps; four dry-run installs. The sweep script and the ledger are in the scratchpad. Read-only git.
+
+Tests: 769 passed, 0 failed, 0 skipped (769 before). Pinned versions added: the 11 transitive ones above, as `backend/constraints.txt` pins (the direct pins did not change).
+
+Not verified:
+- Linux and macOS. The pins were resolved and tested on Windows 11 with Python 3.12.10. `cryptography`, `lxml`, Pillow, `pypdfium2` and `ruff` ship per-platform wheels, and whether every pinned version has one for the Phase 2 host was not checked. `colorama` is only installed on Windows.
+- A vulnerability scan. `pip-audit` is not installed, and this part adds nothing to install it. The step 1 note stands: run it once on the pinned set.
+
+Processes. Started 27, closed 27, confirmed by a process listing at the end (no Python, pip or ruff process left). All 27 are Python commands: 3 venv creations, 3 installs, 2 `pip check`, 5 `pip freeze` (three clean venvs and two of the existing `.venv`), 3 for ruff and pytest, 3 sweeps, 1 fixture build, 4 dry-run installs and 3 version queries. Each ran in the foreground and exited. No browser, no server, no node process. Short read-only shell commands (git, grep, diff, ls) are not counted.
+
+Blockers: none.
+
+`[CONTRACT]`, held for the one message at the end of 1-R. The list so far:
+- Commit 1: `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and counts the bytes read.
+- Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds.
+- Commit 3: none.
+- Commit 4: `MALFORMED_FILE` also means a DOCX text, styles or numbering part with a DOCTYPE, and a footnote or endnote whose `w:id` is missing, signed or longer than nine digits. `TOO_MUCH_TEXT` also means a DOCX with more than 100,000 paragraphs in all its parts, empty ones included.
+- Commit 5: a new warning code, `UNMAPPED_GLYPHS`: a PDF page where more than 25 percent of the glyphs have no text mapping. It carries the page, sets `partial`, and the text keeps each glyph as `(cid:N)`. The JSON schema enum gains the value, last.
+- Commit 6: the text-free JSON (the CLI default and `to_json(doc, text=False)`) has no `locator.list_label` on any block, and the `label` of every `definition` node is `null`. The full form is unchanged. The schema is unchanged. The CLI refuses a file over 10 MiB with `FILE_TOO_LARGE` before reading it.
+- Commit 7: a new locator key `list_level` on a numbered DOCX paragraph: an integer from 0 to 8 (the Word `w:ilvl`), present exactly when `list_label` is, absent on PDF blocks and on cell blocks of several paragraphs, and kept by the text-free form. The structure tree changes where a Word numeral list follows letters on a deeper level: `(i)` after `(h)` is now a numeral child of `(h)`, where it was the ninth letter and left the other numerals inside it. In a PDF or a typed list nothing changes. The schema is unchanged.
+- Commit 8: `UNSUPPORTED_TYPE` no longer means "does not start with `%PDF-`". A PDF with bytes in front of the header (a newline, a byte order mark, junk) now parses when `%PDF-` ends inside the first 1,024 bytes, and gives the same output as the plain file. A header after that is still `UNSUPPORTED_TYPE`. A ZIP signature is checked first. Nothing in the output format changes.
+- Commit 9: none. The parser output is the same for every fixture under the old and the new pins.
+
+Next action: commit with `build(backend): pin transitive packages with a constraints file`, then reply `next` for commit 10, the frontend commit (B16: the undefined `--anchor-50` in `Reader.tsx`, B17: `revealOnce` cleanup leaves `data-reveal="pending"`).

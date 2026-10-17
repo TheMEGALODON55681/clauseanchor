@@ -70,6 +70,7 @@ backend/
   pyproject.toml            # package metadata, ruff and pytest config
   requirements.txt          # pinned runtime dependencies
   requirements-dev.txt      # pinned test and lint dependencies
+  constraints.txt           # exact versions of all installed packages, transitive ones too (pip -c)
   .env.example              # config names only, no secrets
   .gitignore                # .venv, caches, local db, graphify-out
   app/
