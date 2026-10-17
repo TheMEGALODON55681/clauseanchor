@@ -24,7 +24,7 @@ from app.parsing.detect import detect_type
 from app.parsing.errors import MAX_PDF_PAGES, ErrorCode, ParseError, WarningCode
 from app.parsing.model import ParsedDocument, ParseWarning
 from app.parsing.pdf import parse_pdf
-from tests.fixtures.build import PAGE_HEIGHT, PAGE_WIDTH
+from tests.fixtures.build import PAGE_HEIGHT, PAGE_WIDTH, unmapped_pdf
 
 SWEEP_MUTANTS = 300
 CHUNK = pdf_module._FLATE_CHUNK
@@ -509,6 +509,43 @@ def test_an_owner_password_only_file_parses_like_the_plain_one(
 ) -> None:
     plain = parse_pdf(fixture_bytes["simple.pdf"])
     assert parse_pdf(fixture_bytes["owner_only.pdf"]).source_text == plain.source_text
+
+
+# parse_pdf: glyphs with no text mapping
+
+
+def test_a_page_of_unmapped_glyphs_keeps_its_text_warns_and_is_partial(
+    fixture_bytes: dict[str, bytes],
+) -> None:
+    doc = parse_pdf(fixture_bytes["unmapped_all.pdf"])
+    assert doc.source_text == "(cid:65)" * 3  # never altered
+    assert doc.warnings == (ParseWarning(WarningCode.UNMAPPED_GLYPHS, page=1),)
+    assert doc.coverage.partial
+
+
+@pytest.mark.parametrize(
+    ("letters", "glyphs", "warns"),
+    [(3, 1, False), (6, 2, False), (2, 1, True), (5, 2, True), (0, 1, True)],
+)
+def test_more_than_a_quarter_of_a_pages_glyphs_must_be_unmapped_to_warn(
+    letters: int, glyphs: int, warns: bool
+) -> None:
+    doc = parse_pdf(unmapped_pdf((letters, glyphs)))
+    assert [w.code for w in doc.warnings] == ([WarningCode.UNMAPPED_GLYPHS] if warns else [])
+    assert doc.coverage.partial == warns
+
+
+def test_the_share_is_worked_out_for_each_page(fixture_bytes: dict[str, bytes]) -> None:
+    # Page two is 75 percent unmapped, and the file as a whole is 12.5 percent.
+    doc = parse_pdf(fixture_bytes["unmapped_page_two.pdf"])
+    assert doc.warnings == (ParseWarning(WarningCode.UNMAPPED_GLYPHS, page=2),)
+    assert doc.coverage.partial
+
+
+def test_a_word_counts_each_unmapped_glyph_once_whatever_its_length() -> None:
+    word = pdf_module._Box("ab(cid:1)(cid:22)", 0, 1, 0, 1)
+    assert pdf_module._unmapped_share([word]) == 0.5
+    assert pdf_module._unmapped_share([]) == 0.0
 
 
 # parse_pdf: limits (A11)

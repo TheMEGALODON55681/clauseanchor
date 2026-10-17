@@ -73,6 +73,11 @@ IMAGE_DOMINANT = 0.5
 SCANNED_MAX_CHARS = 20
 PARTIAL_MAX_CHARS = 200
 
+# A glyph the font has no text for reaches us as (cid:N). A page is unreadable when more than
+# this share of its glyphs are such tokens, and the file is partial.
+UNMAPPED_MAX_SHARE = 0.25
+_UNMAPPED = re.compile(r"\(cid:\d+\)")
+
 _FLATE_CHUNK = 64 * 1024  # bytes of Flate output read per step while measuring a stream (A11)
 _GROWING_FILTERS = (*LITERALS_FLATE_DECODE, *LITERALS_LZW_DECODE, *LITERALS_RUNLENGTH_DECODE)
 
@@ -398,6 +403,17 @@ def _blocks(streams: list[list[_Box]], char_width: float) -> list[list[_Box]]:
     return blocks
 
 
+def _unmapped_share(words: list[_Box]) -> float:
+    """The share of a page's glyphs that have no text mapping. Each (cid:N) token is one glyph,
+    however many characters it takes, so it is swapped for one character before counting."""
+    glyphs = unmapped = 0
+    for word in words:
+        plain, found = _UNMAPPED.subn("x", word.text)
+        glyphs += len(plain)
+        unmapped += found
+    return unmapped / glyphs if glyphs else 0.0
+
+
 def _split(page: _Page) -> tuple[list[_Box], list[_Box], list[_Box], float]:
     """Splits a page's words by their vertical middle into the top margin, the body and the
     bottom margin (A9). A page number that is the page's first or last row counts as margin
@@ -483,6 +499,9 @@ def parse_pdf(data: bytes) -> ParsedDocument:
                 warnings.append(ParseWarning(WarningCode.PARTIALLY_SCANNED_PDF, page=number))
             elif chars < PARTIAL_MAX_CHARS:
                 partial = True
+        if _unmapped_share(page.words) > UNMAPPED_MAX_SHARE:
+            partial = True
+            warnings.append(ParseWarning(WarningCode.UNMAPPED_GLYPHS, page=number))
         # Each margin candidate gets a block of its own, so decoration never fuses into text.
         groups: list[tuple[BlockKind, list[_Box]]] = [
             (_kind("header", line, repeated), [line]) for line in header

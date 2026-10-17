@@ -465,6 +465,34 @@ def _bomb_encrypted_bytes() -> bytes:
     return buffer.getvalue()
 
 
+def unmapped_pdf(*pages: tuple[int, int]) -> bytes:
+    """One page per (letters, unmapped glyphs) pair. The letters are set in Helvetica. The
+    glyphs are codes of a Type0 font that has no ToUnicode map, so pdfminer reads each as
+    (cid:65): one glyph, eight characters."""
+    kids = " ".join(f"{6 + 2 * n} 0 R" for n in range(len(pages)))
+    objects = {
+        1: b"<< /Type /Catalog /Pages 2 0 R >>",
+        2: b"<< /Type /Pages /Kids [%s] /Count %d >>" % (kids.encode(), len(pages)),
+        3: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        4: b"<< /Type /Font /Subtype /Type0 /BaseFont /Helvetica /Encoding /Identity-H"
+        b" /DescendantFonts [5 0 R] >>",
+        5: b"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Helvetica /CIDSystemInfo"
+        b" << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> >>",
+    }
+    for n, (letters, glyphs) in enumerate(pages):
+        content = b""
+        if letters:
+            content += b"BT /F0 11 Tf 72 700 Td (%s) Tj ET\n" % (b"a" * letters)
+        if glyphs:
+            content += b"BT /F1 11 Tf 72 650 Td <%s> Tj ET" % (b"0041" * glyphs)
+        objects[6 + 2 * n] = (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents %d 0 R"
+            b" /Resources << /Font << /F0 3 0 R /F1 4 0 R >> >> >>" % (7 + 2 * n)
+        )
+        objects[7 + 2 * n] = _stream(content)
+    return _raw_pdf(objects)
+
+
 def _form_cycle_bytes() -> bytes:
     # Forms A and B name each other in their resources and neither draws the other.
     return _raw_pdf(
@@ -1001,6 +1029,9 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "bomb_form.pdf": (_bomb_form_bytes, ErrorCode.TOO_MUCH_TEXT),
     "bomb_encrypted.pdf": (_bomb_encrypted_bytes, ErrorCode.TOO_MUCH_TEXT),
     "form_cycle.pdf": (_form_cycle_bytes, None),
+    # Glyphs with no text mapping
+    "unmapped_all.pdf": (lambda: unmapped_pdf((0, 3)), None),
+    "unmapped_page_two.pdf": (lambda: unmapped_pdf((20, 0), (1, 3)), None),
     # DOCX archive safety (A12)
     "simple.docx": (_simple_docx, None),
     "zip_dotdot.docx": (lambda: build_zip("../evil.txt"), ErrorCode.ARCHIVE_UNSAFE),

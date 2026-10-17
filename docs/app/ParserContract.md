@@ -209,6 +209,7 @@ DOCX: header and footer parts are always decoration. Their tables and text boxes
 | A PDF page is scanned: image-dominant (images cover more than half the page) with fewer than 20 characters outside the margin zones | `PARTIALLY_SCANNED_PDF`, once per such page | refined |
 | An image-dominant PDF page has 20 to 199 characters outside the margins (a searchable scan) | none | refined |
 | A PDF Widget or FreeText annotation holds non-blank text (`/Contents` or `/V`) | none | refined |
+| More than 25 percent of a PDF page's glyphs have no text mapping (10) | `UNMAPPED_GLYPHS`, once per such page | new |
 | A DOCX paragraph holds an embedded object (`w:object`) | `EMBEDDED_OBJECT` | refined |
 | A DOCX block-level child the reader does not know, `altChunk` included | `UNSUPPORTED_DOCX_FEATURE` | refined |
 
@@ -380,6 +381,7 @@ A warning is `ParseWarning(code, page, detail)`. `page` is a 1-based PDF page or
 | `MORE_THAN_TWO_COLUMNS` | A PDF page has two or more gutters and keeps row order | the page | None | no | same |
 | `BLANK_PAGE` | A PDF page holds neither text nor an image | the page | None | no | same |
 | `PARTIALLY_SCANNED_PDF` | A PDF page is scanned and the file has other pages with content. It was an error code in the original spec | the page, once per scanned page | None | yes | refined |
+| `UNMAPPED_GLYPHS` | More than 25 percent of a PDF page's glyphs have no text mapping, because the font carries no Unicode map. Each such glyph stays in `source_text` as `(cid:` and its number and `)`, for example `(cid:65)`, and counts as one glyph, not eight characters. The share is counted over all the page's words, margins included. A file whose every page is like this still parses | the page, once per page | None | yes | new |
 | `NUMBERING_AMBIGUOUS` | A numeral that continues both as a letter and as a numeral (7.4) | the block's page, once per page | None | no | refined |
 | `NUMBERING_NOT_RENDERED` | A DOCX list number could not be worked out: a missing or unreadable numbering definition, a number format other than decimal, letters and roman numerals, a value over a bound, or a cell block that joins several numbered paragraphs | None | None | no | refined |
 | `TEXT_BOX_CONTENT` | A DOCX holds a text box outside `mc:Fallback`. Informational: the text is read | None | None | no | refined |
@@ -425,6 +427,7 @@ The first message listed no ceilings, so this whole section is new. The last col
 | A DOCX page or column break adds nothing, so the words on either side fuse (`before` and `after` become `beforeafter`) | No |
 | `w:noBreakHyphen` becomes ASCII `-` | No (listed in 3.3) |
 | PDF space runs collapse and U+00A0 becomes U+0020 | No (listed in 3.3) |
+| Up to 25 percent of a PDF page's glyphs can have no text mapping. Each shows in `source_text` as `(cid:N)`, with no warning | No |
 
 ### 12.3 PDF reading order and blocks
 
@@ -535,6 +538,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 - `coverage.pages_with_text` leaving out scanned pages (section 6).
 - Structure: node kinds and label format, the run of 3, the prefix rule, schedules clearing sequences, typed numbers never skipping ahead, Word lists opening above 1, the gap rule of 1-F, capitals headings, titles, contents lines, bare numbers, definitions, tables, and header, footer and footnote blocks never read (section 7).
 - The DOCX paragraph limit (section 11).
+- The `UNMAPPED_GLYPHS` warning (sections 6 and 10).
 - The ceilings (section 12), the command line and the schema (section 2).
 
 **Refined** (stated before, now exact or changed):

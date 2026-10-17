@@ -1552,3 +1552,51 @@ Blockers: none.
 - Commit 4: `MALFORMED_FILE` also means a DOCX text, styles or numbering part with a DOCTYPE. A file with an internal entity used to parse with the text after the reference dropped. `MALFORMED_FILE` also means a footnote or endnote whose `w:id` is missing, signed or longer than nine digits, so the locator `id` is at most 999,999,999. `TOO_MUCH_TEXT` also means a DOCX with more than 100,000 paragraphs in all its parts, empty ones included (a new limit in section 11).
 
 Next action: commit with `fix(parser): bound DOCX paragraphs, note ids and DOCTYPE parts`, then reply `next` for commit 5, unreadable text (B6). That commit needs two answers from Aryan first, because the default set from step 1 left them open: a new warning code or `partial` alone, and the share of unmapped glyphs that triggers it.
+
+
+## 2026-10-17: Part 1-R, step 2, commit 5 of 11: unreadable text (B6)
+
+Part: 1-R step 2, theme 5 of the eleven. Fixes B6, the P2 finding that glyphs with no text mapping enter the text silently. `[CONTRACT]`: a new warning code, see the last section. Commit 4 is `4786084`, and the tree was clean before this part started. Aryan's answers for call 3 of step 1: a new warning code plus `partial`, triggered when more than 25 percent of a page's text is unmapped glyphs.
+
+Files changed:
+- `backend/app/parsing/pdf.py`: `UNMAPPED_MAX_SHARE = 0.25`, the pattern `_UNMAPPED`, and `_unmapped_share(words)`. `parse_pdf` adds `UNMAPPED_GLYPHS` for each page over the share and sets `partial`.
+- `backend/app/parsing/errors.py`: `WarningCode.UNMAPPED_GLYPHS`, added last so the other codes keep their place in the schema enum.
+- `backend/tests/fixtures/build.py`: `unmapped_pdf(*pages)`, one page per (letters, unmapped glyphs) pair, and the fixtures `unmapped_all` and `unmapped_page_two`.
+- `backend/tests/test_pdf.py`: the text is kept and the file warns and is partial; the 25 percent boundary (1 of 4 and 2 of 8 pass without a warning, 1 of 3, 2 of 7 and a page of only unmapped glyphs warn); the share is worked out per page (page two is 75 percent unmapped and the whole file 12.5 percent); and a unit check that a token counts as one glyph. 725 tests became 741: 8 new tests and 8 more from the two new fixtures, which four tests walk. The review cut one boundary case.
+- `docs/app/parser_output.schema.json` (the enum, by hand, because a test holds the file equal to `schema.py`), `docs/app/ParserContract.md` (the partial table in 6, the warnings table in 10, a ceiling row in 12.2, section 14), `docs/app/Phases.md` (a resolution under A10), `docs/app/Architecture.md` (the scanned PDFs row), `docs/app/BuildLog.md` (this entry).
+
+What changed, in the order the code runs:
+- For each page, after the scanned check, `_unmapped_share` goes over every word of the page, margins included. Each `(cid:N)` token is swapped for one character, so it counts as one glyph, and the share is tokens over glyphs. Above 0.25 (strictly: exactly a quarter passes) the page gets one `UNMAPPED_GLYPHS` warning and `partial` is set.
+- `source_text` is not touched. A page of tokens reads `(cid:65)(cid:65)(cid:65)` as before. `pages_with_text` still counts the page.
+
+Findings during the part:
+- The review's case, a Type0 font with no ToUnicode map: on the last commit the file parses with no warning and `partial` False (JSON 524 B); now it has the warning and `partial` (577 B). The text is the same in both.
+- Tokens count as one glyph and not as eight characters on purpose. By characters, one unmapped glyph in a line of 20 letters would be 8 of 28, 29 percent, and trip the rule. By glyphs it is 1 of 21, under 5 percent.
+- A page of only unmapped glyphs, and a file where every page is, still parses with the warning and `partial`. It is not an error. Two things were not asked for and not done: leaving such a page out of `pages_with_text` the way scanned pages are, and rejecting a file whose every page is unmapped the way `SCANNED_PDF` does. The core's rule for `partial` (report "not checked") already keeps it from reporting "not found".
+- The three real PDFs of the smoke set (93 pages) have a share of 0.0 on every page, give the same JSON by hash (174, 797 and 614 blocks), and the times are within noise (1.48 to 1.27 s, 8.41 to 8.54 s, 12.02 to 11.45 s). No real file has met the threshold, so the 25 percent comes from the call and not from data.
+- `char_width` in `parse_pdf` is the median of width over `len(text)`, and a token is eight characters, so on a flagged page the indent threshold gets smaller and blocks may split at small indents. The page is already marked, so it was left alone.
+- No frontend code lists warning codes. `FrontendDesign.md` has the wording for `PARTIALLY_SCANNED_PDF`, and wording for the new code is for the frontend track to decide.
+
+Commands run, from `backend/` with the venv interpreter: `ruff format app tests`, `ruff check app tests`, `pytest -q -p no:cacheprovider` (a red run first: 7 failed, 735 passed; the schema file test failed because the enum had a new member, and the text assertion of the first new test already held on the last commit, which shows the fixture reads as the review described). Probes on a copy of `app/` for the last commit (exported with `git archive`) and for the working tree, in the session scratchpad and never the repo, each as its own `python -I` process: the build of two unmapped files with the repo's own builder, the parse of those two and the three smoke PDFs on each version, and the share of every page of the smoke PDFs. Read-only git.
+
+Tests: 741 passed, 0 failed, 0 skipped (725 before). Pinned versions added: none.
+
+Over-engineering review of the diff: cut one boundary case (a page of 20 letters and no unmapped glyph), because every other PDF test is a share of 0 and the empty page has its own check. Nothing left unfixed.
+
+Processes. Started 16, closed 16: 10 Python (4 test runs, 6 scripts and probes) and 6 of the formatter and linter (three runs of the pair). A process listing at the end found no Python or ruff process running.
+
+Not verified:
+- A real PDF with unmapped glyphs. Both fixtures are built with a Type0 font that has no ToUnicode map, and the share of 25 percent was not tuned on any real file.
+- A font whose Unicode map is wrong. It gives plausible wrong letters and no `(cid:N)`, so nothing here sees it. This belongs with the ceilings in the docs commit.
+- Other extractors' markers. The pattern is the one pdfminer writes. A library upgrade that changes it would hide the case, and the fixture test would fail.
+
+Blockers: none.
+
+`[CONTRACT]`, held for the one message at the end of 1-R. The list so far:
+- Commit 1: `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and counts the bytes read.
+- Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds.
+- Commit 3: none.
+- Commit 4: `MALFORMED_FILE` also means a DOCX text, styles or numbering part with a DOCTYPE, and a footnote or endnote whose `w:id` is missing, signed or longer than nine digits. `TOO_MUCH_TEXT` also means a DOCX with more than 100,000 paragraphs in all its parts, empty ones included.
+- Commit 5: a new warning code, `UNMAPPED_GLYPHS`: a PDF page where more than 25 percent of the glyphs have no text mapping. It carries the page, sets `partial`, and the text keeps each glyph as `(cid:N)`. The JSON schema enum gains the value, last.
+
+Next action: commit with `feat(parser): warn on PDF pages with unmapped glyphs`, then reply `next` for commit 6, text-free output and the command line (B7 and B12). Unless told otherwise it follows the default of step 1: `list_label` and the label of a definition node are dropped when `text` is False.

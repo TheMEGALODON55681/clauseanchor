@@ -213,7 +213,8 @@
             "TEXT_BOX_CONTENT",
             "EMBEDDED_OBJECT",
             "UNSUPPORTED_DOCX_FEATURE",
-            "PARTIALLY_SCANNED_PDF"
+            "PARTIALLY_SCANNED_PDF",
+            "UNMAPPED_GLYPHS"
           ]
         },
         "page": {

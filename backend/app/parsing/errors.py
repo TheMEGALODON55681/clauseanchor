@@ -36,6 +36,8 @@ class WarningCode(StrEnum):
     UNSUPPORTED_DOCX_FEATURE = "UNSUPPORTED_DOCX_FEATURE"
     # A warning, not an error: an executed contract often ends in a scanned signature page.
     PARTIALLY_SCANNED_PDF = "PARTIALLY_SCANNED_PDF"
+    # A font with no text mapping: pdfminer writes each such glyph as (cid:N).
+    UNMAPPED_GLYPHS = "UNMAPPED_GLYPHS"
 
 
 class ParseError(Exception):
