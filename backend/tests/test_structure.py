@@ -682,6 +682,59 @@ def test_a_list_label_names_the_node(fixture_bytes: dict[str, bytes]) -> None:
     assert "1.1" not in doc.source_text
 
 
+def test_a_numeral_list_after_h_is_read_as_numerals_in_a_word_file(
+    fixture_bytes: dict[str, bytes],
+) -> None:
+    _, nodes, warnings = structure_of("numeral_after_h.docx", fixture_bytes)
+    assert labels(nodes) == ["1", "1.1", *(f"({c})" for c in "abcdefgh"), "(i)", "(ii)", "(iii)"]
+    assert [n.level for n in nodes] == [1, 2, *[3] * 8, *[4] * 3]
+    assert parent_labels(nodes)[-3:] == ["(h)", "(h)", "(h)"]
+    assert warnings == []
+
+
+def test_the_ninth_letter_of_a_word_list_is_still_a_letter(fixture_bytes: dict[str, bytes]) -> None:
+    _, nodes, warnings = structure_of("letter_after_h.docx", fixture_bytes)
+    assert labels(nodes) == ["1", "1.1", *(f"({c})" for c in "abcdefghij")]
+    assert [n.level for n in nodes] == [1, 2, *[3] * 10]
+    assert warnings == []
+
+
+def test_a_word_label_on_a_shallower_level_than_the_open_letter_keeps_both_readings() -> None:
+    # The level is no evidence here, so the usual scoring decides. (i) after (a) and (b) starts a
+    # numeral run, and (i) after (a) to (h) continues the letters.
+    clause = b("Clause.", list_label="1.", list_level=0)
+    nodes, _ = structure(
+        clause,
+        b("A.", list_label="(a)", list_level=2),
+        b("B.", list_label="(b)", list_level=2),
+        b("One.", list_label="(i)", list_level=1),
+    )
+    assert (nodes[-1].label, nodes[-1].level, parent_labels(nodes)[-1]) == ("(i)", 3, "(b)")
+    nodes, _ = structure(
+        clause,
+        *(b("Item.", list_label=f"({c})", list_level=2) for c in "abcdefgh"),
+        b("Nine.", list_label="(i)", list_level=1),
+    )
+    assert (nodes[-1].label, nodes[-1].level, parent_labels(nodes)[-1]) == ("(i)", 2, "1")
+
+
+def test_a_word_label_with_one_reading_left_raises_no_ambiguity_warning() -> None:
+    # (v) after (iv) continues both the letters (a) to (u) and the numerals, so typed text gets
+    # NUMBERING_AMBIGUOUS. The Word level says which one it is.
+    def after_numerals(level: int) -> tuple[list[StructureNode], list[ParseWarning]]:
+        return structure(
+            b("Clause.", list_label="1.", list_level=0),
+            *(b("Item.", list_label=f"({c})", list_level=1) for c in "abcdefghijklmnopqrstu"),
+            *(b("Part.", list_label=f"({n})", list_level=2) for n in ("i", "ii", "iii", "iv")),
+            b("Last.", list_label="(v)", list_level=level),
+        )
+
+    nodes, warnings = after_numerals(2)
+    assert (nodes[-1].level, parent_labels(nodes)[-1], warnings) == (3, "(u)", [])
+    nodes, warnings = after_numerals(1)
+    assert (nodes[-1].level, parent_labels(nodes)[-1], warnings) == (2, "1", [])
+
+
 def test_a_list_label_is_read_instead_of_the_text() -> None:
     nodes, _ = structure(b("2.5 typed text", list_label="1."), b("Plain.", list_label="1.1"))
     assert labels(nodes) == ["1", "1.1"]

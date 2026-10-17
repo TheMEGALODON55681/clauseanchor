@@ -846,6 +846,15 @@ def _numbering_levels() -> bytes:
     return build_docx("".join(listed(t, num_id=1, level=n) for n, t in items), [numbering])
 
 
+def _after_h(level: int, count: int) -> bytes:
+    """Letters (a) to (h) on level 2, then `count` more paragraphs on `level`. Level 3 is a
+    numeral list, so they read (i), (ii) and on. Level 2 is the same list as the letters, so
+    they read (i) as the ninth letter, then (j)."""
+    numbering = related_part("numbering", _MULTILEVEL + num_xml(1, 0))
+    items = [(0, "Services."), (1, "Clause one."), *[(2, "Item.")] * 8, *[(level, "Last.")] * count]
+    return build_docx("".join(listed(t, num_id=1, level=n) for n, t in items), [numbering])
+
+
 def _empty_numbered() -> bytes:
     # Word shows a number for an empty numbered paragraph and counts it. The reader leaves the
     # empty block out, so the label after each one is a number too high: 1, 2, 4, 4.1, 4.3.
@@ -1195,6 +1204,8 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "list_number_style.docx": (_list_number_style, None),
     "numbering_levels.docx": (_numbering_levels, None),
     "empty_numbered.docx": (_empty_numbered, None),
+    "numeral_after_h.docx": (lambda: _after_h(3, 3), None),
+    "letter_after_h.docx": (lambda: _after_h(2, 2), None),
     # Page parts and notes (A18)
     "header_footer.docx": (_header_footer, None),
     "notes.docx": (_notes, None),

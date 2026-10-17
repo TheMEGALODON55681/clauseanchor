@@ -540,6 +540,10 @@ def labels(doc: ParsedDocument) -> list[int | str | None]:
     return [block.locator.get("list_label") for block in doc.blocks]
 
 
+def levels(doc: ParsedDocument) -> list[int | str | None]:
+    return [block.locator.get("list_level") for block in doc.blocks]
+
+
 def numbered(body: str, *definitions: str, styles: str = "") -> ParsedDocument:
     extras = [related_part("numbering", "".join(definitions))]
     if styles:
@@ -552,6 +556,7 @@ def test_style_linked_numbering_labels_paragraphs_that_carry_no_numpr(
 ) -> None:
     doc = parse_docx(fixture_bytes["list_number_style.docx"])
     assert labels(doc) == ["1.", None, "2.", "3."]
+    assert levels(doc) == [0, None, 0, 0]  # the level has no key where the label has none
     # The label is locator data. The text is the file's, so no offset moves.
     assert doc.source_text == "First item.\nBetween.\nSecond item.\nThird item."
     assert doc.warnings == ()
@@ -562,7 +567,13 @@ def test_composite_labels_and_the_restart_of_deeper_levels(fixture_bytes: dict[s
     doc = parse_docx(fixture_bytes["numbering_levels.docx"])
     assert labels(doc) == ["1.", "1.1", "1.2", "(a)", "(b)", "(i)", "1.3", "(a)", "2.", "2.1"]
     assert doc.warnings == ()
-    assert locators(doc)[1] == {"part": "document", "paragraph": 2, "list_label": "1.1"}
+    assert locators(doc)[1] == {
+        "part": "document",
+        "paragraph": 2,
+        "list_label": "1.1",
+        "list_level": 1,
+    }
+    assert levels(doc) == [0, 1, 1, 2, 2, 3, 1, 2, 0, 1]
 
 
 def test_a_style_chain_gives_the_list_and_the_level_from_different_styles() -> None:
@@ -583,6 +594,7 @@ def test_a_style_chain_gives_the_list_and_the_level_from_different_styles() -> N
     nums = num_xml(1, 0) + num_xml(2, 0, override_xml(0, start=9))
     doc = numbered(body, MULTILEVEL, nums, styles=styles)
     assert labels(doc) == ["1.", "1.1", "1.2", "2.", "9."]
+    assert levels(doc) == [0, 1, 1, 0, 0]
 
 
 def test_a_paragraph_with_no_style_takes_the_default_paragraph_style() -> None:
@@ -787,6 +799,7 @@ def test_a_label_in_a_cell_needs_a_block_of_one_paragraph() -> None:
         ("First.\nSecond.", None),  # two paragraphs, one block, so no single label fits
         ("After.", "4."),  # the counters counted all four
     ]
+    assert levels(doc) == [0, None, 0]
     assert warnings_of(doc) == NUMBERING_WARNING
 
 

@@ -148,7 +148,7 @@ class _Cell:
 
     locator: dict[str, int | str]
     lines: list[str] = field(default_factory=list)
-    labels: list[str | None] = field(default_factory=list)  # one per line
+    labels: list[tuple[str, int] | None] = field(default_factory=list)  # one per line
     segment: int = 0
 
 
@@ -316,10 +316,10 @@ class _Numbering:
                 raise _Unrendered
         return num_id, level
 
-    def label(self, paragraph: etree._Element) -> str | None:
-        """The label of a paragraph, None when it is not numbered or its number is not text.
-        Raises _Unrendered when it is numbered and the label cannot be worked out. The counters
-        advance first, so a later paragraph still counts this one."""
+    def label(self, paragraph: etree._Element) -> tuple[str, int] | None:
+        """The label of a paragraph and its Word level (w:ilvl), None when it is not numbered or
+        its number is not text. Raises _Unrendered when it is numbered and the label cannot be
+        worked out. The counters advance first, so a later paragraph still counts this one."""
         properties = paragraph.find(_w("pPr"))
         direct = None if properties is None else properties.find(_w("numPr"))
         style_num, style_level = self._style_numbering(_val(properties, "pStyle"))
@@ -359,7 +359,7 @@ class _Numbering:
         text = _PLACEHOLDER.sub(number, level.text)
         if len(text) > _MAX_LABEL:
             raise _Unrendered
-        return text if text.strip() else None
+        return (text, index) if text.strip() else None
 
 
 _READABLE_METHODS = (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)  # the others have no output limit
@@ -501,7 +501,7 @@ class _Walk:
                 stack.pop()
         return "".join(parts), boxes
 
-    def _label(self, paragraph: etree._Element) -> str | None:
+    def _label(self, paragraph: etree._Element) -> tuple[str, int] | None:
         try:
             return self._numbering.label(paragraph)
         except _Unrendered:
@@ -529,7 +529,7 @@ class _Walk:
                     if cell is None:
                         locator = {**scope, "paragraph": count}
                         if label:
-                            locator["list_label"] = label
+                            locator["list_label"], locator["list_level"] = label
                         self._emit(self._kind, text, locator)
                     else:
                         cell.lines.append(text)
@@ -551,7 +551,7 @@ class _Walk:
             locator = {**cell.locator, "segment": cell.segment}
             first = cell.labels[0]
             if len(cell.lines) == 1 and first:
-                locator["list_label"] = first
+                locator["list_label"], locator["list_level"] = first
             elif any(cell.labels):
                 # One block holds several paragraphs, so a label has no paragraph to sit on.
                 self._warn(WarningCode.NUMBERING_NOT_RENDERED)

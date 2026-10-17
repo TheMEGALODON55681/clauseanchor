@@ -70,6 +70,7 @@ class _Node:
     index: int
     family: str = ""
     parts: tuple[int, ...] = ()
+    ilvl: int | None = None  # the Word level it was read from, None for typed text
 
 
 def _roman(token: str) -> int | None:
@@ -241,11 +242,13 @@ class _Builder:
         level: int,
         family: str,
         parts: tuple[int, ...],
+        ilvl: int | None = None,
     ) -> None:
         while self.stack and self.stack[-1].level >= level:
             self.stack.pop().end = self.body_end
         parent = self.stack[-1] if self.stack else None
         node = self._add(kind, label, level, block.start, block.end, parent, family, parts)
+        node.ilvl = ilvl
         self.stack.append(node)
 
     def _label(self, block: Block) -> None:
@@ -268,8 +271,10 @@ class _Builder:
             return  # a bare number with no full stop and no title is a page number
         if typed and label.short and len(line) > _SHORT:
             return
+        level_given = block.locator.get("list_level")
+        ilvl = level_given if isinstance(level_given, int) else None
         best, score, ambiguous = None, 0, False
-        for reading in label.readings:
+        for reading in self._by_level(label.readings, ilvl):
             fit = self._fit(reading, listed=not typed)
             if fit > score:
                 best, score = reading, fit
@@ -288,8 +293,19 @@ class _Builder:
             self.last.clear()  # numbering starts again inside a schedule
         # A Word number above the last one is the same run, with the gap left unread.
         self.last[key] = (number, length + 1 if number > current else 1)
-        self._open(block, kind, label.text, level, best.family, best.parts)
+        self._open(block, kind, label.text, level, best.family, best.parts, ilvl)
         self.titled = not rest.strip()
+
+    def _by_level(self, readings: tuple[_Reading, ...], ilvl: int | None) -> tuple[_Reading, ...]:
+        """(i) is the ninth letter and the first numeral. A Word numeral list that follows the
+        letters sits on a deeper Word level, and the next letter sits on the level of the
+        letters, so the level of the open letter settles which reading is possible. Typed text
+        and PDFs have no level, and keep both readings."""
+        letter = next((n for n in reversed(self.stack) if n.family == "letter"), None)
+        if ilvl is None or letter is None or letter.ilvl is None or ilvl < letter.ilvl:
+            return readings
+        drop = "letter" if ilvl > letter.ilvl else "roman"
+        return tuple(r for r in readings if r.family != drop) or readings
 
     def _fit(self, reading: _Reading, *, listed: bool) -> int:
         """_CONTINUES when the reading continues its sequence, _STARTS when it starts one at 1,

@@ -165,12 +165,14 @@ Every number is 1-based. `bbox` is `(x0, top, x1, bottom)` in points from the to
 
 `list_label` **new**: the locator of a numbered DOCX paragraph also holds `"list_label"`, the rendered label as text, such as `1.`, `1.1`, `(a)`, `(ii)` or `ARTICLE I`. The key is absent when the paragraph is not numbered, when its number cannot be worked out, and for bullets and `none` formats. It is never in `source_text`. The structure builder reads it (7.3).
 
+`list_level` **new**: the same locator also holds `"list_level"`, the paragraph's Word level (`w:ilvl`) as an integer from 0 (the top level) to 8. It is present exactly when `list_label` is. A PDF block and a typed list have neither. The structure builder uses it to tell a numeral list from the next letter (7.4). The text-free form keeps it, because it is a number.
+
 Cells and merges **new**:
 
 - A cell is one block of kind `table_cell`, its paragraphs joined with `\n`. An empty cell makes no block.
 - A nested table or a text box ends the block. The text after it starts the next block of the same cell, with `segment` one higher. The key `segment` is always present.
 - A merged cell is one cell and is not marked.
-- A cell block that holds several paragraphs carries no `list_label`, and the reader raises `NUMBERING_NOT_RENDERED`.
+- A cell block that holds several paragraphs carries no `list_label` and no `list_level`, and the reader raises `NUMBERING_NOT_RENDERED`.
 
 Page parts **refined**: a header or footer part that several sections name is read once. A part whose text equals an earlier part of the same kind is dropped. Only the variants a section names are read. Word's separator and continuation notes are skipped.
 
@@ -306,6 +308,8 @@ Levels **refined**:
 | Table | One below the innermost open node |
 
 `(i)`, `(v)`, `(x)`, `(c)`, `(d)`, `(l)` and `(m)` can be a letter or a numeral. `(i)` is a letter when it continues the letters and a numeral when it starts a run under a letter. When both readings continue a sequence it is a letter, and the parser adds `NUMBERING_AMBIGUOUS` once per page. **new**
+
+A Word label settles this with its level. When `(i)` or another label with both readings comes after an open letter that also has a `list_level`, a deeper level makes it a numeral (a numeral list nested under `(h)`), and the same level makes it the next letter. A shallower level, a typed label and every PDF label keep both readings and the rule above. **refined**
 
 ### 7.5 Word lists
 
@@ -473,7 +477,7 @@ These are the cases where the tree is wrong or coarse and offsets are still exac
 | A short all-capitals line is a heading and closes open nodes. Seen: signature block names, formula words (`MULTIPLIED BY`), and a page header that was not marked as furniture | Nodes end early |
 | A party list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay | Two false nodes |
 | A Word list whose first item is an empty numbered paragraph is not read when it is a nested decimal (`1.1` empty, `1.2` first), a letter list or a numeral list. A top-level decimal list is read. A gap in the middle of any list is read (7.5) | A list is missed |
-| A numeral list that opens right after `(h)` reads `(i)` as the ninth letter. Its other numerals stay inside that node. Seen in a state government services template (`(h) a reference to:` then `(i)` to `(iv)`) | One coarse node, wrong level |
+| In a PDF, and in a DOCX whose list is typed, a numeral list that opens right after `(h)` reads `(i)` as the ninth letter, because there is no Word level to tell the two apart. Its other numerals stay inside that node. A Word list is read right (7.4). Seen in a state government services template (`(h) a reference to:` then `(i)` to `(iv)`), which now gives `(h)` four numeral children | One coarse node, wrong level |
 | Numbers inside a table cell are not read, so a contract laid out as one large table has a `table` node and no clauses | No clauses |
 | A contents page with neither a dot leader nor a trailing page number is read as clauses | False nodes |
 | A definition in a form that is not listed (`X shall be construed as`) is not found, and a quoted term at the end of one block with its verb at the start of the next is missed | Missed definition |
@@ -531,7 +535,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 
 **New** (not stated before):
 
-- Word list labels in the locator (`list_label`), and the cell, segment and merge rules (4.3).
+- Word list labels and levels in the locator (`list_label`, `list_level`), and the cell, segment and merge rules (4.3).
 - The page separator rule for pages with no block, the PDF block order and the unit of `bbox` (3.2, 4.2, 4.3).
 - Decoration: the 8 percent margin zone, the repetition rule, a block of its own for each candidate, and DOCX header and footer parts (section 5).
 - DOCX text rules for tabs, breaks, field results and empty paragraphs, the `noBreakHyphen` effect, and the lone surrogate error (3.1, 3.4).
