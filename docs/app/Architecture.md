@@ -79,7 +79,7 @@ backend/
       model.py              # dataclasses: ParsedDocument, Block, StructureNode, ParseWarning, Coverage
       assemble.py           # TextAssembler: builds source_text and assigns offsets while appending
       errors.py             # ParseError, the fixed error/warning code lists and the limits
-      detect.py             # file type detection by magic bytes
+      detect.py             # file type detection by magic bytes; the PDF header may sit anywhere in the first 1,024 bytes (pdf_start), and pdf.py cuts the bytes in front of it
       pdf.py                # pdfplumber extraction: error mapping, words to rows to blocks, columns (1-B); decoration, scanned checks, content budget (1-C)
       docx.py               # python-docx extraction: archive checks, tracked-change check, body order, tables, text boxes (1-D); headers, footers, footnotes, numbering (1-D2)
       structure.py          # clause tree from block text and list labels: numbered labels, headings, schedules, tables, definitions (1-E)

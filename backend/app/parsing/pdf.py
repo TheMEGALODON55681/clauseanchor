@@ -29,6 +29,7 @@ from pdfplumber.page import Page
 from pdfplumber.utils.exceptions import MalformedPDFException, PdfminerException
 
 from app.parsing.assemble import TextAssembler
+from app.parsing.detect import pdf_start
 from app.parsing.errors import (
     MAX_DECODED_CONTENT_BYTES,
     MAX_PDF_PAGES,
@@ -232,7 +233,7 @@ def _read(data: bytes) -> tuple[list[_Page], bool]:
     """Returns the pages, and whether any annotation holds text. The only place library errors
     are caught. The page count and the content budget are settled before any text is read."""
     try:
-        with pdfplumber.open(io.BytesIO(data)) as pdf:
+        with pdfplumber.open(io.BytesIO(data[max(pdf_start(data), 0) :])) as pdf:
             sources = list(islice(PDFPage.create_pages(pdf.doc), MAX_PDF_PAGES + 1))
             if len(sources) > MAX_PDF_PAGES:
                 raise ParseError(ErrorCode.TOO_MANY_PAGES)

@@ -91,6 +91,20 @@ def test_input_of_exactly_the_size_limit_is_read() -> None:
     assert exc.value.code == ErrorCode.MALFORMED_FILE
 
 
+@pytest.mark.parametrize(
+    "prefix",
+    [b"\n", b"\xef\xbb\xbf", b"x" * 100, b"x" * 1019],
+    ids=["newline", "bom", "100_bytes", "1019_bytes"],
+)
+def test_a_pdf_with_bytes_before_the_header_reads_like_the_plain_file(
+    prefix: bytes, fixture_bytes: dict[str, bytes]
+) -> None:
+    # The offsets in a PDF count from its header. This file, with its xref stream, only reads
+    # when the bytes in front are cut off first.
+    plain = fixture_bytes["xref_stream.pdf"]
+    assert parse_document(prefix + plain) == parse_document(plain)
+
+
 def test_a_file_that_is_neither_pdf_nor_docx_is_unsupported() -> None:
     with pytest.raises(ParseError) as exc:
         parse_document(b"plain text, not a document")

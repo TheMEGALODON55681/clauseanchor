@@ -1694,3 +1694,51 @@ Blockers: none.
 - Commit 7: a new locator key `list_level` on a numbered DOCX paragraph: an integer from 0 to 8 (the Word `w:ilvl`), present exactly when `list_label` is, absent on PDF blocks and on cell blocks of several paragraphs, and kept by the text-free form. The structure tree changes where a Word numeral list follows letters on a deeper level: `(i)` after `(h)` is now a numeral child of `(h)`, where it was the ninth letter and left the other numerals inside it. In a PDF or a typed list nothing changes. The schema is unchanged.
 
 Next action: commit with `feat(parser): carry the Word list level into the clause tree`, then reply `next` for commit 8. The order of the rest is approved: 8 is the PDF header window (B10: accept `%PDF-` anywhere in the first 1,024 bytes), 9 the constraints file (B14), 10 the frontend commit (B16 and B17), and 11 the docs commit with the `graphify` refresh. The Word number format (`lowerLetter` or `lowerRoman`) stays a recorded ceiling and is not built.
+
+
+## 2026-10-17: Part 1-R, step 2, commit 8 of 11: the PDF header window (B10)
+
+Part: 1-R step 2, theme 8 of the eleven. Fixes B10, the P3 finding that a valid PDF with any bytes before `%PDF-` is refused as `UNSUPPORTED_TYPE`. Readers accept the header anywhere in the first 1,024 bytes. `[CONTRACT]`: a file that was refused now parses, see the last section. Commit 7 landed as `626376a`, the tree was clean before this part started, and the two extra commit 7 tests (a Word label on a shallower level keeps both readings, and a Word label with one reading left raises no `NUMBERING_AMBIGUOUS`) are already in it, so nothing from commit 7 is carried here.
+
+Files changed:
+- `backend/app/parsing/detect.py`: new `pdf_start(data)`, which returns where `%PDF-` begins in the first 1,024 bytes, or -1. `detect_type` checks the ZIP signature first and then calls `pdf_start`. Before, it checked `startswith(b"%PDF-")` first.
+- `backend/app/parsing/pdf.py`: `_read` hands pdfplumber `data[max(pdf_start(data), 0):]`, so the bytes in front of the header are cut off before pdfminer sees them. A plain file starts at 0 and is opened as it was.
+- `backend/tests/fixtures/build.py`: `_xref_stream_pdf` and the fixture `xref_stream.pdf`: a PDF 1.5 file with its page tree in an object stream and an xref stream (one page, the text `1. Services`).
+- `backend/tests/test_pdf.py`: `detect_type` finds the header after a newline, a byte order mark, 100 bytes and 1,019 bytes; refuses it after 1,020 bytes (the header would end at byte 1,025); and still names a ZIP that mentions `%PDF-` in its first bytes a DOCX. The reject test got readable ids. `backend/tests/test_parse.py`: `parse_document` of the xref stream file with each of the four prefixes equals `parse_document` of the plain file.
+- `docs/app/ParserContract.md` (the `UNSUPPORTED_TYPE` row), `docs/app/Phases.md` (a resolution under the 1-B `detect_type` bullet), `docs/app/Architecture.md` (the `detect.py` line), `docs/app/BuildLog.md` (this entry). The schema file did not change.
+
+What changed, in the order the code runs:
+- `parse_document` checks the size, then `detect_type`: empty is `EMPTY_FILE`, a ZIP signature goes to the package check, and anything else with `%PDF-` inside its first 1,024 bytes is a PDF.
+- `parse_pdf` cuts the file at the header and opens the rest. Every offset in the output points into `source_text`, so none of them moves.
+
+Findings during the part:
+- The open question of step 1 (does pdfminer read a file with bytes in front?) has an answer, and it is not a plain yes. Probes with `python -I`: the classic-xref fixture `simple.pdf` reads whole with up to 5,000 bytes in front, which suggests that pdfminer falls back to scanning for objects when the table's offsets are wrong (not checked in its source). The new xref stream fixture reads with one byte in front and ends as `MALFORMED_FILE` with 100 or 1,019. On the five CUAD PDFs with 100 bytes in front and no cut: files 3, 4 and 5 read and give the same blocks, and files 1 and 2 end as `MALFORMED_FILE`. Files 1 and 2 have xref streams and object streams (3 and 36 `ObjStm` markers) and no classic `trailer`; file 3 has the same kind of markers and also a `trailer`, and files 4 and 5 are classic. With the cut all five read and give the same text and blocks. So the cut is needed, and widening the check alone would have turned `UNSUPPORTED_TYPE` into `MALFORMED_FILE` on real files.
+- End to end through `parse_document`, with the node list and `text_sha256` hashed: the last commit refuses all five CUAD files with 100 bytes in front (`UNSUPPORTED_TYPE`). The working tree gives the same hash as the plain file for all five with 100 bytes and with 1,019, and `UNSUPPORTED_TYPE` for all five with 1,020.
+- The five PDFs and three DOCX files of the smoke set give the same node list by hash on the last commit and on the working tree: 174, 797, 246, 614, 176, 21, 212 and 251 blocks, and 93, 209, 157, 413, 124, 5, 158 and 168 nodes. The DOCX path moved (the ZIP check is first now) and did not change.
+- Three mutations on scratch copies each fail tests. Not cutting fails the three xref stream cases with 3 or more bytes in front, and not the newline one, which reads either way. A window of 1,025 fails the 1,020 byte case. Trying the PDF header before the ZIP signature fails the package test and nothing else. The first attempt at the third mutation did not apply (the substitution matched nothing, and 59 tests failed for a different reason), so the mutated file was written out whole and run again.
+- A ZIP is checked first on purpose. Without that, the wider window would read a package as a PDF whenever its first stored member contains `%PDF-` text, and the package test pins it.
+
+ponytail-review: the first version had a named constant for 1,024 used once, and the parse test ran over two fixtures, `simple.pdf` as well as the xref stream file. The constant is now the literal in `pdf_start`, whose docstring says why, and the parse test uses the xref stream file only, because it fails on both a missing window and a missing cut (4 cases fewer). Not changed: `pdf_start` is called in `detect.py` and `pdf.py`, so the window is stated once.
+
+Commands run, from `backend/` with the venv interpreter: `ruff format app tests`, `ruff check app tests`, `pytest -q -p no:cacheprovider` (a red run first: 12 failed, 761 passed; the 8 parse and 4 detect cases with a prefix failed, and the two guards, the 1,020 byte refusal and the package test, passed on the old code as they should; 755 passed on the last commit, 769 after: 6 detect cases, 4 parse cases, and 4 cases from the new fixture in the schema, offset and parse tests). Probes in the session scratchpad, outside the repo: pdfminer on synthetic and real files with a prefix, the end-to-end comparison on the old side (`git archive HEAD backend/app`) and the new, the eight-file node hash comparison, and three mutation copies.
+
+Not verified:
+- A real PDF with a byte order mark, a mail header or a wrapper in front. The prefix in every probe is a newline, the three bytes of a byte order mark, or `x` bytes.
+- A PDF that has been concatenated with another file (the real header after other data, with the real `startxref` at the end). The cut makes the offsets count from the header, which is what the format says, and no such file was tried.
+- The wider window and `FILE_TOO_LARGE`: the size limit still counts the bytes in front.
+
+Processes. Started 25, closed 25, confirmed by a process listing at the end: 25 Python (probes, test, ruff and mutation runs). No browser, no server, no node process. Short read-only shell commands (git, grep, ls, tar) are not counted.
+
+Blockers: none.
+
+`[CONTRACT]`, held for the one message at the end of 1-R. The list so far:
+- Commit 1: `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and counts the bytes read.
+- Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds.
+- Commit 3: none.
+- Commit 4: `MALFORMED_FILE` also means a DOCX text, styles or numbering part with a DOCTYPE, and a footnote or endnote whose `w:id` is missing, signed or longer than nine digits. `TOO_MUCH_TEXT` also means a DOCX with more than 100,000 paragraphs in all its parts, empty ones included.
+- Commit 5: a new warning code, `UNMAPPED_GLYPHS`: a PDF page where more than 25 percent of the glyphs have no text mapping. It carries the page, sets `partial`, and the text keeps each glyph as `(cid:N)`. The JSON schema enum gains the value, last.
+- Commit 6: the text-free JSON (the CLI default and `to_json(doc, text=False)`) has no `locator.list_label` on any block, and the `label` of every `definition` node is `null`. The full form is unchanged. The schema is unchanged. The CLI refuses a file over 10 MiB with `FILE_TOO_LARGE` before reading it.
+- Commit 7: a new locator key `list_level` on a numbered DOCX paragraph: an integer from 0 to 8 (the Word `w:ilvl`), present exactly when `list_label` is, absent on PDF blocks and on cell blocks of several paragraphs, and kept by the text-free form. The structure tree changes where a Word numeral list follows letters on a deeper level: `(i)` after `(h)` is now a numeral child of `(h)`, where it was the ninth letter and left the other numerals inside it. In a PDF or a typed list nothing changes. The schema is unchanged.
+- Commit 8: `UNSUPPORTED_TYPE` no longer means "does not start with `%PDF-`". A PDF with bytes in front of the header (a newline, a byte order mark, junk) now parses when `%PDF-` ends inside the first 1,024 bytes, and gives the same output as the plain file. A header after that is still `UNSUPPORTED_TYPE`. A ZIP signature is checked first. Nothing in the output format changes.
+
+Next action: commit with `fix(parser): accept a PDF header anywhere in the first 1,024 bytes`, then reply `next` for commit 9, the constraints file (B14: pin the transitive runtime packages from a clean install, no new dependency).

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import os
+import struct
 import zipfile
 import zlib
 from collections.abc import Callable, Collection, Iterable
@@ -506,6 +507,37 @@ def _form_cycle_bytes() -> bytes:
             6: _stream(b"q Q", _FORM + b" /Resources << /XObject << /A 5 0 R >> >>"),
         }
     )
+
+
+def _xref_stream_pdf() -> bytes:
+    """A PDF 1.5 file with its page tree in an object stream and an xref stream. Its offsets
+    count from the header, so bytes in front of the header move every one of them."""
+    tree = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 5 0 R"
+        b" /Resources << /Font << /F1 4 0 R >> >> >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    heads, body = b"", b""
+    for number, item in enumerate(tree, start=1):
+        heads += b"%d %d " % (number, len(body))
+        body += item + b"\n"
+    objects = {
+        5: _stream(b"BT /F1 12 Tf 72 700 Td (1. Services) Tj ET"),
+        6: _stream(heads + body, b"/Type /ObjStm /N %d /First %d" % (len(tree), len(heads))),
+    }
+    out, offsets = bytearray(b"%PDF-1.5\n"), {}
+    for number, item in objects.items():
+        offsets[number] = len(out)
+        out += b"%d 0 obj\n%s\nendobj\n" % (number, item)
+    offsets[7] = len(out)
+    rows = [(0, 0, 65535)] + [(2, 6, n) for n in range(4)]  # object 0 is free, 1 to 4 are packed
+    rows += [(1, offsets[n], 0) for n in (5, 6, 7)]
+    entries = b"".join(struct.pack(">BIH", *row) for row in rows)
+    xref = _stream(entries, b"/Type /XRef /Size 8 /W [1 4 2] /Root 1 0 R")
+    out += b"7 0 obj\n%s\nendobj\nstartxref\n%d\n%%%%EOF\n" % (xref, offsets[7])
+    return bytes(out)
 
 
 def _simple_bytes() -> bytes:
@@ -1038,6 +1070,7 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "bomb_form.pdf": (_bomb_form_bytes, ErrorCode.TOO_MUCH_TEXT),
     "bomb_encrypted.pdf": (_bomb_encrypted_bytes, ErrorCode.TOO_MUCH_TEXT),
     "form_cycle.pdf": (_form_cycle_bytes, None),
+    "xref_stream.pdf": (_xref_stream_pdf, None),
     # Glyphs with no text mapping
     "unmapped_all.pdf": (lambda: unmapped_pdf((0, 3)), None),
     "unmapped_page_two.pdf": (lambda: unmapped_pdf((20, 0), (1, 3)), None),

@@ -51,6 +51,25 @@ def test_detect_type_names_a_pdf_and_a_docx(fixture_bytes: dict[str, bytes]) -> 
 
 
 @pytest.mark.parametrize(
+    "prefix",
+    [b"\n", b"\xef\xbb\xbf", bytes(100), bytes(1019)],
+    ids=["newline", "bom", "100_bytes", "1019_bytes"],
+)
+def test_detect_type_finds_the_pdf_header_in_the_first_1024_bytes(
+    prefix: bytes, fixture_bytes: dict[str, bytes]
+) -> None:
+    assert detect_type(prefix + fixture_bytes["simple.pdf"]) == "pdf"
+
+
+def test_a_package_that_mentions_a_pdf_header_is_still_a_docx() -> None:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:  # stored, so the text sits in the first bytes
+        archive.writestr("[Content_Types].xml", b"%PDF-1.4")
+        archive.writestr("word/document.xml", b"<x/>")
+    assert detect_type(buffer.getvalue()) == "docx"
+
+
+@pytest.mark.parametrize(
     ("data", "code"),
     [
         (b"", ErrorCode.EMPTY_FILE),
@@ -62,7 +81,9 @@ def test_detect_type_names_a_pdf_and_a_docx(fixture_bytes: dict[str, bytes]) -> 
         (make_zip("xl/workbook.xml"), ErrorCode.UNSUPPORTED_TYPE),
         (make_zip("word/document.xml", "word/vbaProject.bin"), ErrorCode.UNSUPPORTED_TYPE),
         (b"PK\x03\x04" + b"junk" * 16, ErrorCode.MALFORMED_FILE),
+        (bytes(1020) + b"%PDF-1.4", ErrorCode.UNSUPPORTED_TYPE),  # the header ends past byte 1024
     ],
+    ids=["empty", "text", "legacy_doc", "xlsx", "docm", "bad_zip", "header_too_late"],
 )
 def test_detect_type_rejects_with_a_fixed_code(data: bytes, code: ErrorCode) -> None:
     with pytest.raises(ParseError) as exc:

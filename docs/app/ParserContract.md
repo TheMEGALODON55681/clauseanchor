@@ -364,7 +364,7 @@ A rejected file raises `ParseError`. Its message is the code alone, so no docume
 |---|---|---|
 | `EMPTY_FILE` | The input has no bytes | same |
 | `FILE_TOO_LARGE` | The input is over 10 MiB | same |
-| `UNSUPPORTED_TYPE` | The file is not a PDF (`%PDF-`) and not a ZIP that holds `word/document.xml`. A macro-enabled document (`word/vbaProject.bin`) and an encrypted DOCX end here too | refined |
+| `UNSUPPORTED_TYPE` | The file does not start with the ZIP signature and has no `%PDF-` in its first 1,024 bytes, or it is a ZIP that does not hold `word/document.xml`. A PDF with bytes in front of the header (a newline, a byte order mark, junk) parses when the header ends inside the first 1,024 bytes: the parser cuts the bytes off before it reads the file. A ZIP signature is checked first, so a package is never read as a PDF. A macro-enabled document (`word/vbaProject.bin`) and an encrypted DOCX end here too | refined |
 | `MALFORMED_FILE` | A library could not read the file: a damaged PDF, an unreadable archive, a package python-docx cannot open (strict OOXML, a template), XML nested deeper than 256 levels, a lone surrogate in the text, a DOCX part that has a DOCTYPE, a footnote or endnote whose `w:id` is missing, signed or longer than nine digits | refined |
 | `ENCRYPTED_PDF` | A PDF needs a password to open. An owner-password file that opens without one parses | refined |
 | `SCANNED_PDF` | Every page that has content is scanned. A blank page does not count | refined |
