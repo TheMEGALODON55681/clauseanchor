@@ -766,8 +766,8 @@ _EMPTY_PARAGRAPHS = (
 
 
 def _entity_prolog() -> str:
-    """Nested entities that would expand to 400,000 characters. The parser keeps them as they
-    are, so the body that names the last one reads as empty."""
+    """Nested entities that would expand to 400,000 characters. The parser refuses any DOCTYPE,
+    so none of them is ever expanded."""
     declared = ['<!ENTITY a "' + "a" * 40 + '">']
     for inner, outer in zip("abcd", "bcde", strict=True):
         declared.append(f'<!ENTITY {outer} "' + f"&{inner};" * 10 + '">')
@@ -888,6 +888,37 @@ def _notes() -> bytes:
     reference_run = '<w:r><w:footnoteReference w:id="1"/></w:r>'
     body = f"<w:p>{_run('Claim.')}{reference_run}</w:p>" + _p("Closing.")
     return build_docx(body, [footnotes, endnotes])
+
+
+def _word_notes() -> bytes:
+    # Footnotes and endnotes as Word writes them: a separator with id -1 and a continuation
+    # separator with id 0, neither with text, then the notes from 1. Each note opens with its
+    # reference mark and a space. A signed id is legal only on the two typed ones, so they have
+    # to be skipped before any id is read.
+    def separators(kind: str) -> str:
+        spacing = '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'
+        return "".join(
+            f'<w:{kind} w:type="{type_}" w:id="{note_id}"><w:p>{spacing}<w:r><w:{type_}/></w:r>'
+            f"</w:p></w:{kind}>"
+            for type_, note_id in (("separator", -1), ("continuationSeparator", 0))
+        )
+
+    def note(kind: str, number: int, text: str) -> str:
+        title = kind.capitalize()
+        return (
+            f'<w:{kind} w:id="{number}"><w:p><w:pPr><w:pStyle w:val="{title}Text"/></w:pPr>'
+            f'<w:r><w:rPr><w:rStyle w:val="{title}Reference"/></w:rPr><w:{kind}Ref/></w:r>'
+            f'<w:r><w:t xml:space="preserve"> {text}</w:t></w:r></w:p></w:{kind}>'
+        )
+
+    parts = [
+        related_part(
+            f"{kind}s",
+            separators(kind) + note(kind, 1, f"First {kind}.") + note(kind, 2, f"Second {kind}."),
+        )
+        for kind in ("footnote", "endnote")
+    ]
+    return build_docx(_p("Claim.") + _p("Closing."), parts)
 
 
 def _contents_tab() -> bytes:
@@ -1127,7 +1158,7 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
         lambda: build_docx(
             _p("Visible.") + "<w:p><w:r><w:t>&e;</w:t></w:r></w:p>", prolog=_entity_prolog()
         ),
-        None,
+        ErrorCode.MALFORMED_FILE,
     ),
     # Numbering (A17)
     "list_number_style.docx": (_list_number_style, None),
@@ -1136,6 +1167,7 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     # Page parts and notes (A18)
     "header_footer.docx": (_header_footer, None),
     "notes.docx": (_notes, None),
+    "word_notes.docx": (_word_notes, None),
     # A typed contents list with tab-separated page numbers (A21)
     "contents_tab.docx": (_contents_tab, None),
 }

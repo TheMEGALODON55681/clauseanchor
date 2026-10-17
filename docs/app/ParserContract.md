@@ -161,7 +161,7 @@ Every number is 1-based. `bbox` is `(x0, top, x1, bottom)` in points from the to
 | DOCX text box paragraph | `{"part": "document", "textbox": n, "paragraph": i}`. `n` counts text boxes in preorder (an outer box before the box inside it), `i` the paragraphs of that box | refined |
 | DOCX table cell | `{"part": "document", "table": t, "row": r, "cell": c, "segment": k}`. `t` is the preorder index across all tables, nested ones included. `k` counts the blocks of one cell | refined |
 | Header or footer | `{"part": "header" or "footer", "section": s, "variant": "default" or "first" or "even", "paragraph": i}`. A table or text box inside adds the keys above, numbered from 1 within that part | refined |
-| Footnote or endnote | `{"part": "footnotes" or "endnotes", "id": n, "paragraph": i}`. `n` is the note's `w:id`. A table or text box inside adds the keys above | refined |
+| Footnote or endnote | `{"part": "footnotes" or "endnotes", "id": n, "paragraph": i}`. `n` is the note's `w:id`, a number of up to nine digits. A table or text box inside adds the keys above | refined |
 
 `list_label` **new**: the locator of a numbered DOCX paragraph also holds `"list_label"`, the rendered label as text, such as `1.`, `1.1`, `(a)`, `(ii)` or `ARTICLE I`. The key is absent when the paragraph is not numbered, when its number cannot be worked out, and for bullets and `none` formats. It is never in `source_text`. The structure builder reads it (7.3).
 
@@ -360,11 +360,11 @@ A rejected file raises `ParseError`. Its message is the code alone, so no docume
 | `EMPTY_FILE` | The input has no bytes | same |
 | `FILE_TOO_LARGE` | The input is over 10 MiB | same |
 | `UNSUPPORTED_TYPE` | The file is not a PDF (`%PDF-`) and not a ZIP that holds `word/document.xml`. A macro-enabled document (`word/vbaProject.bin`) and an encrypted DOCX end here too | refined |
-| `MALFORMED_FILE` | A library could not read the file: a damaged PDF, an unreadable archive, a package python-docx cannot open (strict OOXML, a template), XML nested deeper than 256 levels, a lone surrogate in the text | refined |
+| `MALFORMED_FILE` | A library could not read the file: a damaged PDF, an unreadable archive, a package python-docx cannot open (strict OOXML, a template), XML nested deeper than 256 levels, a lone surrogate in the text, a DOCX part that has a DOCTYPE, a footnote or endnote whose `w:id` is missing, signed or longer than nine digits | refined |
 | `ENCRYPTED_PDF` | A PDF needs a password to open. An owner-password file that opens without one parses | refined |
 | `SCANNED_PDF` | Every page that has content is scanned. A blank page does not count | refined |
 | `TOO_MANY_PAGES` | A PDF has more than 100 pages. Checked before any text is read | same |
-| `TOO_MUCH_TEXT` | The decoded page content passes 8 MiB (PDF), or a PDF content stream names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds, or the text passes 500,000 code points (PDF and DOCX) | refined |
+| `TOO_MUCH_TEXT` | The decoded page content passes 8 MiB (PDF), or a PDF content stream names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds, or a DOCX holds more than 100,000 paragraphs, empty ones included, or the text passes 500,000 code points (PDF and DOCX) | refined |
 | `ARCHIVE_TOO_LARGE` | The members of a DOCX archive inflate to more than 100 MiB. The parser counts the bytes it reads, and stops at the limit | refined |
 | `ARCHIVE_UNSAFE` | A member name is absolute, has a drive letter or has a `..` segment, after backslashes become slashes. Or a member uses a compression method other than stored or Flate | refined |
 | `TRACKED_CHANGES_PRESENT` | `ins`, `del`, `moveFrom` or `moveTo` appears in the document, a header, a footer, the footnotes or the endnotes, in any element position. The user accepts all changes and uploads again | refined |
@@ -396,6 +396,7 @@ A warning is `ParseWarning(code, page, detail)`. `page` is a 1-based PDF page or
 | PDF pages | 100 | `TOO_MANY_PAGES` | same |
 | Decoded PDF page content, content streams and Form XObjects, each stream counted once | 8 MiB, decoded incrementally and aborted as soon as the total passes. A stream with more than one growing filter (for example Flate twice) counts as over the limit without being decoded | `TOO_MUCH_TEXT` | refined |
 | Text | 500,000 code points | `TOO_MUCH_TEXT` | same |
+| DOCX paragraphs, every part together, empty ones included | 100,000 | `TOO_MUCH_TEXT` | new |
 | DOCX archive, total uncompressed size, counted as the members are read | 100 MiB | `ARCHIVE_TOO_LARGE` | refined |
 
 The budget bounds size, not time. The API runs each parse in a child process with a wall-clock kill (Phase 2, part 2-C).
@@ -445,6 +446,7 @@ The first message listed no ceilings, so this whole section is new. The last col
 |---|---|
 | Only Flate streams are measured, behind any leading ASCII85 or ASCIIHex filter. A stream whose only growing filter is LZW or RunLength counts its stored length. Font programs, ToUnicode maps and object streams are not budgeted | No |
 | The budget bounds size and not time. A 16 KB file that decodes to 16 MB took 186 s. The Phase 2 child process kill is the real bound | No |
+| A DOCX part is parsed in full before the paragraph limit applies, so a large part costs memory: a 12 MB part of empty paragraphs took 279 MiB, which is about 2.3 GB for a 100 MiB part (computed). The Phase 2 child process memory cap is the bound | No |
 | An owner-password PDF parses. The parser does not enforce usage permissions | No |
 | An encrypted DOCX reports `UNSUPPORTED_TYPE`, not `ENCRYPTED_PDF`, because it is not a ZIP | Yes, by the error |
 | A chain of 3,000 nested Form XObjects makes pdfminer fail, and the file is `MALFORMED_FILE` | Yes, by the error |
@@ -532,12 +534,13 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 - DOCX text rules for tabs, breaks, field results and empty paragraphs, the `noBreakHyphen` effect, and the lone surrogate error (3.1, 3.4).
 - `coverage.pages_with_text` leaving out scanned pages (section 6).
 - Structure: node kinds and label format, the run of 3, the prefix rule, schedules clearing sequences, typed numbers never skipping ahead, Word lists opening above 1, the gap rule of 1-F, capitals headings, titles, contents lines, bare numbers, definitions, tables, and header, footer and footnote blocks never read (section 7).
+- The DOCX paragraph limit (section 11).
 - The ceilings (section 12), the command line and the schema (section 2).
 
 **Refined** (stated before, now exact or changed):
 
 - `warnings` order, and the meaning of `COLUMN_ORDER_UNCERTAIN`, `PARTIALLY_SCANNED_PDF` (an error code in the original spec), `NUMBERING_AMBIGUOUS`, `NUMBERING_NOT_RENDERED`, `TEXT_BOX_CONTENT`, `EMBEDDED_OBJECT` and `UNSUPPORTED_DOCX_FEATURE` (section 10).
-- The meaning of `UNSUPPORTED_TYPE`, `MALFORMED_FILE`, `ENCRYPTED_PDF`, `SCANNED_PDF`, `TOO_MUCH_TEXT`, `ARCHIVE_TOO_LARGE`, `ARCHIVE_UNSAFE` and `TRACKED_CHANGES_PRESENT` (section 9), and the PDF content budget (section 11).
+- The meaning of `UNSUPPORTED_TYPE`, `MALFORMED_FILE`, `ENCRYPTED_PDF`, `SCANNED_PDF`, `TOO_MUCH_TEXT`, `ARCHIVE_TOO_LARGE`, `ARCHIVE_UNSAFE` and `TRACKED_CHANGES_PRESENT` (section 9), the PDF content budget (section 11), and the `id` of a footnote or endnote in the locator (4.3).
 - The PDF locator and every DOCX locator (4.3), header, footer and endnote reading (4.3), and the page-number rule (section 5).
 - The triggers of `partial` (section 6), DOCX wrappers and text boxes (3.4), structure levels, ranges and acceptance (7.2 and 7.4).
 

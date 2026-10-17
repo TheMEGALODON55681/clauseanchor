@@ -22,6 +22,7 @@ from lxml import etree
 from app.parsing.assemble import TextAssembler
 from app.parsing.errors import (
     MAX_ARCHIVE_BYTES,
+    MAX_DOCX_PARAGRAPHS,
     MAX_TEXT_CHARS,
     ErrorCode,
     ParseError,
@@ -413,7 +414,12 @@ def _children(element: etree._Element) -> Iterator[etree._Element]:
 
 
 def _root(part: Part) -> etree._Element:
-    return part.element if isinstance(part, XmlPart) else parse_xml(part.blob)
+    """The root of an XML part. A part with a DOCTYPE is refused: Word never writes one, and
+    lxml keeps each entity reference as a node of its own, so the text after it is lost."""
+    root = part.element if isinstance(part, XmlPart) else parse_xml(part.blob)
+    if root.getroottree().docinfo.doctype:
+        raise ParseError(ErrorCode.MALFORMED_FILE)
+    return root
 
 
 def _related(part: Part, reltype: str) -> Iterator[Part]:
@@ -443,6 +449,7 @@ class _Walk:
         self.partial = False
         self._numbering = numbering
         self._chars = 0
+        self._paragraphs = 0
         self._scope: dict[str, int | str] = {}
         self._kind: BlockKind = "text"
         self._tables = 0
@@ -513,6 +520,9 @@ class _Walk:
         for child in _children(container):
             if child.tag == _w("p"):
                 count += 1
+                self._paragraphs += 1
+                if self._paragraphs > MAX_DOCX_PARAGRAPHS:
+                    raise ParseError(ErrorCode.TOO_MUCH_TEXT)
                 text, boxes = self._paragraph(child)
                 label = self._label(child)  # every list paragraph counts, empty ones too
                 if text.strip():
@@ -623,8 +633,12 @@ class _Walk:
                         continue
                     if note.get(_w("type")) in _NOTE_SEPARATORS:
                         continue
-                    scope: dict[str, int | str] = {"part": name, "id": int(note.get(_w("id")))}
-                    self.part(note, scope, "footnote")
+                    note_id = None
+                    with suppress(_Unrendered):  # too long or not a number, like a missing id
+                        note_id = _number(note.get(_w("id")))
+                    if note_id is None:
+                        raise ParseError(ErrorCode.MALFORMED_FILE)
+                    self.part(note, {"part": name, "id": note_id}, "footnote")
 
 
 def _read(data: bytes) -> _Walk:

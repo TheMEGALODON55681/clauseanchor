@@ -14,7 +14,13 @@ import pytest
 from app.parsing import docx as docx_module
 from app.parsing.assemble import TextAssembler
 from app.parsing.docx import parse_docx
-from app.parsing.errors import MAX_TEXT_CHARS, ErrorCode, ParseError, WarningCode
+from app.parsing.errors import (
+    MAX_DOCX_PARAGRAPHS,
+    MAX_TEXT_CHARS,
+    ErrorCode,
+    ParseError,
+    WarningCode,
+)
 from app.parsing.model import ParsedDocument
 from tests.fixtures.build import (
     abstract_num,
@@ -874,6 +880,28 @@ def test_notes_follow_the_page_parts_and_skip_word_separators(
     assert doc.decorations == ()  # a note is not furniture
 
 
+def test_notes_as_word_writes_them_are_read_after_the_signed_separators_are_skipped(
+    fixture_bytes: dict[str, bytes],
+) -> None:
+    doc = parse_docx(fixture_bytes["word_notes.docx"])
+    assert [(b.kind, b.text) for b in doc.blocks] == [
+        ("text", "Claim."),
+        ("text", "Closing."),
+        ("footnote", " First footnote."),
+        ("footnote", " Second footnote."),
+        ("footnote", " First endnote."),
+        ("footnote", " Second endnote."),
+    ]
+    assert locators(doc)[2:] == [
+        {"part": "footnotes", "id": 1, "paragraph": 1},
+        {"part": "footnotes", "id": 2, "paragraph": 1},
+        {"part": "endnotes", "id": 1, "paragraph": 1},
+        {"part": "endnotes", "id": 2, "paragraph": 1},
+    ]
+    assert doc.warnings == ()
+    assert not doc.coverage.partial
+
+
 def test_a_part_named_by_many_sections_is_read_once(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[object] = []
     real = docx_module._Walk.part
@@ -1045,11 +1073,83 @@ def test_a_document_with_only_an_image_has_no_text() -> None:
 # Entities and limits
 
 
-def test_nested_entities_are_not_expanded(fixture_bytes: dict[str, bytes]) -> None:
+def test_nested_entities_are_refused_without_being_expanded(
+    fixture_bytes: dict[str, bytes],
+) -> None:
     started = time.perf_counter()
-    doc = parse_docx(fixture_bytes["entity_bomb.docx"])
+    assert rejects(fixture_bytes["entity_bomb.docx"]) == ErrorCode.MALFORMED_FILE
     assert time.perf_counter() - started < 2
-    assert doc.source_text == "Visible."
+
+
+# lxml keeps an entity reference as a node and the text after it is dropped, so a part with a
+# declared entity would read as shorter than it is. Word never writes a DOCTYPE.
+@pytest.mark.parametrize(
+    ("prolog", "text"),
+    [
+        ('<!DOCTYPE w:document [<!ENTITY e "kept">]>', "Before &e; after"),
+        ('<!DOCTYPE w:document SYSTEM "x.dtd">', "Before after"),
+        ("<!DOCTYPE w:document>", "Before after"),
+    ],
+)
+def test_a_document_with_a_doctype_is_refused(prolog: str, text: str) -> None:
+    assert rejects(build_docx(paragraph(text), prolog=prolog)) == ErrorCode.MALFORMED_FILE
+
+
+def with_doctype(part: tuple[str, str, str, str]) -> tuple[str, str, str, str]:
+    name, content_type, kind, xml = part
+    return name, content_type, kind, xml.replace("<w:", '<!DOCTYPE w:x [<!ENTITY e "k">]><w:', 1)
+
+
+def test_a_doctype_in_a_header_or_a_note_part_is_refused() -> None:
+    header = with_doctype(related_part("header", paragraph("Head.")))
+    page = paragraph("Body.") + end_section(reference("header", "default", 1))
+    assert rejects(build_docx(page, [header])) == ErrorCode.MALFORMED_FILE
+    note = with_doctype(note_part('w:id="1"'))
+    assert rejects(build_docx(paragraph("Body."), [note])) == ErrorCode.MALFORMED_FILE
+
+
+def note_part(attributes: str) -> tuple[str, str, str, str]:
+    return related_part("footnotes", f"<w:footnote {attributes}>{paragraph('Note.')}</w:footnote>")
+
+
+@pytest.mark.parametrize(
+    "attributes",
+    ['w:id="1234567890"', f'w:id="{"9" * 4200}"', 'w:id="-5"', 'w:id=""', ""],
+)
+def test_a_note_id_that_is_not_a_short_number_is_malformed(attributes: str) -> None:
+    assert (
+        rejects(build_docx(paragraph("Body."), [note_part(attributes)])) == ErrorCode.MALFORMED_FILE
+    )
+
+
+def test_a_note_id_of_nine_digits_is_kept() -> None:
+    doc = parse_docx(build_docx(paragraph("Body."), [note_part('w:id="999999999"')]))
+    assert locators(doc)[-1] == {"part": "footnotes", "id": 999_999_999, "paragraph": 1}
+
+
+def test_the_paragraph_limit_is_inclusive_counts_empty_paragraphs_and_stops_the_walk(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    empties = "<w:p/>" * (MAX_DOCX_PARAGRAPHS - 1)
+    assert len(parse_docx(build_docx(paragraph("Text.") + empties)).blocks) == 1
+
+    calls = 0
+    real = docx_module._Walk._paragraph
+
+    def counting(self: docx_module._Walk, element: object) -> object:
+        nonlocal calls
+        calls += 1
+        return real(self, element)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(docx_module._Walk, "_paragraph", counting)
+    assert rejects(build_docx(paragraph("Text.") + empties + "<w:p/>")) == ErrorCode.TOO_MUCH_TEXT
+    assert calls == MAX_DOCX_PARAGRAPHS
+
+
+def test_paragraphs_in_a_table_cell_count_toward_the_limit() -> None:
+    cell = "<w:p/>" * (MAX_DOCX_PARAGRAPHS + 1)
+    table = f"<w:tbl><w:tblPr/><w:tblGrid/><w:tr><w:tc>{cell}</w:tc></w:tr></w:tbl>"
+    assert rejects(build_docx(table)) == ErrorCode.TOO_MUCH_TEXT
 
 
 def test_the_text_limit_is_inclusive_and_stops_the_walk_before_the_assembler(

@@ -7,6 +7,7 @@ MAX_PDF_PAGES = 100
 MAX_TEXT_CHARS = 500_000  # code points of source_text, separators included
 MAX_ARCHIVE_BYTES = 100 * 1024 * 1024  # total uncompressed size of a DOCX archive
 MAX_DECODED_CONTENT_BYTES = 8 * 1024 * 1024  # PDF page content and Form XObjects, after Flate
+MAX_DOCX_PARAGRAPHS = 100_000  # w:p read from every part of a DOCX, empty ones included
 
 
 class ErrorCode(StrEnum):

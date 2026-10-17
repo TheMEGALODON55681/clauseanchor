@@ -1502,3 +1502,53 @@ Blockers: none.
 - Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds.
 
 Next action: commit with `fix(parser): find column gutters without a scan per candidate`, then reply `next` for commit 4, the DOCX bounds (B5, B8 and B11).
+
+
+## 2026-10-16: Part 1-R, step 2, commit 4 of 11: DOCX bounds (B5, B8 and B11)
+
+Part: 1-R step 2, theme 4 of the eleven. Fixes B5 (the walk cost per byte of a DOCX part), B8 (a DOCTYPE loses the text after an entity reference) and B11 (a note id with no bound). `[CONTRACT]`: three changes, see the last section. Commit 3 is `1f0c3ec`, and the tree was clean before this part started.
+
+Files changed:
+- `backend/app/parsing/docx.py`: `_root` refuses a part with a DOCTYPE (`MALFORMED_FILE`). `_Walk.flow` counts every `w:p` it meets, in every part, and stops with `TOO_MUCH_TEXT` at the 100,001st before it reads that paragraph. `_Walk.notes` takes the note id through `_number` (at most nine digits, no sign) and refuses a missing or bad one as `MALFORMED_FILE`.
+- `backend/app/parsing/errors.py`: `MAX_DOCX_PARAGRAPHS = 100_000`, next to the other limits.
+- `backend/tests/fixtures/build.py`: `entity_bomb` is registered with `MALFORMED_FILE`, and its docstring says why. New fixture `word_notes`: a footnotes part and an endnotes part as Word writes them, a separator with id -1 and a continuation separator with id 0 (spacing properties, no text), then notes 1 and 2, each opening with its reference mark and a space.
+- `backend/tests/test_docx.py`: the entity test now expects the refusal. New: three DOCTYPE forms in the document part (an internal entity with text after the reference, a SYSTEM id, a bare one), a DOCTYPE in a header and in a footnotes part, five bad note ids (ten digits, 4,200 digits, a sign, empty, missing) and the nine digit boundary that parses, the paragraph limit at exactly 100,000 (it parses) and one more (it fails and `_paragraph` ran 100,000 times, so the walk stopped before the extra one), the limit counted inside a table cell, and a test that `word_notes` parses with both notes of both parts read (the separators skipped, no warning, `partial` False). 710 tests became 725: 13 new, one case cut by the review, two fewer because `entity_bomb` leaves the list of valid fixtures that two parametrized tests walk, and five for `word_notes` (its test and four that walk every valid fixture).
+- `docs/app/ParserContract.md` (the `MALFORMED_FILE` and `TOO_MUCH_TEXT` rows, a new limits row, the note `id` in the locator row, a new ceiling row in 12.4, section 14), `docs/app/Phases.md` (a resolution under the 1-D deviations), `docs/app/Architecture.md` (the DOCX safety row), `docs/app/BuildLog.md` (this entry).
+
+What changed, in the order the code runs:
+- The tracked-change scan is the first caller of `_root` for every text part, so a DOCTYPE in the document, a header, a footer or the notes ends the parse there. Styles and numbering go through `_root` too. Parts the walk never reads (theme, settings, custom XML) are not checked.
+- The paragraph count sits in `flow`, the one place every paragraph of a body, a cell, a text box, a header and a note passes. The count is for the whole file and is not reset when a repeated header is dropped, because the work was done.
+- A note `w:id` of `-1` or `0` on a separator is skipped before the id is read, as before. Only a note that is read needs a good id.
+
+Findings during the part:
+- B5: I chose the paragraph count over a cap on the XML bytes of a part. The count bounds the walk where the cost is, takes no new error code, and 100,000 is twenty times what the text limit lets through (500,000 characters is about 5,000 real paragraphs). It does not bound the parse. A 12 MB part of 2 million empty paragraphs (18,610 B in the archive): the last commit parsed it in 12.32 s with a rise of 279 MiB, the new code stops it in 0.75 s with the same 279 MiB, because lxml builds the whole tree before the walk starts. Scaled to a 100 MiB part that is about 2.3 GB (computed). That half stays with the memory cap of the Phase 2 child process (call 2), and it is a new row in the ceilings.
+- B5, the most the limit lets through: 99,999 empty numbered paragraphs and one with text parse in 4.04 s with a rise of 191 MiB (4.48 s on the last commit). About 40 microseconds a paragraph, so 4 s is the slowest walk now.
+- B8, the case from step 1: `Before &e; after` with `e` declared gave the text `Before` on the last commit, with no warning, and is `MALFORMED_FILE` now. The refusal covers any DOCTYPE, not only one that declares entities, because the check is on the part.
+- B11: a note id of 4,200 digits made a 4,913 byte JSON on the last commit and is `MALFORMED_FILE` now.
+- A file with both a DOCTYPE and a tracked change used to report `TRACKED_CHANGES_PRESENT` and now reports `MALFORMED_FILE`, since the DOCTYPE is seen first.
+- `_number` raises `_Unrendered`, which is not in the catch tuple on purpose (it never leaves the module). Calling it from `notes` needed a local `suppress`, or an overlong id would have escaped `_read` as an unknown exception.
+- Word's separators carry signed ids (-1 and 0), and `_number` refuses a sign. The type skip (`docx.py`, the `continue` on `_NOTE_SEPARATORS`) runs before the id is read, so a real file is not hit. `notes.docx` already pinned that with ids -1, 0 and -2; `word_notes` adds Word's own shape. With the id read moved before the skip in a scratchpad copy, both tests fail, so the order is pinned twice. No code change was needed.
+- The three DOCX files of the smoke set give the same JSON, by hash, before and after (21, 212 and 251 blocks).
+
+Commands run, from `backend/` with the venv interpreter: `ruff format app tests`, `ruff check app tests`, `pytest -q -p no:cacheprovider` (a red run of the new tests first: 12 failed, 709 passed; the cases that already held, such as an empty or missing id and a nine digit id, passed on both). Probes on a copy of `app/` for the last commit (exported with `git archive`) and for the working tree, in the session scratchpad and never the repo, each as its own `python -I` process: two experiments on what lxml reports for each DOCTYPE form, two builds of the synthetic files, and the parse of five files and the three smoke files on each version (the numbered file twice, since the first one was over the text limit on both). The order check ran the two notes tests on a copy of `app/` and `tests/` with the id read moved before the skip. Read-only git.
+
+Tests: 725 passed, 0 failed, 0 skipped (710 before). Pinned versions added: none.
+
+Over-engineering review of the diff: cut one test case (`w:id="x"`), because it takes the same path as the empty id, and the reference marks from the body of the `word_notes` fixture, which `notes.docx` already covers. Kept the 5-line block in `notes`: it has to catch `_Unrendered` locally. Nothing left unfixed.
+
+Processes. Started 28, closed 28: 18 Python (6 test runs, 12 scripts and probes) and 10 of the formatter and linter (five runs of the pair). A process listing at the end found no Python or ruff process running.
+
+Not verified:
+- Other producers. A DOCX from a producer that writes a DOCTYPE into a part, or a negative `w:id` on a normal note, now has no result. Word, and the three templates of the smoke set, do neither. No survey of Google Docs, LibreOffice or Pages exports.
+- A real 100 MiB DOCX. The memory figure is computed from the 12 MB file.
+- Paragraphs inside a text box, a header or a note at the limit. They pass through the same line as the body and the cell, and only those two are tested.
+
+Blockers: none.
+
+`[CONTRACT]`, held for the one message at the end of 1-R. The list so far:
+- Commit 1: `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and counts the bytes read.
+- Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds.
+- Commit 3: none.
+- Commit 4: `MALFORMED_FILE` also means a DOCX text, styles or numbering part with a DOCTYPE. A file with an internal entity used to parse with the text after the reference dropped. `MALFORMED_FILE` also means a footnote or endnote whose `w:id` is missing, signed or longer than nine digits, so the locator `id` is at most 999,999,999. `TOO_MUCH_TEXT` also means a DOCX with more than 100,000 paragraphs in all its parts, empty ones included (a new limit in section 11).
+
+Next action: commit with `fix(parser): bound DOCX paragraphs, note ids and DOCTYPE parts`, then reply `next` for commit 5, unreadable text (B6). That commit needs two answers from Aryan first, because the default set from step 1 left them open: a new warning code or `partial` alone, and the share of unmapped glyphs that triggers it.
