@@ -11,9 +11,19 @@ from typing import Any
 import pytest
 
 from app.parsing import ParsedDocument, parse_document
+from app.parsing.errors import MAX_INPUT_BYTES
 from app.parsing.schema import SCHEMA, to_json
 from app.scripts.parse_file import main
-from tests.fixtures.build import VALID_NAMES, Fixtures
+from tests.fixtures.build import (
+    VALID_NAMES,
+    Fixtures,
+    abstract_num,
+    build_docx,
+    level_xml,
+    listed,
+    num_xml,
+    related_part,
+)
 
 SCHEMA_FILE = Path(__file__).parents[2] / "docs" / "app" / "parser_output.schema.json"
 
@@ -92,6 +102,21 @@ def test_every_parsed_fixture_matches_the_schema(name: str, text: bool, fixtures
     assert violations(as_sent(doc, text=text), SCHEMA) == []
 
 
+def without_text(full: dict[str, Any]) -> dict[str, Any]:
+    """What the text-free form must equal: the full form minus every field that holds the file's
+    own words, which are the text fields, a Word numbering label and a defined term."""
+    bare = copy.deepcopy(full)
+    del bare["source_text"]
+    for block in bare["blocks"]:
+        del block["text"]
+        block["locator"].pop("list_label", None)
+    for node in bare["nodes"]:
+        del node["text"]
+        if node["kind"] == "definition":
+            node["label"] = None
+    return bare
+
+
 def test_the_text_fields_are_left_out_and_nothing_else(fixtures: Fixtures) -> None:
     doc = parse_document(fixtures["simple.docx"][0].read_bytes())
     full, bare = as_sent(doc, text=True), as_sent(doc, text=False)
@@ -99,10 +124,40 @@ def test_the_text_fields_are_left_out_and_nothing_else(fixtures: Fixtures) -> No
     assert "source_text" not in bare
     assert all("text" in item for item in [*full["blocks"], *full["nodes"]])
     assert not any("text" in item for item in [*bare["blocks"], *bare["nodes"]])
-    del full["source_text"]
-    for item in [*full["blocks"], *full["nodes"]]:
-        del item["text"]
-    assert full == bare
+    assert without_text(full) == bare
+
+
+def labelled_docx() -> bytes:
+    """A numbered paragraph whose level text is free text, a numbered paragraph the structure
+    builder reads as a clause, and a defined term."""
+    numbering = related_part(
+        "numbering",
+        abstract_num(0, level_xml(0, "decimal", "Clause %1 SECRET-LABEL"))
+        + abstract_num(1, level_xml(0, "decimal", "%1."))
+        + num_xml(1, 0)
+        + num_xml(2, 1),
+    )
+    body = (
+        listed("Numbered by free text.", num_id=1)
+        + listed("Fees are payable.", num_id=2)
+        + listed('"Secret Widget Pricing" means the list price.')
+    )
+    return build_docx(body, [numbering])
+
+
+def test_text_free_output_leaves_out_the_numbering_text_and_the_defined_term() -> None:
+    doc = parse_document(labelled_docx())
+    full = as_sent(doc, text=True)
+    bare = as_sent(doc, text=False)
+    assert "SECRET-LABEL" in json.dumps(full)
+    assert [n["label"] for n in full["nodes"] if n["kind"] == "definition"] == [
+        "Secret Widget Pricing"
+    ]
+    assert "SECRET-LABEL" not in json.dumps(bare)
+    assert "Secret Widget Pricing" not in json.dumps(bare)
+    assert violations(bare, SCHEMA) == []
+    assert without_text(full) == bare
+    assert as_sent(doc, text=True) == full  # building the text-free form left the document alone
 
 
 def test_offsets_slice_back_to_the_text_after_a_trip_through_json(fixtures: Fixtures) -> None:
@@ -191,6 +246,21 @@ def test_the_cli_summary_of_a_docx_has_no_page_count(
 ) -> None:
     _, out, _ = run(capsys, str(fixtures["simple.docx"][0]), "--summary")
     assert out.splitlines()[0] == "pages: none"
+
+
+def test_the_cli_refuses_a_file_over_the_limit_without_reading_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    big = tmp_path / "big.pdf"
+    with big.open("wb") as handle:
+        handle.truncate(MAX_INPUT_BYTES + 1)
+
+    def read(self: Path) -> bytes:
+        raise AssertionError("the file was read")
+
+    monkeypatch.setattr(Path, "read_bytes", read)
+    status, out, err = run(capsys, str(big))
+    assert (status, out, err.strip()) == (2, "", "FILE_TOO_LARGE")
 
 
 @pytest.mark.parametrize(

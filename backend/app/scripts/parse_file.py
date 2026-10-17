@@ -3,7 +3,8 @@
     python -m app.scripts.parse_file CONTRACT.pdf [--text] [--summary]
 
 The JSON leaves out every text field unless --text is given, so a result can be pasted into a
-ticket without the contract. A ParseError prints its code to stderr and exits with status 2."""
+ticket without the contract. That includes a Word numbering label (locator.list_label) and the
+term of a definition. A ParseError prints its code to stderr and exits with status 2."""
 
 from __future__ import annotations
 
@@ -13,7 +14,8 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from app.parsing import ParseError, parse_document
+from app.parsing import ErrorCode, ParseError, parse_document
+from app.parsing.errors import MAX_INPUT_BYTES
 from app.parsing.schema import to_json
 
 
@@ -26,6 +28,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--summary", action="store_true", help="print counts instead of JSON")
     args = parser.parse_args(argv)
     try:
+        if args.path.stat().st_size > MAX_INPUT_BYTES:
+            raise ParseError(ErrorCode.FILE_TOO_LARGE)  # before the read, so memory stays small
         doc = parse_document(args.path.read_bytes())
     except ParseError as error:
         print(error.code, file=sys.stderr)

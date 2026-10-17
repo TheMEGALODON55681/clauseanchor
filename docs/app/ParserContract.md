@@ -60,7 +60,7 @@ The DOCX media type is `application/vnd.openxmlformats-officedocument.wordproces
 | `warnings` | What the parser had to guess or could not read (section 10). Reader warnings first, then structure warnings | refined |
 | `coverage` | Section 6 | same |
 
-JSON form: `to_json` in `app/parsing/schema.py` turns a document into plain data with the same field names. Tuples become arrays and `bbox` is an array of four numbers or `null`. The command line `python -m app.scripts.parse_file FILE [--text] [--summary]` prints it. By default it leaves out `source_text`, `blocks[].text` and `nodes[].text`, so a result can be shared without the contract. `--text` keeps them. A rejected file prints its code to stderr and exits with status 2. Every offset is present either way. **new**
+JSON form: `to_json` in `app/parsing/schema.py` turns a document into plain data with the same field names. Tuples become arrays and `bbox` is an array of four numbers or `null`. The command line `python -m app.scripts.parse_file FILE [--text] [--summary]` prints it. By default it leaves out `source_text`, `blocks[].text` and `nodes[].text`. It also leaves out every block's `locator.list_label` and sets the `label` of every `definition` node to `null`, because both hold words from the file (a numbering level can say anything, and a defined term is often a party or product name). The other node labels (`1.1`, `(a)`, `ARTICLE I`) follow a fixed grammar and stay. A result can then be shared without the contract. `--text` keeps all of it, and `to_json(doc, text=False)` does the same as the default. A file over 10 MiB is refused with `FILE_TOO_LARGE` before it is read. A rejected file prints its code to stderr and exits with status 2. Every offset is present either way. **new**
 
 ## 3. Text and offsets
 
@@ -539,7 +539,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 - Structure: node kinds and label format, the run of 3, the prefix rule, schedules clearing sequences, typed numbers never skipping ahead, Word lists opening above 1, the gap rule of 1-F, capitals headings, titles, contents lines, bare numbers, definitions, tables, and header, footer and footnote blocks never read (section 7).
 - The DOCX paragraph limit (section 11).
 - The `UNMAPPED_GLYPHS` warning (sections 6 and 10).
-- The ceilings (section 12), the command line and the schema (section 2).
+- The ceilings (section 12), the command line and the schema (section 2). The text-free form also leaves out `list_label` and sets a definition's label to `null`.
 
 **Refined** (stated before, now exact or changed):
 

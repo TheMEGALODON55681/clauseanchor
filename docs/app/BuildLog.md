@@ -1600,3 +1600,48 @@ Blockers: none.
 - Commit 5: a new warning code, `UNMAPPED_GLYPHS`: a PDF page where more than 25 percent of the glyphs have no text mapping. It carries the page, sets `partial`, and the text keeps each glyph as `(cid:N)`. The JSON schema enum gains the value, last.
 
 Next action: commit with `feat(parser): warn on PDF pages with unmapped glyphs`, then reply `next` for commit 6, text-free output and the command line (B7 and B12). Unless told otherwise it follows the default of step 1: `list_label` and the label of a definition node are dropped when `text` is False.
+
+
+
+## 2026-10-17: Part 1-R, step 2, commit 6 of 11: text-free output and the command line (B7 and B12)
+
+Part: 1-R step 2, theme 6 of the eleven. Fixes B7, the P2 finding that the text-free output still carried words from the file, and B12, the CLI reading a whole file before the size check. `[CONTRACT]`: the text-free form loses two fields, see the last section. Commit 5 is `dcc48f1`, and the tree was clean before this part started. Aryan's answer for call 4 of step 1 is the recommended one: drop `list_label` and definition labels from text-free output.
+
+Files changed:
+- `backend/app/parsing/schema.py`: `to_json` with `text=False` now also removes `locator.list_label` from every block and sets the `label` of every `definition` node to `None`. The docstring says so.
+- `backend/app/scripts/parse_file.py`: the docstring names the two fields. The size check is `args.path.stat().st_size > MAX_INPUT_BYTES`, raised as `FILE_TOO_LARGE` inside the existing `try`, so the existing handler prints the code and exits 2. `read_bytes()` is not reached.
+- `backend/tests/test_contract.py`: `without_text(full)` is the form the text-free output must equal (the full form minus the text fields, `list_label` and definition labels). The existing "text fields only" test uses it. New: one test on a DOCX whose numbering level text says `Clause %1 SECRET-LABEL` and which holds the defined term `Secret Widget Pricing` (neither string is in the text-free JSON, the schema check passes, the form equals `without_text`, and the document is unchanged afterwards), and one CLI test with a sparse file of 10 MiB plus one byte and `Path.read_bytes` patched to fail. 741 tests became 743.
+- `docs/app/ParserContract.md` (the JSON form paragraph in section 2), `docs/app/Phases.md` (a resolution under A23), `docs/app/Architecture.md` (the `schema.py` and `parse_file.py` lines), `docs/app/BuildLog.md` (this entry). `docs/app/parser_output.schema.json` did not change: a node label is already `string or null`, and a locator already allows any keys.
+
+What changed, in the order the code runs:
+- The CLI stats the file. Over 10 MiB it prints `FILE_TOO_LARGE` to stderr and exits 2 without reading anything. Otherwise it reads and parses as before.
+- `to_json(doc, text=False)` copies the document with `asdict`, so the pops touch the copy. A test checks that the document is the same after the call.
+
+Findings during the part:
+- The red run showed the leak the review described. With the level text `Clause %1 SECRET-LABEL` the block locator held `"list_label": "Clause 1 SECRET-LABEL"`, and the text-free JSON printed it. The structure node made from the same paragraph has the label `Clause 1`, so the free text did not reach the node label. Node labels other than a definition's follow the label grammar (`1`, `1.1`, `(a)`, `ARTICLE I`, `Section 2.1`, `SCHEDULE 2`), so they stay.
+- The other locator keys are fixed words (`part`) or numbers (`paragraph`, `segment`, `id`, table, row and column), so nothing else in a locator holds words from the file. Warning `detail` is a fixed string.
+- All three mutation probes fail the tests as they should. Removing the `list_label` pop fails the labelled test, setting the definition label to anything but `None` fails it and the "text fields only" test, and removing the size check fails the CLI test.
+- End to end on a scratch copy of the labelled file: the CLI without `--text` prints no `SECRET-LABEL`, no `Secret Widget` and no `list_label` (0 matches), and with `--text` it prints all of them (7 matches). The node labels without `--text` are `Clause 1`, `1` and `null`.
+- The review proposed comparing `stat().st_size` first, and that is what is done. A file that reports size 0 and still delivers bytes (a pipe or a device) would pass the check. `parse_document` still refuses it after the read. For a development tool that is enough.
+
+ponytail-review: three tests became one (the locator check, the node label check and the "document is unchanged" check were each a few lines over the same fixture), and the long comprehensions became the shared `without_text`. Not changed: the `stat()` check, as above.
+
+Commands run, from `backend/` with the venv interpreter: `ruff format app tests`, `ruff check app tests`, `pytest -q -p no:cacheprovider` (a red run first: 4 failed, 135 passed in `test_contract.py`. The failures were the existing "text fields only" test, which now needs the two extra fields, two label tests and the CLI test. The "document is unchanged" test passed from the start, as a guard, and was folded into the label test afterwards). Probes on copies in the session scratchpad: three mutations, each in its own copy of `app/` and `tests/`, and the CLI on the labelled file. Final: ruff format and ruff check clean, 743 passed.
+
+Not verified:
+- A real contract with a numbering level text that is long (100 characters). The labelled fixture is 22 characters.
+- The terms of a real contract in the text-free output. The fixture term is invented.
+
+Processes. Started 17, closed 17, confirmed by a process listing at the end: 17 Python (14 test, ruff and probe runs, 3 final checks). The 3 runs that re-checked the commit 5 tree before it landed are not counted. No browser, no server, no node process, no ruff process outside `python -m ruff`. Short read-only shell commands (git, grep, ls) are not counted.
+
+Blockers: none.
+
+`[CONTRACT]`, held for the one message at the end of 1-R. The list so far:
+- Commit 1: `ARCHIVE_UNSAFE` also means a DOCX member with a compression method other than stored or Flate. `ARCHIVE_TOO_LARGE` keeps its limit (100 MiB) and counts the bytes read.
+- Commit 2: `TOO_MUCH_TEXT` also means a PDF page content stream or Form XObject that names more than one filter that can grow the data (Flate, LZW or RunLength), whatever it holds.
+- Commit 3: none.
+- Commit 4: `MALFORMED_FILE` also means a DOCX text, styles or numbering part with a DOCTYPE, and a footnote or endnote whose `w:id` is missing, signed or longer than nine digits. `TOO_MUCH_TEXT` also means a DOCX with more than 100,000 paragraphs in all its parts, empty ones included.
+- Commit 5: a new warning code, `UNMAPPED_GLYPHS`: a PDF page where more than 25 percent of the glyphs have no text mapping. It carries the page, sets `partial`, and the text keeps each glyph as `(cid:N)`. The JSON schema enum gains the value, last.
+- Commit 6: the text-free JSON (the CLI default and `to_json(doc, text=False)`) has no `locator.list_label` on any block, and the `label` of every `definition` node is `null`. The full form is unchanged. The schema is unchanged. The CLI refuses a file over 10 MiB with `FILE_TOO_LARGE` before reading it.
+
+Next action: commit with `fix(parser): drop labels and terms from text-free output`, then reply `next` for commit 7, the `ilvl` carrier (pass the Word list level from `docx.py` into `structure.py`, so a numeral list after `(h)` reads `(i)` as a numeral in DOCX, and record the PDF case as a ceiling).

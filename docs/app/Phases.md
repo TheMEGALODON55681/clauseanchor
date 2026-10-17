@@ -238,6 +238,7 @@ Known ceilings of 1-E, none of them silent unless noted:
 #### 1-F
 
 - **A23 CLI.** Default output omits every text field (`source_text`, `blocks[].text`, `nodes[].text`); `--text` includes them. A ParseError exits with status 2.
+  Resolution (17 October 2026, 1-R) `[CONTRACT]`: two more fields hold the file's own words, a block's `locator.list_label` (up to 100 characters of numbering text) and the `label` of a definition node (the quoted term, up to 80). The default output and `to_json(doc, text=False)` now leave out the first and set the second to `null`. Other node labels follow the label grammar and stay. The CLI also compares the file size with the 10 MiB limit before it reads the file, and prints `FILE_TOO_LARGE` for a larger one.
 - **A24 Contract ceilings.** `ParserContract.md` lists what the parser cannot see or fix: outlined vector text and form fields; `partial = True` means the core must never report "not found"; only Flate is budgeted; owner-only encrypted PDFs parse; an encrypted DOCX reports UNSUPPORTED_TYPE; a page-break `w:br` fuses neighbouring words; `w:noBreakHyphen` becomes ASCII `-`; rotated pages are unsupported.
 
 Deviations from the 1-F spec, with reasons. Done in 1-F:

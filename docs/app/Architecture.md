@@ -83,9 +83,9 @@ backend/
       pdf.py                # pdfplumber extraction: error mapping, words to rows to blocks, columns (1-B); decoration, scanned checks, content budget (1-C)
       docx.py               # python-docx extraction: archive checks, tracked-change check, body order, tables, text boxes (1-D); headers, footers, footnotes, numbering (1-D2)
       structure.py          # clause tree from block text and list labels: numbered labels, headings, schedules, tables, definitions (1-E)
-      schema.py             # JSON Schema of the output (docs/app/parser_output.schema.json) and to_json, which turns a document into the data the schema describes
+      schema.py             # JSON Schema of the output (docs/app/parser_output.schema.json) and to_json, which turns a document into the data the schema describes (with text=False it also drops list_label and sets a definition's label to null)
     scripts/
-      parse_file.py         # CLI: parse a local file and print JSON or a summary (dev only)
+      parse_file.py         # CLI: parse a local file and print JSON or a summary (dev only); refuses a file over 10 MiB before reading it
     main.py                 # (planned, Phase 2) FastAPI app
     config.py               # (planned, Phase 2)
     db.py, models.py        # (planned, Phase 2) SQLite metadata

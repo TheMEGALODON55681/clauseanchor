@@ -107,12 +107,18 @@ SCHEMA: dict[str, Any] = {
 
 def to_json(doc: ParsedDocument, *, text: bool = True) -> dict[str, Any]:
     """The document as plain data that json.dumps accepts. Without `text` the document text,
-    the block text and the node text are left out, and every offset is still there."""
+    the block text, the node text, a block's `list_label` and a definition's label (the term) are
+    left out, and every offset is still there."""
     data = asdict(doc)
     if not text:
         data.pop("source_text")
-        for item in (*data["blocks"], *data["nodes"]):
-            item.pop("text")
+        for block in data["blocks"]:
+            block.pop("text")
+            block["locator"].pop("list_label", None)
+        for node in data["nodes"]:
+            node.pop("text")
+            if node["kind"] == "definition":
+                node["label"] = None
     return data
 
 
