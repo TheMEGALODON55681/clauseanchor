@@ -1,0 +1,10 @@
+config_version: 1
+
+cuad:
+  repo_id: "theatticusproject/cuad"
+  repo_type: "dataset"
+  revision: "a3c393f5d103fd0c516374e4fdff676c8176dcb1"
+  filename: "CUAD_v1/CUAD_v1.json"
+
+storage:
+  raw_dir: "data/raw/cuad"
