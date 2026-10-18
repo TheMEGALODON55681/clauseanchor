@@ -19,8 +19,10 @@ log = logging.getLogger("clauseanchor.api")
 # code: (status, message, retryable). API.md lists the same table.
 ERRORS: dict[str, tuple[int, str, bool]] = {
     "VALIDATION_ERROR": (422, "The request is not valid.", False),
+    "SESSION_INVALID": (401, "The session token is missing, invalid or expired.", False),
     "NOT_FOUND": (404, "No such resource.", False),
     "METHOD_NOT_ALLOWED": (405, "This method is not allowed here.", False),
+    "SESSION_LIMIT": (429, "Too many sessions are active. Try again later.", True),
     "INTERNAL_ERROR": (500, "Something went wrong on the server.", False),
     "NOT_READY": (503, "The service is not ready.", True),
     "CATALOGUE_UNAVAILABLE": (503, "The category catalogue is not available.", False),
@@ -56,18 +58,23 @@ def _reply(code: str) -> Callable[[Request, Exception], Awaitable[JSONResponse]]
 
 def install_error_handling(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, _reply("VALIDATION_ERROR"))
+    # The bearer check raises a bare 401, so the headers it carries (WWW-Authenticate) pass through
+    app.add_exception_handler(401, _reply("SESSION_INVALID"))
     app.add_exception_handler(404, _reply("NOT_FOUND"))
     app.add_exception_handler(405, _reply("METHOD_NOT_ALLOWED"))
 
     @app.middleware("http")
-    async def contain_crashes(
+    async def guard_responses(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         # A handler for Exception runs inside Starlette's server-error layer, which sends its
         # reply and then raises again, so the server logs a traceback with the exception text.
         # Catching the crash here keeps that text out of the reply and out of the log.
         try:
-            return await call_next(request)
+            response = await call_next(request)
         except Exception as exc:
             log.error("unhandled %s", type(exc).__name__)
-            return error_response("INTERNAL_ERROR")
+            response = error_response("INTERNAL_ERROR")
+        # Session and document replies hold tokens and contract text, and none is worth caching.
+        response.headers["Cache-Control"] = "no-store"
+        return response

@@ -23,13 +23,13 @@ flowchart TD
     D --- A
 ```
 
-1. The browser creates an anonymous session and gets a bearer token (Phase 2).
+1. The browser creates an anonymous session and gets a bearer token, shown once (2-B).
 2. It uploads one PDF or DOCX and nothing else. The role goes with the party binding, and the scope and `category_ids` go with the analysis request (`Phases.md`, D1).
 3. The upload is validated by magic bytes, size and archive safety, then parsed in a child process with a wall-clock kill and a memory cap (planned, Phase 2).
 4. The parser returns a `ParsedDocument`: canonical `source_text`, its SHA-256, text blocks with source locators, a structure tree and warnings. The uploaded bytes are dropped.
 5. The analysis job passes `source_text` and an `AnalysisContext` to the core analyzer (`AnalyzerProtocol`) from `ml/clauseanchor_core` and gets back category decisions with spans.
 6. The backend applies polarity from the user's role and party binding. The core never sees the user's side.
-7. Everything text-bearing lives in RAM with a 60-minute TTL. SQLite holds only metadata (ids, statuses, counts, offsets).
+7. Everything text-bearing lives in RAM with a 60-minute TTL. SQLite holds only metadata (ids, token hashes, timestamps, sizes, job state).
 8. Every capabilities response, analysis response and report carries the fixed scope notice (Phases.md, "Review scope"). After a complete analysis, the manual-review endpoint (planned, Phase 3) labels each display unit by its overlap with accepted findings, so text without findings is easy to reach.
 
 ## 2. Key decisions
@@ -56,12 +56,15 @@ flowchart TD
 | Structure: numbered labels | A label is read at the start of a block, or from the block's `list_label`. It becomes a node only when it continues the sequence at its depth, or starts one at 1, `(a)` or `(i)`. A restart at 1 replaces a run of 3 or fewer and is body text after a longer run. A Word list may open a top-level number above 1, and a Word number above the last one in its sequence continues it. A schedule label clears every sequence. A level is the number of parts of a decimal, plus 1 inside a schedule, and a letter or numeral sits below its parent. A label that is both a letter and a numeral, such as `(i)`, is settled by the Word level in the locator (`list_level`) when there is one | A number inside running text, a cross reference or a party list must not become a clause. Word counts empty numbered paragraphs that the blocks drop, so a gap in a Word list is not a break. One pass with a stack, with no model, so every node can be explained |
 | Structure: headings and contents | A short block of capitals (80 characters, every line 60 percent capitals) is an unnumbered level 1 heading that closes open nodes, unless it directly follows a block that is only a label, where it is that label's title. A block with a dot leader, or a one-line block that ends in a page number, is a contents entry and is ignored. A bare number with no full stop is a page number | The contents page repeats every heading, and 1-C does not mark a page number printed mid-page. A title must not close the node it names. A line of redaction marks must not turn a notice into a heading |
 | Structure: tables and definitions | An outermost table is one `table` node, and nothing inside it is read as a label or heading. A quoted term followed by `means`, `shall mean`, `has the meaning`, `refers to`, or in brackets as `(the "T")`, is a `definition` node that spans the term with its quotes, one level below the innermost open node or the table | A table has no clause order to read. A definition node lets the core point at the term itself, and the container gives its scope |
-| Database | SQLite only, `create_all()`, in memory by default (`CLAUSEANCHOR_DB_PATH`, D8) | Nothing durable is stored; no migrations tool needed. A file would keep session rows and file names on disk until the next start, or after a crash |
+| Database | SQLite through the standard library: three tables, `sessions`, `documents` and `jobs`, created in code at start and emptied at every start (D4). In memory by default (`CLAUSEANCHOR_DB_PATH`, D8) | Metadata only: ids, token hashes, timestamps, sizes, media type and job state. Nothing durable is stored, so there is no migrations tool, and SQLAlchemy was not needed. A file would keep session rows on disk until the next start, or after a crash |
 | API config | `Settings.from_env` in `config.py` reads `CLAUSEANCHOR_` variables once at start. A bad value stops the start with a message that names the variable and not the value. The session TTL cannot pass 60 minutes. The parser's limits are not settings | One object, no `pydantic-settings`. The promise to users is deletion within 60 minutes, so no setting may break it |
-| API errors | One envelope for every error (`api/errors.py`, API.md section 2). A fixed message per code, so request input and exception text never reach a reply. A middleware, not an `Exception` handler, catches a crash and logs only its class name | Starlette's server-error layer sends its reply and then raises again, so the server would log a traceback that holds the exception text (Rules section 5). FastAPI's own 422 body repeats the submitted input |
+| API errors | One envelope for every error (`api/errors.py`, API.md section 2). A fixed message per code, so request input and exception text never reach a reply. A middleware, not an `Exception` handler, catches a crash and logs only its class name. The same middleware sets `Cache-Control: no-store` on every reply | Starlette's server-error layer sends its reply and then raises again, so the server would log a traceback that holds the exception text (Rules section 5). FastAPI's own 422 body repeats the submitted input |
 | Catalogue source | `backend/app/catalogue.json`, loaded once at start by `load_catalogue`, with no ids in the code. A missing or broken file is a reported state: `/ready` says which, and `/capabilities` answers 503 | Tanishq owns the 46 ids. The loader is the one place to change if they later come from the core |
 | Worker model | One API process, one bounded analysis worker, one executor thread. Each parse job runs in its own child process with a wall-clock kill and a memory cap (planned, part 2-C) | Fits a laptop and a free host; no Redis or Celery. The kill stops a parse that the content budget cannot bound in time, and the cap stops one it cannot bound in memory. One parse per child, because the DOCX reader changes the process-wide warnings filter |
-| User content storage | RAM only, 60-minute absolute TTL | Matches the synopsis promise; nothing on disk |
+| User content storage | RAM only, 60-minute absolute TTL. A document's text, nodes, results and file name live in a dict keyed by document id (`Store`), and the file name is never written to SQLite | Matches the synopsis promise; nothing on disk |
+| Sessions and expiry | `POST /api/v1/sessions` makes `secrets.token_urlsafe(32)` and returns it once. SQLite keeps its SHA-256, and a lookup goes by that hash. `expires_at` is fixed at creation (creation plus the TTL setting, 60 minutes at most), and a document copies its session's (D5). Expiry is lazy: every access checks the time, deletes an expired session with everything it owns and treats it as gone. A sweep started in the app lifespan repeats that every `SWEEP_INTERVAL_SECONDS` for sessions nobody asks for. `DELETE /api/v1/sessions/current` does it at once. All of it reads one injected clock | The promise is deletion within 60 minutes, so nothing renews a session. The lazy check makes a session unreachable the moment it expires. The sweep sets how long its data lingers. `/ready` fails when the sweep stops, because then expired data would stay until a request found it |
+| Store lock | One `threading.Lock` inside `Store` guards the single SQLite connection and the RAM dict together. Every public method takes it, and a session leaves RAM and SQLite inside one critical section. A caller holds it for one store call and never across a parse | Each `:memory:` connection is its own database, so the app opens one connection (`check_same_thread=False`) and shares it. The parse and analysis workers of 2-C and 2-D reach the store from other threads. One lock is enough for one process |
+| Bearer check | One dependency, `require_session` in `api/auth.py`, which every session route uses. A missing, malformed, unknown or expired token gives 401 `SESSION_INVALID` with `WWW-Authenticate: Bearer` | The mock treats an unknown token as expired and the Reader sends `not_found` and `expired` to the same page. A server that told them apart could not stay accurate, because the store deletes an expired session when it meets it and the token then looks unknown |
 | Review scope | Fixed category catalogue, a fixed scope notice on every result, no safety score or overall verdict anywhere | The system checks listed categories only. A highlight-free passage is not a safe passage, and the output must never imply it is |
 | Completeness | Processing completion, decision coverage and highlight extent are separate fields | Each answers a different question; merging them would read as "share of risk found", which nothing measures |
 | Manual-review navigation | Derived in the backend from parser blocks and accepted spans; no new core field | Parser blocks are already exact, non-overlapping units, so the core interface (v2.0) stays unchanged |
@@ -90,18 +93,17 @@ backend/
       schema.py             # JSON Schema of the output (docs/app/parser_output.schema.json) and to_json, which turns a document into the data the schema describes (with text=False it also drops list_label and sets a definition's label to null)
     scripts/
       parse_file.py         # CLI: parse a local file and print JSON or a summary (dev only); refuses a file over 10 MiB before reading it
-    main.py                 # create_app(settings): the app factory. Loads the catalogue, installs error handling, adds the router (2-A)
-    config.py               # Settings.from_env: CLAUSEANCHOR_ variables and the API-owned limits (2-A)
+    main.py                 # create_app(settings, clock): the app factory. Loads the catalogue, opens the store, installs error handling, adds the router, and starts the expiry sweep in the lifespan (2-A, 2-B)
+    config.py               # Settings.from_env: CLAUSEANCHOR_ variables and the API-owned limits (2-A); MAX_SESSIONS, MAX_DOCUMENTS_PER_SESSION and SWEEP_INTERVAL_SECONDS (2-B)
     catalogue.json          # (not committed yet) the 46 categories from Tanishq, shape in API.md section 5
     schemas.py              # Pydantic response models (2-A); each later endpoint adds its models
     api/
       errors.py             # ERRORS table, error_response, handlers for 422, 404 and 405, crash containment (2-A)
-      routes.py             # health, ready, capabilities (2-A); later parts add their routes
-    db.py, models.py        # (planned, 2-B) SQLite metadata
+      routes.py             # health, ready, capabilities (2-A); sessions (2-B); later parts add their routes
+      auth.py               # require_session: the bearer check (2-B)
     services/
       scope.py              # SCOPE_NOTICE, Category, Catalogue and load_catalogue (2-A)
-      memory_store.py       # (planned) RAM-only content with TTL
-      sessions.py           # (planned) capability tokens
+      store.py              # Store: sessions, documents and jobs as SQLite metadata, document content in RAM, the lock, expiry and the sweep body (2-B)
       jobs.py               # (planned) bounded queue, progress, cancel
       documents.py          # (planned) upload validation, parse jobs (child process, wall-clock kill, memory cap)
       analysis.py           # (planned) core adapter and result validation
@@ -112,8 +114,8 @@ backend/
   tools/
     annotator/              # (planned, 2-0B) offline annotation tool: runs locally, no network
   tests/
-    conftest.py             # session-scoped fixture generation into a temp dir; the API client fixtures on a synthetic catalogue
-    synthetic.py            # the made-up catalogue the API tests use (no real id)
+    conftest.py             # session-scoped fixture generation into a temp dir; the API client fixtures on a synthetic catalogue and a fake clock, with the app lifespan running
+    synthetic.py            # the made-up catalogue the API tests use (no real id), and FakeClock
     fixtures/build.py       # generates PDF and DOCX fixtures with reportlab and python-docx
     test_assemble.py
     test_pdf.py
@@ -126,6 +128,8 @@ backend/
     test_catalogue.py       # load_catalogue, and the scope notice against Phases.md
     test_errors.py          # the envelope: 404, 405, 422 with no echo, 500 with no exception text
     test_api.py             # health, ready, capabilities and the base path
+    test_store.py           # Store: token hashing, fixed expiry, the boundary, the sweep, delete, limits, the file path, the lock
+    test_sessions.py        # the two session routes, every 401 case, no-store, the lifespan sweep, nothing written to disk
     test_docs.py            # API.md names every error code and every variable
 ```
 
@@ -166,7 +170,7 @@ The backend imports only public names from `clauseanchor_core`: `CONTRACT_VERSIO
 
 ## 6. Backend tech stack
 
-Python 3.12, pdfplumber (with pdfminer.six), python-docx (with lxml), FastAPI with plain uvicorn (`uvloop` has no Windows build), Pydantic v2, SQLAlchemy 2 on SQLite, ReportLab, PyYAML, pytest, httpx, ruff.
+Python 3.12, pdfplumber (with pdfminer.six), python-docx (with lxml), FastAPI with plain uvicorn (`uvloop` has no Windows build), Pydantic v2, SQLite through the standard library, ReportLab, PyYAML, pytest, httpx, ruff.
 
 ## 7. Frontend
 

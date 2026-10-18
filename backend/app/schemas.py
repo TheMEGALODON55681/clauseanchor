@@ -5,6 +5,7 @@ A response model also filters: a field that is not declared here cannot leave th
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -17,6 +18,8 @@ class Health(BaseModel):
 class ReadyChecks(BaseModel):
     analyzer: Literal["ok", "artifacts_missing"]
     catalogue: Literal["ok", "missing", "invalid"]
+    store: Literal["ok", "sweep_stopped"]
+    database: Literal["ok", "unavailable"]
 
 
 class Ready(BaseModel):
@@ -36,6 +39,11 @@ class Capabilities(BaseModel):
     mode: Literal["sample", "real"]
     catalogue_version: str
     categories: list[CategorySpec]
+
+
+class NewSession(BaseModel):
+    token: str
+    expires_at: datetime
 
 
 class ErrorBody(BaseModel):

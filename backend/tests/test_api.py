@@ -14,6 +14,9 @@ from tests.synthetic import synthetic_catalogue
 HEALTH = "/api/v1/health"
 READY = "/api/v1/ready"
 CAPABILITIES = "/api/v1/capabilities"
+SESSIONS = "/api/v1/sessions"
+CURRENT = "/api/v1/sessions/current"
+OK_STORE = {"store": "ok", "database": "ok"}
 
 MakeClient = Callable[..., TestClient]
 
@@ -29,7 +32,7 @@ def test_openapi_is_served_under_api_v1_and_every_path_sits_there(client: TestCl
     response = client.get("/api/v1/openapi.json")
     assert response.status_code == 200
     paths = set(response.json()["paths"])
-    assert {HEALTH, READY, CAPABILITIES} <= paths
+    assert {HEALTH, READY, CAPABILITIES, SESSIONS, CURRENT} <= paths
     assert all(path.startswith("/api/v1/") for path in paths)
 
 
@@ -55,13 +58,16 @@ def test_health_checks_no_dependency(make_client: MakeClient, tmp_path: Path) ->
 def test_ready_when_analyzer_and_catalogue_are_fine(client: TestClient) -> None:
     response = client.get(READY)
     assert response.status_code == 200
-    assert response.json() == {"ready": True, "checks": {"analyzer": "ok", "catalogue": "ok"}}
+    assert response.json() == {
+        "ready": True,
+        "checks": {"analyzer": "ok", "catalogue": "ok", **OK_STORE},
+    }
 
 
 def test_not_ready_without_a_catalogue(make_client: MakeClient, tmp_path: Path) -> None:
     response = make_client(catalogue_path=tmp_path / "absent.json").get(READY)
     error = _error(response, 503, "NOT_READY")
-    assert error["details"] == {"checks": {"analyzer": "ok", "catalogue": "missing"}}
+    assert error["details"] == {"checks": {"analyzer": "ok", "catalogue": "missing", **OK_STORE}}
     assert error["retryable"] is True
 
 
@@ -79,8 +85,34 @@ def test_real_analyzer_without_its_artifacts_is_not_ready(
     artifacts = tmp_path / "absent" if missing == "no directory" else None
     response = make_client(analyzer="real", artifacts_dir=artifacts).get(READY)
     error = _error(response, 503, "NOT_READY")
-    assert error["details"]["checks"] == {"analyzer": "artifacts_missing", "catalogue": "ok"}
+    assert error["details"]["checks"] == {
+        "analyzer": "artifacts_missing",
+        "catalogue": "ok",
+        **OK_STORE,
+    }
     assert str(tmp_path) not in response.text
+
+
+def test_not_ready_when_the_database_stops_answering(client: TestClient) -> None:
+    client.app.state.store.close()
+    error = _error(client.get(READY), 503, "NOT_READY")
+    assert error["details"]["checks"]["database"] == "unavailable"
+    assert error["details"]["checks"]["store"] == "ok"
+
+
+def test_not_ready_when_the_expiry_sweep_has_stopped(client: TestClient) -> None:
+    client.app.state.sweeper.cancel()
+    # The cancel lands on the next turn of the app's loop, and a request runs on that loop
+    client.get(HEALTH)
+    error = _error(client.get(READY), 503, "NOT_READY")
+    assert error["details"]["checks"]["store"] == "sweep_stopped"
+    assert error["details"]["checks"]["database"] == "ok"
+
+
+def test_health_stays_dependency_free_with_a_dead_store(client: TestClient) -> None:
+    client.app.state.store.close()
+    client.app.state.sweeper.cancel()
+    assert client.get(HEALTH).status_code == 200
 
 
 def test_real_analyzer_with_its_artifacts_is_ready(make_client: MakeClient, tmp_path: Path) -> None:
