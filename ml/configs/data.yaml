@@ -6,5 +6,15 @@ cuad:
   revision: "a3c393f5d103fd0c516374e4fdff676c8176dcb1"
   filename: "CUAD_v1/CUAD_v1.json"
 
+cuad_official:
+  repo_id: "The-Atticus-Project/cuad"
+  revision: "67faa0e6023b04fcaae6cc09497ab00e5d63a2a2"
+  archive_path: "data.zip"
+  archive_sha256: "f8161d18bea4e9c05e78fa6dda61c19c846fb8087ea969c172753bc2f45b999a"
+  full_member: "CUADv1.json"
+  train_member: "train_separate_questions.json"
+  test_member: "test.json"
+
 storage:
   raw_dir: "data/raw/cuad"
+  official_dir: "data/raw/cuad/official"
