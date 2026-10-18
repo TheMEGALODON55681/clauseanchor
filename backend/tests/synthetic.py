@@ -1,9 +1,23 @@
-"""A made-up catalogue for tests. Every id, name and status here is invented and none is real.
+"""Made-up test data: a catalogue and a clock that only moves when a test moves it.
 
-The real 46 ids are Tanishq's. The ids below must never be copied from anywhere.
+Every catalogue id, name and status here is invented and none is real. The real 46 ids are
+Tanishq's, and the ids below must never be copied from anywhere.
 """
 
 from __future__ import annotations
+
+
+class FakeClock:
+    """The injected clock (one callable). Tests move time with `advance`, so nothing sleeps."""
+
+    def __init__(self, now: float = 1_800_000_000.0) -> None:
+        self.now = now
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
 
 
 def synthetic_catalogue() -> dict:

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import ExitStack
 from dataclasses import replace
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from fastapi.testclient import TestClient
 from app.config import Settings
 from app.main import create_app
 from tests.fixtures.build import Fixtures, build_all
-from tests.synthetic import synthetic_catalogue
+from tests.synthetic import FakeClock, synthetic_catalogue
 
 
 @pytest.fixture(scope="session")
@@ -40,14 +41,23 @@ def catalogue_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def make_client(catalogue_file: Path) -> Callable[..., TestClient]:
-    """Builds an app on the synthetic catalogue. Keyword arguments override Settings fields."""
+def clock() -> FakeClock:
+    return FakeClock()
 
-    def make(**overrides: object) -> TestClient:
-        settings = replace(Settings(catalogue_path=catalogue_file), **overrides)
-        return TestClient(create_app(settings))
 
-    return make
+@pytest.fixture
+def make_client(catalogue_file: Path, clock: FakeClock) -> Iterator[Callable[..., TestClient]]:
+    """Builds an app on the synthetic catalogue and the fake clock, with its lifespan running.
+
+    Keyword arguments override Settings fields. Every client closes when the test ends.
+    """
+    with ExitStack() as stack:
+
+        def make(**overrides: object) -> TestClient:
+            settings = replace(Settings(catalogue_path=catalogue_file), **overrides)
+            return stack.enter_context(TestClient(create_app(settings, clock=clock)))
+
+        yield make
 
 
 @pytest.fixture

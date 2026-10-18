@@ -19,6 +19,13 @@ SESSION_TTL_MINUTES = 60  # also the ceiling: the privacy promise is deletion wi
 PARSE_KILL_SECONDS = 120  # provisional, 2-C re-measures it (Phases.md, 2-C)
 PARSE_QUEUE_LENGTH = 2  # queue capacity of plan 9.3
 
+# Store limits and the sweep interval, not environment variables. Plan 9.2 names a 429 for the
+# session limit and gives no number, and neither plan section gives a document limit, so these are
+# proposals (Phases.md, 2-B).
+MAX_SESSIONS = 25
+MAX_DOCUMENTS_PER_SESSION = 5
+SWEEP_INTERVAL_SECONDS = 30  # after expiry a session is unreachable at once and gone within this
+
 DEFAULT_CATALOGUE_PATH = Path(__file__).parent / "catalogue.json"
 
 

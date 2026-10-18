@@ -2133,3 +2133,78 @@ Held `[CONTRACT]` items for Tanishq, with the ones from earlier entries that are
 - Correction in his file: `docs/ml/Interface.md` line 50 says the parser's nodes carry page and source locator. They do not.
 
 Next action: commit with `feat(api): add app with health, readiness and capabilities`. Then 2-B (D4 and D5 are decided), while the catalogue is pending. 2-A ticks when the catalogue loads.
+
+## 2026-10-18: Part 2-B, RAM store with TTL, SQLite metadata, expiring sessions
+
+Part: 2-B. No parser output moved, so `parser_version` stays 1.1.0 and `ParserContract.md` is unchanged. Start: `main` at `8bc6568` (the 2-A commit), tree clean, level with `origin/main`. Ticked `[x]` in `Phases.md`. 2-A stays `[~]` until Tanishq's catalogue loads, and 2-0A stays `[~]`. Neither was touched.
+
+Start checks, before any code:
+- `git status` and `git log -5 --oneline`: clean tree, HEAD `8bc6568`.
+- Tanishq's two commits (`d604ece` build(ml): add data preparation dependencies, `45e5547` feat(ml): add pinned CUAD source configuration and verification). `git diff --stat b574766 45e5547` shows 3 files and 61 insertions, all under `ml/`: `configs/data.yaml` (+10), `requirements-data.in` (+2) and `scripts/verify_sources.py` (+49). Nothing under `backend/` or `docs/`, so 2-A's tests are unaffected by them.
+- Baseline at `8bc6568` in `backend/.venv`: 860 passed, 1 warning, `ruff check` clean. My first `pytest` ran on the system Python 3.12.10, which has no project packages, and stopped at collection with `No module named 'pdfplumber'`. That was the wrong interpreter and not a failure at HEAD. The same run in the project venv gave the 860.
+
+Read: Rules, Phases (Review scope, Phase 2, D1 to D9), Architecture, API, the 2-A entry, `config.py`, `main.py`, `api/`, `schemas.py`, the 2-A tests and fixtures, `frontend/src/api` (`client.ts`, `types.ts`, `mock.ts`), the Reader's and Expired page's handling of a dead session, and plan sections 5, 9.1, 9.2 and 9.3. Plan revision: `ClauseAnchor_Plan (1).md` says "Revision 1.1" on line 5, and that is the one read. The plan was not edited.
+
+What the plan says about limits: 9.2 lists "429 session limit" for `POST /sessions` and gives no number. 9.3 gives the analysis queue (two pending, one active per session) and nothing for sessions alive or documents per session. So both limits are proposals.
+
+What the frontend does with a dead session: the mock's `gate()` throws `ApiError("expired")` for any token it does not hold, so it cannot tell unknown from ended. The Reader sends both `not_found` and `expired` to `/expired?reason=expired`, and the Expired page picks its wording from `?reason=` (`deleted` or not), never from the error. `createSession()` runs once per page load and returns `{token, expires_at}`. The Start flow uploads a replacement file in the same session and never deletes the first one.
+
+Files changed:
+- `backend/app/services/store.py` (new): `Store`, `Session`, `DocumentRecord`, `SessionLimitError`, `DocumentLimitError`. SQLite holds `sessions`, `documents` and `jobs` (metadata only). A RAM dict holds each document's record, file name included. One `threading.Lock` guards the one SQLite connection and the dict. The schema is a string in the module, dropped and recreated at every start (D4).
+- `backend/app/api/auth.py` (new): `require_session`, the one bearer dependency.
+- `backend/app/api/routes.py`: `POST /api/v1/sessions`, `DELETE /api/v1/sessions/current`, and the `store` and `database` checks in `/ready`.
+- `backend/app/api/errors.py`: `SESSION_INVALID` (401) and `SESSION_LIMIT` (429), the 401 handler, and `Cache-Control: no-store` on every reply (the crash-containing middleware became `guard_responses`).
+- `backend/app/main.py`: `create_app(settings, clock)`, the store, the lifespan that starts and stops the sweep, and a `ConfigError` for a database path that cannot open.
+- `backend/app/config.py`: `MAX_SESSIONS`, `MAX_DOCUMENTS_PER_SESSION`, `SWEEP_INTERVAL_SECONDS`.
+- `backend/app/schemas.py`: `NewSession`, and two more `ReadyChecks` fields.
+- `backend/tests/`: `test_store.py` and `test_sessions.py` (new), `test_api.py` and `test_docs.py` extended, `conftest.py` (a `clock` fixture, and `make_client` now runs each app's lifespan and closes it), `synthetic.py` (`FakeClock`).
+- `docs/app/API.md`, `Phases.md`, `Architecture.md`, `Rules.md`, `README.md`, `BuildLog.md`.
+
+Decisions for Aryan to confirm or change:
+1. `MAX_SESSIONS` 25, `MAX_DOCUMENTS_PER_SESSION` 5 and `SWEEP_INTERVAL_SECONDS` 30. They are constants, not settings. The reasoning is an estimate and not a measurement: a parsed 500,000 character document may hold 10 to 15 MB across the text, blocks and nodes, so 25 sessions of 5 is about 1.9 GB in the worst case and far less in practice. 2-C should measure a parsed document's RAM and revisit both numbers. The 5 allows four replacement uploads because the Start flow never deletes the first file.
+2. The sweep runs every 30 seconds, where plan section 5 says every minute. The promise is deletion within 60 minutes, and the interval is how long an expired session's data can stay in memory after it becomes unreachable.
+3. One 401 code, `SESSION_INVALID`, for a missing, malformed, unknown and expired token. Reason: the mock cannot tell unknown from ended, the Reader treats them alike, and the server cannot tell them apart either, because it deletes an expired session when it meets it. `WWW-Authenticate` is plain `Bearer`, as the prompt says.
+4. The session reply is `{token, expires_at}`, as the mock has it. Plan 9.1's `Session` also has `session_id`, which nothing uses.
+5. `/ready` has two more checks. `store` is `ok` while the expiry sweep task runs, because a dead sweep would keep expired data in memory until a request found it. `database` is `ok` while SQLite answers `SELECT 1`. Tests that read `/ready` now run the app lifespan.
+6. `Cache-Control: no-store` goes on every reply, not only the session ones. 2-A's note assigned it to 2-B, and the middleware already wraps every reply.
+7. The documents-per-session status is left to 2-C. The store raises `DocumentLimitError`, and the route will answer 429, the plan's status for its limits.
+8. `created_at` is on all three tables though nothing reads it yet. The prompt lists timestamps and plan section 5 has the column. 2-C needs it to order the parse queue.
+9. `DocumentRecord.parsed` is a slot for 2-C's `ParsedDocument`. Nothing in 2-B fills it.
+10. Plan section 5's `revoked_at`, `parser_version`, `warnings`, `text_sha256` and counts are not columns yet. Each later part adds its own to the schema string.
+
+Test-driven record. Each slice was red before any code:
+- Store: the whole module failed at import (`cannot import name 'MAX_DOCUMENTS_PER_SESSION'`, then no `app.services.store`). Green at 31 tests, later 29 after the review cut.
+- Sessions, bearer check and readiness: `ModuleNotFoundError: app.api.auth`, and `test_api` failed with `create_app() got an unexpected keyword argument 'clock'` (10 failures, 8 errors). Green except the two `test_docs` tests, which stayed red until `API.md` was written, as intended.
+- Docs guard: the new codes and the three limit constants were red until `API.md` named them.
+- Mutation check on copies of `app/` and `tests/` in the scratchpad, never the repo: 27 one-line mutants (each boundary `<=` turned `<`, cascade off, token stored plain, TTL off by one, no lock, same-thread-only connection, both limits off by one, expired sessions counted, RAM not cleared, document expiry computed fresh, no ownership check, no challenge header, no `no-store`, no 401 handler, static readiness checks, no sweep, a sweep that dies on error, no database-path error, no seconds rounding, delete that does nothing). The first pass left one alive: the document's `expires_at` computed fresh instead of copied. The test never moved the clock between the session and the document. It now advances 600 seconds in between. The second pass killed all 27.
+
+Checks:
+- `ruff format --check`: 38 files already formatted. `ruff check`: all checks passed.
+- `pytest`: 921 passed, 1 warning (860 before, 61 new: 29 store, 28 sessions, 3 api, 1 docs). The warning is the same Starlette `httpx` deprecation 2-A reported, and it still waits for Aryan's yes on `httpx2`.
+- Frontend: untouched, so its build and tests did not run.
+- No server and no browser. `TestClient` runs every check.
+- Nothing is written to disk by the API: one test points the working directory, `TMP`, `TEMP`, `TMPDIR` and `tempfile.tempdir` at empty folders, runs a whole session cycle on the default `:memory:` settings (create, document, job, expiry, sweep, delete), and asserts both folders are still empty and that every file under `backend/` has the same size and modification time as before. The suite as a whole does write to pytest's own temp folders (fixtures, the catalogue file, the file-path database tests), so "nothing written" holds for the API process and not for the test runner.
+- Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/`, and the same pattern over `README.md` and `backend/.env.example`: no output.
+- Tool-name grep, now recorded in Rules section 1. First form over `backend/app`, `backend/tests`, the three backend config files, `backend/.env.example` and `README.md`: no output. Second form over the lines added to the tracked docs other than `BuildLog.md` and `Rules.md`: no output. A control string (`ponytail`) matched the pattern.
+- Dash scan with a control string that holds both dashes (matched twice) over the 18 changed or new files, then over this entry: no hit.
+- Copy passes: `copywriting`, `copy-editing` and `stop-slop` ran in that order over the new `API.md` text, the README paragraph, the `Architecture.md` rows and the `Phases.md` deviations. The edits were mostly active voice and fewer qualifiers: "nothing it can turn back into the token" became "a SHA-256 hash of it and nothing else", the unknown-versus-expired paragraph split into three shorter sentences, and "only decides" became "sets".
+- ponytail-review of the diff and the four new files: one cut, applied. `Store` took `max_sessions` and `max_documents` parameters that nothing in the app sets, so they went, the store reads the two constants, and the two small-limit tests now fill 25 sessions and 5 documents. Two findings kept with reasons: `created_at` (decision 8) and `DocumentRecord.parsed` (decision 9). The 8-case lock test stays: it is the only proof the lock exists.
+
+Docs checked for staleness: `API.md`, `Phases.md`, `Architecture.md`, `Rules.md`, `README.md` and `BuildLog.md` changed. `Architecture.md` changed in the flow step, the database, storage and errors rows, three new rows (sessions and expiry, store lock, bearer check), the folder tree and the stack line, which no longer lists SQLAlchemy. `Rules.md` changed in section 1 (the tool-name grep) and in the section 4 database row. `Phases.md` also changed in the 2-A "not built here" line, because `no-store` is built. Checked and left alone: `ParserContract.md` and `parser_output.schema.json` (parser output did not move), `FrontendDesign.md` (nothing it says about the Expired page or the session changed), `DesignSystem.md`, `AnnotationGuidelines.md`, `backend/.env.example` (the `DB_PATH` line was already right) and `docs/ml/` (Tanishq's).
+
+Pinned versions added: none. The part uses `sqlite3`, `hashlib`, `secrets`, `threading` and `asyncio` from the standard library, and `HTTPBearer` from the pinned FastAPI. `constraints.txt` and both requirements files are unchanged.
+
+Not verified:
+- A real server. The prompt bars one for this part, so the lifespan, the sweep task and the shutdown order ran only under `TestClient`.
+- The RAM cost of a stored document, and so whether 25 sessions of 5 documents fits a free host (decision 1).
+- How the file-path database behaves under uvicorn with several threads. Every check ran on this laptop, with one connection and one lock.
+- Linux. Every check ran on this laptop.
+- `request_id` against logs, still not logged (2-A).
+
+Processes. Started 108, closed 108: 107 Python-family runs and 1 PowerShell call. The Python-family runs were 5 on the system Python (a mistaken `pytest`, a `ruff`, two version checks, one `print`), 1 `sqlite3` version check in the venv, 15 `pytest`, 16 `ruff`, 14 edit or scan scripts, and 56 for the mutation check (2 drivers and 54 child `pytest` runs). Every one ran in the foreground to exit. The last check, a read-only PowerShell query of the process list, found no `python`, `pytest` or `ruff` process left from this session. No server, no browser, no `pnpm`. Short read-only shell commands (git, grep, ls, cat, sed, wc, awk, od, file) are not counted.
+
+Blockers: the catalogue still blocks ticking 2-A. Nothing blocks 2-C.
+
+Held `[CONTRACT]` items for Tanishq: no new ones. 2-B changes no parser output and no field he consumes. The 2-A list stands.
+
+Next action: commit with `feat(store): add in-memory document store and expiring sessions`. Then 2-C (upload validation, parse jobs, document read and delete). D1 to D3 are decided.

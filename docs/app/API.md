@@ -1,6 +1,6 @@
 # API
 
-The contract for the HTTP API. This file governs: the frontend adapter follows it, and plan section 9 copies it (`Phases.md`, D1). Each part adds its endpoints here. Part 2-A adds health, readiness and capabilities.
+The contract for the HTTP API. This file governs: the frontend adapter follows it, and plan section 9 copies it (`Phases.md`, D1). Each part adds its endpoints here. Part 2-A adds health, readiness and capabilities, and part 2-B adds sessions.
 
 `[CONTRACT]` marks a shape Tanishq has to agree to.
 
@@ -13,6 +13,8 @@ The contract for the HTTP API. This file governs: the frontend adapter follows i
 - **Declared fields only.** Each response has a Pydantic model, and a field the model does not declare cannot leave the API.
 - **No verdicts.** No response carries a safety score, a risk score, a verdict or a completeness figure (`Phases.md`, Review scope).
 - **Scope notice.** `GET /api/v1/capabilities` carries it. Each analysis response will too (2-D).
+- **Sessions.** Health, readiness and capabilities are public. Every other route takes the bearer token from `POST /api/v1/sessions` (section 7).
+- **No caching.** Every response carries `Cache-Control: no-store`, errors included.
 
 ## 2. Error envelope
 
@@ -46,8 +48,10 @@ Every error response has this body, with the status code in the table below:
 | `INTERNAL_ERROR` | 500 | no | An unhandled exception. The body has no exception text, and the server logs only the exception class name |
 | `NOT_READY` | 503 | yes | `GET /api/v1/ready` found a failed check. `details.checks` lists the results |
 | `CATALOGUE_UNAVAILABLE` | 503 | no | `GET /api/v1/capabilities` has no usable catalogue |
+| `SESSION_INVALID` | 401 | no | The bearer token is missing, malformed, unknown or expired. The reply carries `WWW-Authenticate: Bearer` and never repeats the token (section 7) |
+| `SESSION_LIMIT` | 429 | yes | `POST /api/v1/sessions` found `MAX_SESSIONS` live sessions (section 8) |
 
-Later parts add codes for sessions (401), uploads (413, 415), queues (429) and parse errors.
+Later parts add codes for uploads (413, 415), queues (429) and parse errors.
 
 ## 3. Endpoints
 
@@ -61,18 +65,18 @@ Liveness only. It checks no dependency, so it answers 200 while the catalogue is
 
 ### `GET /api/v1/ready`
 
-Readiness of the analyzer setting and the catalogue.
+Readiness of the analyzer setting, the catalogue, the session store and the database.
 
-200 when both checks pass:
+200 when every check passes:
 
 ```json
-{ "ready": true, "checks": { "analyzer": "ok", "catalogue": "ok" } }
+{ "ready": true, "checks": { "analyzer": "ok", "catalogue": "ok", "store": "ok", "database": "ok" } }
 ```
 
 503 `NOT_READY` otherwise, with the same `checks` object under `details`:
 
 ```json
-{ "error": { "code": "NOT_READY", "message": "The service is not ready.", "request_id": "0b0f6c1e-3a3e-4a52-9c3c-2f1d3a5f7a10", "retryable": true, "details": { "checks": { "analyzer": "ok", "catalogue": "missing" } } } }
+{ "error": { "code": "NOT_READY", "message": "The service is not ready.", "request_id": "0b0f6c1e-3a3e-4a52-9c3c-2f1d3a5f7a10", "retryable": true, "details": { "checks": { "analyzer": "ok", "catalogue": "missing", "store": "ok", "database": "ok" } } } }
 ```
 
 | Check | Value | Meaning |
@@ -82,6 +86,10 @@ Readiness of the analyzer setting and the catalogue.
 | `catalogue` | `ok` | The catalogue loaded at start |
 | | `missing` | No readable catalogue file |
 | | `invalid` | The file breaks the shape in section 5 |
+| `store` | `ok` | The expiry sweep is running |
+| | `sweep_stopped` | The sweep is not running. Expired sessions would stay in memory until a request found them |
+| `database` | `ok` | SQLite answers a query |
+| | `unavailable` | It does not |
 
 The `analyzer` check looks at the directory and no more. Artifact manifest checks come with 4-A.
 
@@ -111,6 +119,31 @@ A category can be listed without validated support. `support_status` says which 
 
 503 `CATALOGUE_UNAVAILABLE` when the catalogue is missing or invalid.
 
+### `POST /api/v1/sessions`
+
+Starts an anonymous session. Send no body. The API ignores one.
+
+201:
+
+```json
+{ "token": "Qk3v0x...43 characters in all", "expires_at": "2026-10-18T11:00:00Z" }
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `token` | string | The bearer token: 32 random bytes as 43 characters of URL-safe text. This reply is the only place the API shows it. The server keeps a SHA-256 hash of it and nothing else, so a lost token cannot be recovered. Start a new session |
+| `expires_at` | string | ISO-8601 UTC, in whole seconds. It is the creation time plus `CLAUSEANCHOR_SESSION_TTL_MINUTES` and never moves. No request extends it, polling included |
+
+At `expires_at` the session stops working, and the API deletes it with its documents and jobs from memory and from SQLite. A sweep every `SWEEP_INTERVAL_SECONDS` seconds finds the sessions that no request touches.
+
+429 `SESSION_LIMIT` when `MAX_SESSIONS` sessions are alive. An expired session does not count.
+
+### `DELETE /api/v1/sessions/current`
+
+Ends the session named by the bearer token at once and deletes its documents and jobs from memory and from SQLite.
+
+204 with no body. 401 `SESSION_INVALID` for a bad token. A second delete with the same token gets 401, because the session is gone.
+
 ## 4. Configuration
 
 The API reads the process environment once, at start. It does not read a `.env` file. A bad value stops the start with a message that names the variable and never shows its value.
@@ -119,12 +152,12 @@ The API reads the process environment once, at start. It does not read a `.env` 
 |---|---|---|
 | `CLAUSEANCHOR_ANALYZER` | `stub` | `stub` or `real`. The stub serves sample mode, and `real` loads Tanishq's artifacts (4-A) |
 | `CLAUSEANCHOR_ARTIFACTS_DIR` | none | The artifacts directory. Required when the analyzer is `real` and ignored otherwise |
-| `CLAUSEANCHOR_DB_PATH` | `:memory:` | The SQLite path (2-B). The default keeps session rows and file names off disk, because D4 clears the tables at start |
+| `CLAUSEANCHOR_DB_PATH` | `:memory:` | The SQLite path. The default writes nothing to disk. A file path works too, and its three tables are emptied at every start (D4). An upload's file name never reaches SQLite. A path the API cannot open stops the start |
 | `CLAUSEANCHOR_SESSION_TTL_MINUTES` | `60` | Session lifetime. A whole number from 1 to 60, because the promise to users is deletion within 60 minutes |
 | `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse. Provisional: 2-C times the dense cases and fixes it |
 | `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait (plan 9.3) |
 
-The three numbers must be whole numbers of at least 1. The parser's own limits (file size, page count, text length) are not settings. They stay in the parser.
+The three numbers must be whole numbers of at least 1. The parser's own limits (file size, page count, text length) are not settings. They stay in the parser. The limits in section 8 are constants and not settings.
 
 ## 5. Catalogue `[CONTRACT]`
 
@@ -163,3 +196,24 @@ This file governs, and the plan will copy it.
 - `Capabilities` has `scope_notice`, `mode`, `catalogue_version` and `categories`. The plan's also lists `contract_version`, upload limits, `upload_enabled` and `artifact_ready`. The parts that own those values add them.
 - A category has four fields. The plan's `CategorySpec` adds `description`.
 - The error envelope keeps the five fields of plan 9.1's `Error`. `details` is `{}` except on `NOT_READY`.
+- `POST /api/v1/sessions` returns `token` and `expires_at`. The plan's `Session` adds `session_id`, which the frontend has no use for, so the API does not show it.
+- The plan says "401 invalid capability" and 410 for an expired document or job. Here every bad token is one 401, `SESSION_INVALID` (section 7). A document lives and dies with its session (D5), so after expiry a request fails the bearer check before it reaches a document route, and 410 does not occur.
+- Readiness adds `store` and `database` to the checks.
+
+## 7. Bearer token
+
+A route that needs a session reads `Authorization: Bearer <token>`. The scheme name is not case sensitive. The API hashes the token with SHA-256 and looks up the hash, so the stored value is not a credential.
+
+Every bad token gets the same reply: 401, `SESSION_INVALID` and `WWW-Authenticate: Bearer`. That covers a missing header, another scheme, an empty token, a token that was never issued and a token whose session expired or ended. The reply never repeats the token. Routes use one dependency for the check, `require_session` in `app/api/auth.py`.
+
+One code covers unknown and expired, for two reasons. The frontend mock raises one `expired` error for any token it does not know. The Reader sends that error and `not_found` to the same Expired page, which takes its wording from the address (`?reason=`). And the server cannot tell the two apart: it deletes an expired session the first time it sees it, and from then on the token looks unknown.
+
+## 8. Limits
+
+These three are constants in `app/config.py`, not settings. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so the values are proposals for Aryan to confirm.
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `MAX_SESSIONS` | 25 | Live sessions at once. Past it, `POST /api/v1/sessions` answers 429 `SESSION_LIMIT`. Expired sessions do not count |
+| `MAX_DOCUMENTS_PER_SESSION` | 5 | Documents one session can hold. The store enforces it. The upload route (2-C) answers 429, the plan's status for its limits, and picks the code |
+| `SWEEP_INTERVAL_SECONDS` | 30 | How often the sweep runs. Every lookup checks the time, so an expired session is unreachable at once. The sweep sets how long its data stays in memory after that |

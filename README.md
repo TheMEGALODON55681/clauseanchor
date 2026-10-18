@@ -1,6 +1,6 @@
 ## Backend
 
-The backend reads a PDF or DOCX contract and builds one canonical text with exact character offsets. Its code lives in `backend/`. Today it holds the PDF and DOCX parsers, the clause structure builder, a command-line tool and the start of the API: health, readiness and capabilities. The parser output format is in `docs/app/ParserContract.md`, and the API contract is in `docs/app/API.md`.
+The backend reads a PDF or DOCX contract and builds one canonical text with exact character offsets. Its code lives in `backend/`. Today it holds the PDF and DOCX parsers, the clause structure builder, a command-line tool and the first API endpoints: health, readiness, capabilities and sessions. The parser output format is in `docs/app/ParserContract.md`, and the API contract is in `docs/app/API.md`.
 
 ### Prerequisites
 
@@ -30,13 +30,15 @@ uvicorn app.main:create_app --factory
 
 The API listens on `http://127.0.0.1:8000`, and `GET /api/v1/health` should answer `{"status":"ok"}`. `GET /api/v1/ready` and `GET /api/v1/capabilities` answer 503 until `backend/app/catalogue.json` exists. The category catalogue comes from Tanishq and is not committed yet. API.md section 5 gives its shape.
 
+`POST /api/v1/sessions` starts a session and returns a bearer token once. A session lasts 60 minutes, or less if `CLAUSEANCHOR_SESSION_TTL_MINUTES` says so, and `DELETE /api/v1/sessions/current` ends it sooner. Sessions and the documents they will hold live in memory only, so stopping the API deletes them all. `GET /api/v1/ready` also checks the session store and the database.
+
 The API reads these environment variables once, at start, and does not read a `.env` file. Every one is optional.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `CLAUSEANCHOR_ANALYZER` | `stub` | `stub` serves sample mode. `real` loads the trained analyzer |
 | `CLAUSEANCHOR_ARTIFACTS_DIR` | none | The analyzer's artifacts directory. Required when the analyzer is `real` |
-| `CLAUSEANCHOR_DB_PATH` | `:memory:` | The SQLite path. The default keeps session data off disk |
+| `CLAUSEANCHOR_DB_PATH` | `:memory:` | The SQLite path for session metadata. The default writes nothing to disk. A file path is emptied at every start |
 | `CLAUSEANCHOR_SESSION_TTL_MINUTES` | `60` | Session lifetime, from 1 to 60 |
 | `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse. Provisional |
 | `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait |
