@@ -15,6 +15,17 @@ dist/
 # Data and model weights
 data/*
 !data/.gitkeep
+
+# Share only the fixed CUAD source and its provenance files.
+!data/raw/
+data/raw/*
+!data/raw/cuad/
+data/raw/cuad/*
+!data/raw/cuad/README.md
+!data/raw/cuad/source_manifest.json
+!data/raw/cuad/CUAD_v1/
+data/raw/cuad/CUAD_v1/*
+!data/raw/cuad/CUAD_v1/CUAD_v1.json
 models/
 *.pt
 *.bin

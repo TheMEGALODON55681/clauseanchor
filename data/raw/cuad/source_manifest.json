@@ -1,0 +1,10 @@
+{
+  "manifest_version": 1,
+  "repo_id": "theatticusproject/cuad",
+  "repo_type": "dataset",
+  "revision": "a3c393f5d103fd0c516374e4fdff676c8176dcb1",
+  "filename": "CUAD_v1/CUAD_v1.json",
+  "local_path": "data/raw/cuad/CUAD_v1/CUAD_v1.json",
+  "size_bytes": 40128638,
+  "sha256": "ed0b77d85bdf4014d7495800e8e4a70565b48ee6f8a2e5dca9cf8655dbf10eae"
+}
