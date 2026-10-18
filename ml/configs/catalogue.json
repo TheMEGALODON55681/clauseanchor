@@ -1,0 +1,281 @@
+{
+  "catalogue_version": "1.0.0",
+  "categories": [
+    {
+      "id": "cuad.document_name",
+      "display_name": "Document Name",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.parties",
+      "display_name": "Parties",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.agreement_date",
+      "display_name": "Agreement Date",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.effective_date",
+      "display_name": "Effective Date",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.expiration_date",
+      "display_name": "Expiration Date",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.renewal_term",
+      "display_name": "Renewal Term",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.notice_period_renewal",
+      "display_name": "Notice Period to Terminate Renewal",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.governing_law",
+      "display_name": "Governing Law",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.most_favored_nation",
+      "display_name": "Most Favored Nation",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.non_compete",
+      "display_name": "Non-Compete",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.exclusivity",
+      "display_name": "Exclusivity",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.no_solicit_customers",
+      "display_name": "No-Solicit of Customers",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.competitive_restriction_exception",
+      "display_name": "Competitive Restriction Exception",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.no_solicit_employees",
+      "display_name": "No-Solicit of Employees",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.non_disparagement",
+      "display_name": "Non-Disparagement",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.termination_for_convenience",
+      "display_name": "Termination for Convenience",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.rofr_rofo_rofn",
+      "display_name": "Rofr/Rofo/Rofn",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.change_of_control",
+      "display_name": "Change of Control",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.anti_assignment",
+      "display_name": "Anti-Assignment",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.revenue_profit_sharing",
+      "display_name": "Revenue/Profit Sharing",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.price_restrictions",
+      "display_name": "Price Restrictions",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.minimum_commitment",
+      "display_name": "Minimum Commitment",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.volume_restriction",
+      "display_name": "Volume Restriction",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.ip_ownership_assignment",
+      "display_name": "IP Ownership Assignment",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.joint_ip_ownership",
+      "display_name": "Joint IP Ownership",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.license_grant",
+      "display_name": "License Grant",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.non_transferable_license",
+      "display_name": "Non-Transferable License",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.affiliate_license_licensor",
+      "display_name": "Affiliate License-Licensor",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.affiliate_license_licensee",
+      "display_name": "Affiliate License-Licensee",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.unlimited_license",
+      "display_name": "Unlimited/All-You-Can-Eat-License",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.irrevocable_perpetual_license",
+      "display_name": "Irrevocable or Perpetual License",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.source_code_escrow",
+      "display_name": "Source Code Escrow",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.post_termination_services",
+      "display_name": "Post-Termination Services",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.audit_rights",
+      "display_name": "Audit Rights",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.uncapped_liability",
+      "display_name": "Uncapped Liability",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.cap_on_liability",
+      "display_name": "Cap on Liability",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.liquidated_damages",
+      "display_name": "Liquidated Damages",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.warranty_duration",
+      "display_name": "Warranty Duration",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.insurance",
+      "display_name": "Insurance",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.covenant_not_to_sue",
+      "display_name": "Covenant Not to Sue",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "cuad.third_party_beneficiary",
+      "display_name": "Third Party Beneficiary",
+      "source": "cuad",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "in.arbitration",
+      "display_name": "Arbitration",
+      "source": "india_extension",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "in.seat_venue",
+      "display_name": "Seat and Venue",
+      "source": "india_extension",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "in.stamping_registration",
+      "display_name": "Stamping and Registration",
+      "source": "india_extension",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "in.forum_selection",
+      "display_name": "Jurisdiction / Forum Selection",
+      "source": "india_extension",
+      "support_status": "not_validated"
+    },
+    {
+      "id": "in.dispute_escalation",
+      "display_name": "Dispute Escalation",
+      "source": "india_extension",
+      "support_status": "not_validated"
+    }
+  ]
+}
