@@ -2055,3 +2055,81 @@ Held `[CONTRACT]` items for Tanishq, with the ones from the Phase 2 start review
 - Correction in his file: `docs/ml/Interface.md` line 50 says the parser's nodes carry page and source locator. They do not.
 
 Next action: commit with `docs: add annotation guidelines for the Indian contract set`. Then Aryan approves or changes the counting script and the 3-file threshold, and puts contracts 001 to 025 under `data/`; the counts run after that and close the part. 2-A waits for D1 to D5 and the catalogue.
+
+
+## 2026-10-18: Part 2-A, FastAPI app, config, error envelope, health, readiness, capabilities
+
+Part: 2-A, the first code of Phase 2. No parser output moved, so `parser_version` stays 1.1.0 and `ParserContract.md` is unchanged. Start: `main` at `b574766`, tree clean, level with `origin/main`. The part stays `[~]`: the real catalogue is not here. It ticks when Tanishq's 46 ids load and a test pins the count (41 CUAD, 5 India extension).
+
+Files changed:
+- `backend/app/main.py`: `create_app(settings)`. It loads the catalogue once, installs error handling, adds the router and turns off the docs pages. With no argument it reads the environment, so `uvicorn app.main:create_app --factory` runs it.
+- `backend/app/config.py`: `Settings.from_env` and `ConfigError`. Six `CLAUSEANCHOR_` variables, the three limits as named constants, standard library only.
+- `backend/app/services/scope.py`: `SCOPE_NOTICE`, `Category`, `Catalogue`, `CatalogueError` and `load_catalogue`.
+- `backend/app/api/errors.py`: the `ERRORS` table, `error_response`, the 422, 404 and 405 handlers and the crash-containing middleware.
+- `backend/app/api/routes.py`: `GET /api/v1/health`, `/ready` and `/capabilities`.
+- `backend/app/schemas.py`: the Pydantic response models.
+- `backend/tests/`: `test_config.py`, `test_catalogue.py`, `test_errors.py`, `test_api.py`, `test_docs.py`, `synthetic.py`, and the client fixtures in `conftest.py`.
+- `backend/requirements.txt`, `requirements-dev.txt`, `constraints.txt`, `.env.example`.
+- `docs/app/API.md` (new), `Phases.md`, `Rules.md`, `Architecture.md`, `BuildLog.md`, and the backend section of `README.md`.
+
+Read: Rules, Phases (Review scope, Phase 2, the D table), Architecture, `ParserContract.md` 2.1 and the code lists, the Phase 2 start review entry, `frontend/src/api` (`client.ts`, `types.ts`, `catalogue.ts`, the mock's analysis object), and plan sections 2.4, 2.5, 9, 14.1 (and 10.7, 11.3 by reference) from Downloads.
+
+Plan revision: the file the prompt names, `ClauseAnchor_Plan.md`, is revision 1.0 (28 September, no section 2.5). `ClauseAnchor_Plan (1).md` is revision 1.1 (30 September), and that is the one read. The 1.2 changes are not applied in either: section 2.4 step 3 says "the single worker parses the file in a bounded executor" and names no child process or kill, and section 9.1 `Clause` holds one `span` while section 14.1 describes multi-span findings for the core. The Plan was not edited.
+
+Decisions recorded (D1 to D9):
+- `Phases.md`: the table column is now "Decision (18 October 2026)" and the nine rows carry the decided text. The line above the table says the decisions are made.
+- `Rules.md` section 5: the privacy rule applies to the API process, and the annotator may write spans with their text under `data/annotations/`. `git check-ignore -v` shows `data/*` in the root `.gitignore` already covers that path, so no root config changed.
+- `Rules.md` section 4: the API row said `uvicorn[standard]`. It now says plain `uvicorn` and notes the `pydantic` pin.
+- `Phases.md`, three stale bits: the 1-R commit line, the 2-0A status line (the counting script is approved and leaves the open list) and the run-in "Label set:" paragraph.
+- `Phases.md`, 2-A: ticked `[~]` with a status line and the deviations. The 2-C lines now point at `PARSE_KILL_SECONDS` and `PARSE_QUEUE_LENGTH` in `app/config.py`, where 2-A put them.
+
+Docs checked for staleness: `Rules.md`, `Phases.md`, `Architecture.md`, `README.md` and `BuildLog.md` changed, and `API.md` is new. Checked and left alone: `ParserContract.md` (parser output did not move), `FrontendDesign.md` (D13's note that the client needs a capabilities method at 4-C still holds), `DesignSystem.md`, `AnnotationGuidelines.md` and `parser_output.schema.json`. `docs/ml/` is Tanishq's.
+
+Pinned versions added (Rules section 4). Runtime: `fastapi==0.143.3`, `uvicorn==0.54.0`, `pydantic==2.14.1`. Dev: `httpx==0.28.1`. All four are in the Rules section 4 table, so no new entry type was needed. `pydantic` is pinned because `schemas.py` imports it directly, as Phase 1 did for `lxml` and `pdfminer.six`. `constraints.txt` went from 20 to 36 pins, regenerated from a freeze of a clean venv installed without the file, as its header says. No existing pin moved. The 16 additions: `annotated-doc` 0.0.5, `annotated-types` 0.8.0, `anyio` 4.15.1, `certifi` 2026.7.22, `click` 8.5.0, `fastapi`, `h11` 0.16.0, `httpcore` 1.0.9, `httpx`, `idna` 3.20, `opentelemetry-api` 1.45.1 (FastAPI requires it), `pydantic`, `pydantic_core` 2.50.1, `starlette` 1.8.0, `typing-inspection` 0.4.4 and `uvicorn`. After `pip install -r requirements-dev.txt -c constraints.txt`, the project venv's freeze matched the file line for line.
+
+Compiled-package check, because Application Control blocked scikit-learn's DLLs before. One `python -c "import pydantic_core, fastapi, uvicorn"` in the clean venv and again in the project venv. Both imported with no block and printed `pydantic_core` 2.50.1, `fastapi` 0.143.3 and `uvicorn` 0.54.0. After `import app.main`, neither `sklearn` nor `scipy` is in `sys.modules`.
+
+Decisions the prompt leaves to this part, for Aryan to confirm or change:
+1. The envelope is the shape of plan 9.1's `Error`: `code`, `message`, `request_id`, `retryable`, `details`. A fixed message per code, held in one table. `details` is `{}` except on `NOT_READY`, where it holds the check results. `request_id` is a new UUID per reply and is not logged yet. `NOT_READY` is retryable, and the other four codes are not.
+2. A middleware catches a crash, not an `Exception` handler. Starlette's server-error layer sends a handler's reply and then raises again, so uvicorn logs a traceback that holds the exception text. The middleware logs the class name only. A test pins both the reply and the log record.
+3. The session TTL setting is capped at 60, the promise to users.
+4. The catalogue is `backend/app/catalogue.json`, strict: exactly four fields per row, `source` of `cuad` or `india_extension`, unique ids, a non-empty list. It accepts a byte order mark. It does not count to 46, because the synthetic fixture would then need 46 rows. The real-catalogue part adds that test.
+5. Readiness has two checks: the analyzer (`ok` or `artifacts_missing`, a directory test only until 4-A) and the catalogue (`ok`, `missing` or `invalid`).
+6. The docs pages are off and the OpenAPI document sits at `/api/v1/openapi.json`.
+7. The `PARSE_QUEUE_LENGTH` default of 2 is plan 9.3's capacity for analyses. 2-C applies it to parses.
+
+Test-driven record. Each slice was red before any code:
+- Config: `ModuleNotFoundError: app.config`, then 38 tests green.
+- Catalogue and scope notice: `ModuleNotFoundError: app.services`, then 24 green.
+- Error envelope: the first run stopped at the missing `app.main`. With a bare app and no handlers, 11 of 12 failed for the intended reasons: FastAPI's `{"detail"}` body for 404, 405 and 422, the docs page answering 200, and the `RuntimeError` escaping the app. Then 12 green.
+- Routes: 15 of 16 failed on 404, then green. One test walked `app.routes` and broke on FastAPI 0.143's private router wrapper, so it reads the OpenAPI paths instead.
+- `API.md` guards: `FileNotFoundError` until the file existed.
+
+Checks:
+- `ruff format --check` and `ruff check`: clean.
+- `pytest`: 860 passed (769 before, 91 new: 38 config, 24 catalogue, 12 errors, 15 api, 2 docs), 1 warning, run again on the final tree after the last doc edit. The warning is Starlette 1.8's `StarletteDeprecationWarning`: its `TestClient` with `httpx` is deprecated in favour of `httpx2`. Switching is a new dependency, so it waits for Aryan's yes. The warning stays visible.
+- Frontend: untouched, so its build and 68 tests did not run.
+- Real-server smoke on 127.0.0.1:8765, stub analyzer, no catalogue file: `/health` 200; `/ready` 503 `NOT_READY` with `catalogue: missing`; `/capabilities` 503 `CATALOGUE_UNAVAILABLE`; an unknown path 404 `NOT_FOUND`; `POST /health` 405 with `allow: GET`; `/docs` 404. With `CLAUSEANCHOR_ANALYZER` set to a bad value the start failed with `CLAUSEANCHOR_ANALYZER must be stub or real`, and the value appeared nowhere in the output.
+- The Rules section 1 scrub over `backend/`, `frontend/` and `docs/app/`, and the same pattern over `README.md` and `.env.example`: no output. The tool-name grep over the 15 new files and the added lines of the 9 changed ones: no hit. The dash scan over every changed file: no hit, with a control string that held both dashes and matched twice.
+- Copy passes: `copywriting`, `copy-editing` and `stop-slop` ran in that order over `API.md`, the README section and the `Architecture.md` and `Phases.md` additions. They changed five sentences of `API.md` (a vague "what the API checks" opener, an unclear "this one", an inverted "being listed" sentence, the failure-states wording, a difference bullet that was not a difference) and one passive sentence.
+- ponytail-review of the diff: cut the three near-identical handlers to one `_reply(code)` factory, the closure helpers in the catalogue test to plain broken documents, the `[CONTRACT]` tag test and a single-use type alias. Kept: the response models (they filter fields and give 2-E its OpenAPI), the `api/` package, the middleware and the `services/scope.py` dataclasses (Rules section 5).
+
+Not verified:
+- Anything against the real catalogue. No id, support-status value or count of 46 is checked.
+- A crash through a real server log. The log record is pinned with `caplog`, and uvicorn has nothing to log because no exception leaves the app.
+- Linux. Every check ran on this laptop.
+- `request_id` against logs. Nothing logs it yet.
+
+Processes. Started 50, closed 50: 40 Python-family runs (1 `--version`, 1 `venv`, 2 `pip install`, 2 `pip freeze`, 1 `pip show`, 3 import checks, 18 `pytest`, 8 `ruff`, 2 `uvicorn`, 1 edit script, and 1 stray empty `python` heredoc that opened a REPL and exited at end of input), 6 `curl.exe` calls to 127.0.0.1 and 4 PowerShell calls. The two uvicorn runs: a bad-config start that exited on its own (PID 31492), and a server (launcher PID 6732, `python.exe` 27660, console host 15028) that was stopped by PID. All four PIDs were checked afterwards and none runs, and nothing listens on port 8765. No browser, no `pnpm`. Short read-only shell commands (git, grep, ls, cat, sed, wc, od) are not counted.
+
+Blockers: the catalogue. Nothing else blocks 2-B.
+
+Held `[CONTRACT]` items for Tanishq, with the ones from earlier entries that are still unsent:
+- 2-A: the catalogue file. Shape in `API.md` section 5: `catalogue_version`, and per category `id`, `display_name`, `source` (`cuad` or `india_extension`) and `support_status`. He fixes the vocabulary of `support_status` and sends the 46 ids.
+- 2-0A: the ten annotation ids with their fixed questions, confirmation of `cuad.uncapped_liability` and `cuad.governing_law`, and contracts 001 to 025 as files.
+- 2-0B: the JSONL record fields, the attribute keys `designation` and `negated`, the state names, the adjudication status values, and whether the record groups the spans of one finding.
+- 2-0C: the `name_span` shape, including `null`, and the unspecified detection points in `ParserContract.md` section 8.
+- 2-D: whether `AnalysisContext` gains `decorations`, and what `parser_complete` and `warnings` must hold.
+- Correction in his file: `docs/ml/Interface.md` line 50 says the parser's nodes carry page and source locator. They do not.
+
+Next action: commit with `feat(api): add app with health, readiness and capabilities`. Then 2-B (D4 and D5 are decided), while the catalogue is pending. 2-A ticks when the catalogue loads.

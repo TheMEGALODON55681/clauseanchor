@@ -79,7 +79,7 @@ Pin exact versions in `requirements.txt` / `requirements-dev.txt` as resolved at
 | DOCX text | `python-docx` | Plus stdlib `zipfile` and `xml.etree` for parts it does not expose |
 | PDF library internals | `pdfminer.six` | `pdfplumber` requires this exact version. `pdf.py` imports its error types, its parser and `PDFPasswordIncorrect` directly, so it is pinned |
 | DOCX XML | `lxml` | `python-docx` brings it in. `docx.py` walks its elements and catches `etree.LxmlError`, so it is pinned |
-| API (from Phase 2) | `fastapi`, `uvicorn[standard]`, `pydantic` v2, `python-multipart` | |
+| API (from Phase 2) | `fastapi`, `uvicorn` (plain, because `uvloop` has no Windows build), `pydantic` v2, `python-multipart` | `pydantic` is pinned because `schemas.py` imports it directly |
 | Database (from Phase 2) | `sqlalchemy` 2.x, stdlib `sqlite3` | `Base.metadata.create_all()`, no migrations tool |
 | Config files | `pyyaml` | `yaml.safe_load` only |
 | PDF reports (Phase 3) | `reportlab` | Also used in tests to generate PDF fixtures |
@@ -96,7 +96,7 @@ Adding any dependency not in this table requires: a one-line justification in `B
 - Data types as `@dataclass(frozen=True, slots=True)` unless mutation is required. Pydantic only at the HTTP boundary (Phase 2 onward).
 - **Offsets are Unicode code points** into the canonical text, zero-based, `end` exclusive: `source_text[start:end]`. Never locate a span with `str.find`, `str.index` or regex search over the output after offsets are assigned. Offsets are computed while text is assembled.
 - **Never normalise Unicode** (no NFC, NFD, NFKC). Never alter characters in the canonical text after offsets exist.
-- **Privacy:** uploaded bytes and extracted text never touch disk, logs, exception messages or temp files. Parse from `io.BytesIO`. Errors carry a fixed code and safe metadata only (page number, counts), never document text.
+- **Privacy:** uploaded bytes and extracted text never touch disk, logs, exception messages or temp files. This rule applies to the API process. The annotator may write spans with their text under `data/annotations/`, which Git ignores. Parse from `io.BytesIO`. Errors carry a fixed code and safe metadata only (page number, counts), never document text.
 - **Errors:** raise typed exceptions with a fixed machine code from the phase spec. No bare `except:`. No `except Exception: pass`.
 - **Parser version.** A part that changes parser output bumps `parser_version` under `ParserContract.md` 2.1 in the same commit, and a test asserts the new value.
 - Comments explain **why**, not what. No commented-out code. No TODOs without a matching line in `docs/app/Phases.md`.

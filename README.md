@@ -1,6 +1,6 @@
 ## Backend
 
-The backend reads a PDF or DOCX contract and builds one canonical text with exact character offsets. Its code lives in `backend/`. Today it holds the PDF and DOCX parsers, the clause structure builder and a command-line tool. There is no server yet. The output format is in `docs/app/ParserContract.md`.
+The backend reads a PDF or DOCX contract and builds one canonical text with exact character offsets. Its code lives in `backend/`. Today it holds the PDF and DOCX parsers, the clause structure builder, a command-line tool and the start of the API: health, readiness and capabilities. The parser output format is in `docs/app/ParserContract.md`, and the API contract is in `docs/app/API.md`.
 
 ### Prerequisites
 
@@ -20,9 +20,32 @@ pip install -r requirements-dev.txt -c constraints.txt
 
 On macOS or Linux, activate with `source .venv/bin/activate`. `requirements.txt` pins the runtime packages, and `requirements-dev.txt` adds the pinned test and lint tools. `constraints.txt` pins everything those two pull in. For a runtime-only install, use `requirements.txt` in place of `requirements-dev.txt`.
 
-### Run
+### Run the API
 
-There is no server yet. To parse a file and print the result as JSON, from `backend/` with the virtual environment active:
+From `backend/` with the virtual environment active:
+
+```bash
+uvicorn app.main:create_app --factory
+```
+
+The API listens on `http://127.0.0.1:8000`, and `GET /api/v1/health` should answer `{"status":"ok"}`. `GET /api/v1/ready` and `GET /api/v1/capabilities` answer 503 until `backend/app/catalogue.json` exists. The category catalogue comes from Tanishq and is not committed yet. API.md section 5 gives its shape.
+
+The API reads these environment variables once, at start, and does not read a `.env` file. Every one is optional.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `CLAUSEANCHOR_ANALYZER` | `stub` | `stub` serves sample mode. `real` loads the trained analyzer |
+| `CLAUSEANCHOR_ARTIFACTS_DIR` | none | The analyzer's artifacts directory. Required when the analyzer is `real` |
+| `CLAUSEANCHOR_DB_PATH` | `:memory:` | The SQLite path. The default keeps session data off disk |
+| `CLAUSEANCHOR_SESSION_TTL_MINUTES` | `60` | Session lifetime, from 1 to 60 |
+| `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse. Provisional |
+| `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait |
+
+A bad value stops the start and the message names the variable. `docs/app/API.md` section 4 has the details.
+
+### Parse a file
+
+To parse a file and print the result as JSON, from `backend/` with the virtual environment active:
 
 ```bash
 python -m app.scripts.parse_file CONTRACT.pdf

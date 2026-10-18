@@ -24,7 +24,7 @@ flowchart TD
 ```
 
 1. The browser creates an anonymous session and gets a bearer token (Phase 2).
-2. It uploads one PDF or DOCX. Where the user's role and review scope travel is open (`Phases.md`, Phase 2 open decisions, D1).
+2. It uploads one PDF or DOCX and nothing else. The role goes with the party binding, and the scope and `category_ids` go with the analysis request (`Phases.md`, D1).
 3. The upload is validated by magic bytes, size and archive safety, then parsed in a child process with a wall-clock kill and a memory cap (planned, Phase 2).
 4. The parser returns a `ParsedDocument`: canonical `source_text`, its SHA-256, text blocks with source locators, a structure tree and warnings. The uploaded bytes are dropped.
 5. The analysis job passes `source_text` and an `AnalysisContext` to the core analyzer (`AnalyzerProtocol`) from `ml/clauseanchor_core` and gets back category decisions with spans.
@@ -56,7 +56,10 @@ flowchart TD
 | Structure: numbered labels | A label is read at the start of a block, or from the block's `list_label`. It becomes a node only when it continues the sequence at its depth, or starts one at 1, `(a)` or `(i)`. A restart at 1 replaces a run of 3 or fewer and is body text after a longer run. A Word list may open a top-level number above 1, and a Word number above the last one in its sequence continues it. A schedule label clears every sequence. A level is the number of parts of a decimal, plus 1 inside a schedule, and a letter or numeral sits below its parent. A label that is both a letter and a numeral, such as `(i)`, is settled by the Word level in the locator (`list_level`) when there is one | A number inside running text, a cross reference or a party list must not become a clause. Word counts empty numbered paragraphs that the blocks drop, so a gap in a Word list is not a break. One pass with a stack, with no model, so every node can be explained |
 | Structure: headings and contents | A short block of capitals (80 characters, every line 60 percent capitals) is an unnumbered level 1 heading that closes open nodes, unless it directly follows a block that is only a label, where it is that label's title. A block with a dot leader, or a one-line block that ends in a page number, is a contents entry and is ignored. A bare number with no full stop is a page number | The contents page repeats every heading, and 1-C does not mark a page number printed mid-page. A title must not close the node it names. A line of redaction marks must not turn a notice into a heading |
 | Structure: tables and definitions | An outermost table is one `table` node, and nothing inside it is read as a label or heading. A quoted term followed by `means`, `shall mean`, `has the meaning`, `refers to`, or in brackets as `(the "T")`, is a `definition` node that spans the term with its quotes, one level below the innermost open node or the table | A table has no clause order to read. A definition node lets the core point at the term itself, and the container gives its scope |
-| Database | SQLite only, `create_all()` | Nothing durable is stored; no migrations tool needed |
+| Database | SQLite only, `create_all()`, in memory by default (`CLAUSEANCHOR_DB_PATH`, D8) | Nothing durable is stored; no migrations tool needed. A file would keep session rows and file names on disk until the next start, or after a crash |
+| API config | `Settings.from_env` in `config.py` reads `CLAUSEANCHOR_` variables once at start. A bad value stops the start with a message that names the variable and not the value. The session TTL cannot pass 60 minutes. The parser's limits are not settings | One object, no `pydantic-settings`. The promise to users is deletion within 60 minutes, so no setting may break it |
+| API errors | One envelope for every error (`api/errors.py`, API.md section 2). A fixed message per code, so request input and exception text never reach a reply. A middleware, not an `Exception` handler, catches a crash and logs only its class name | Starlette's server-error layer sends its reply and then raises again, so the server would log a traceback that holds the exception text (Rules section 5). FastAPI's own 422 body repeats the submitted input |
+| Catalogue source | `backend/app/catalogue.json`, loaded once at start by `load_catalogue`, with no ids in the code. A missing or broken file is a reported state: `/ready` says which, and `/capabilities` answers 503 | Tanishq owns the 46 ids. The loader is the one place to change if they later come from the core |
 | Worker model | One API process, one bounded analysis worker, one executor thread. Each parse job runs in its own child process with a wall-clock kill and a memory cap (planned, part 2-C) | Fits a laptop and a free host; no Redis or Celery. The kill stops a parse that the content budget cannot bound in time, and the cap stops one it cannot bound in memory. One parse per child, because the DOCX reader changes the process-wide warnings filter |
 | User content storage | RAM only, 60-minute absolute TTL | Matches the synopsis promise; nothing on disk |
 | Review scope | Fixed category catalogue, a fixed scope notice on every result, no safety score or overall verdict anywhere | The system checks listed categories only. A highlight-free passage is not a safe passage, and the output must never imply it is |
@@ -87,26 +90,30 @@ backend/
       schema.py             # JSON Schema of the output (docs/app/parser_output.schema.json) and to_json, which turns a document into the data the schema describes (with text=False it also drops list_label and sets a definition's label to null)
     scripts/
       parse_file.py         # CLI: parse a local file and print JSON or a summary (dev only); refuses a file over 10 MiB before reading it
-    main.py                 # (planned, Phase 2) FastAPI app
-    config.py               # (planned, Phase 2)
-    db.py, models.py        # (planned, Phase 2) SQLite metadata
-    schemas.py              # (planned, Phase 2) Pydantic DTOs
-    api/routes.py           # (planned, Phase 2)
-    services/               # (planned, Phase 2 and 3)
-      memory_store.py       # RAM-only content with TTL
-      sessions.py           # capability tokens
-      jobs.py               # bounded queue, progress, cancel
-      documents.py          # upload validation, parse jobs (child process, wall-clock kill, memory cap)
-      analysis.py           # core adapter and result validation
-      polarity.py           # (Phase 3) party binding and polarity
-      report.py             # (Phase 3) ReportLab report
-      review_units.py       # (Phase 3) manual-review display units and overlap labels
-      scope.py              # (Phase 2) scope notice constant and category catalogue with support status
+    main.py                 # create_app(settings): the app factory. Loads the catalogue, installs error handling, adds the router (2-A)
+    config.py               # Settings.from_env: CLAUSEANCHOR_ variables and the API-owned limits (2-A)
+    catalogue.json          # (not committed yet) the 46 categories from Tanishq, shape in API.md section 5
+    schemas.py              # Pydantic response models (2-A); each later endpoint adds its models
+    api/
+      errors.py             # ERRORS table, error_response, handlers for 422, 404 and 405, crash containment (2-A)
+      routes.py             # health, ready, capabilities (2-A); later parts add their routes
+    db.py, models.py        # (planned, 2-B) SQLite metadata
+    services/
+      scope.py              # SCOPE_NOTICE, Category, Catalogue and load_catalogue (2-A)
+      memory_store.py       # (planned) RAM-only content with TTL
+      sessions.py           # (planned) capability tokens
+      jobs.py               # (planned) bounded queue, progress, cancel
+      documents.py          # (planned) upload validation, parse jobs (child process, wall-clock kill, memory cap)
+      analysis.py           # (planned) core adapter and result validation
+      polarity.py           # (planned, Phase 3) party binding and polarity
+      report.py             # (planned, Phase 3) ReportLab report
+      review_units.py       # (planned, Phase 3) manual-review display units and overlap labels
     policies/polarity.yaml  # (planned, Phase 3) 46 category policies
   tools/
     annotator/              # (planned, 2-0B) offline annotation tool: runs locally, no network
   tests/
-    conftest.py             # session-scoped fixture generation into a temp dir
+    conftest.py             # session-scoped fixture generation into a temp dir; the API client fixtures on a synthetic catalogue
+    synthetic.py            # the made-up catalogue the API tests use (no real id)
     fixtures/build.py       # generates PDF and DOCX fixtures with reportlab and python-docx
     test_assemble.py
     test_pdf.py
@@ -115,6 +122,11 @@ backend/
     test_parse.py           # parse_document: every fixture, limits, warning order
     test_contract.py        # JSON form, schema check, CLI
     test_invariants.py      # offset invariant over every fixture
+    test_config.py          # Settings.from_env: defaults, every variable, bad values
+    test_catalogue.py       # load_catalogue, and the scope notice against Phases.md
+    test_errors.py          # the envelope: 404, 405, 422 with no echo, 500 with no exception text
+    test_api.py             # health, ready, capabilities and the base path
+    test_docs.py            # API.md names every error code and every variable
 ```
 
 Fixtures are generated at test time, so no binary files are committed.
@@ -150,11 +162,11 @@ Nodes. `StructureNode` holds `id` (`n0001`, `n0002` and on, in order of start an
 
 ## 5. Interface to the core (planned, Phase 2)
 
-The backend imports only public names from `clauseanchor_core`: `CONTRACT_VERSION`, the result dataclasses, `AnalyzerProtocol` and `StubAnalyzer`. It never imports training, extraction or retrieval internals. Contract version **2.0** (multi-span findings) is on `main` (`ml/clauseanchor_core`, Tanishq's commit `d9e4c6a`). Its stub accepts only the fixture text, a parse with no warnings and four category ids, and `AnalysisContext` has no field for `decorations` (`Phases.md`, D6 and D7). The switch is `CLAUSEANCHOR_ANALYZER=stub|real`; a real run with missing artifacts fails readiness instead of falling back to the stub.
+The backend imports only public names from `clauseanchor_core`: `CONTRACT_VERSION`, the result dataclasses, `AnalyzerProtocol` and `StubAnalyzer`. It never imports training, extraction or retrieval internals. Contract version **2.0** (multi-span findings) is on `main` (`ml/clauseanchor_core`, Tanishq's commit `d9e4c6a`). Its stub accepts only the fixture text, a parse with no warnings and four category ids, and `AnalysisContext` has no field for `decorations` (`Phases.md`, D6 and D7). The switch is `CLAUSEANCHOR_ANALYZER=stub|real` (built in 2-A). A real run whose artifacts directory is missing fails `/ready` instead of falling back to the stub. Manifest checks come with 4-A. The API `mode` comes from the switch: `stub` gives `sample`.
 
 ## 6. Backend tech stack
 
-Python 3.12, pdfplumber (with pdfminer.six), python-docx (with lxml), FastAPI, Pydantic v2, SQLAlchemy 2 on SQLite, ReportLab, PyYAML, pytest, httpx, ruff.
+Python 3.12, pdfplumber (with pdfminer.six), python-docx (with lxml), FastAPI with plain uvicorn (`uvloop` has no Windows build), Pydantic v2, SQLAlchemy 2 on SQLite, ReportLab, PyYAML, pytest, httpx, ruff.
 
 ## 7. Frontend
 
