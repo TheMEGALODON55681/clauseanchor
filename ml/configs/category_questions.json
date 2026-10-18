@@ -1,0 +1,384 @@
+{
+  "catalogue_content_sha256": "23f239d3a9dac1971c05455090651b346189f4c522e5ccd0993f14c29a3f0b65",
+  "catalogue_version": "1.0.0",
+  "content_digest_encoding": "UTF-8 JSON with sorted keys, ensure_ascii=False, compact separators; no trailing newline",
+  "provenance": {
+    "category_table_sha256": "7499950ee04d2ed2841c0f8ec2ef96b91be039bc2ea3c4edcc36334a465b1f36",
+    "cuad": {
+      "files": {
+        "full": {
+          "archive_member": "CUADv1.json",
+          "path": "data/raw/cuad/CUAD_v1/CUAD_v1.json",
+          "sha256": "ed0b77d85bdf4014d7495800e8e4a70565b48ee6f8a2e5dca9cf8655dbf10eae",
+          "size_bytes": 40128638
+        },
+        "test": {
+          "archive_member": "test.json",
+          "path": "data/raw/cuad/official/test.json",
+          "sha256": "007b6a40b0c65247f881627375c3d2e9b6aeeb5dfa89957494feed0765a1a073",
+          "size_bytes": 7378232
+        },
+        "train": {
+          "archive_member": "train_separate_questions.json",
+          "path": "data/raw/cuad/official/train_separate_questions.json",
+          "sha256": "7de21d2bb741ac939e2a839ef9640634a5e0f9f40ea2b82c6833baf7db33dab4",
+          "size_bytes": 35065844
+        }
+      },
+      "full_source": {
+        "filename": "CUAD_v1/CUAD_v1.json",
+        "repo_id": "theatticusproject/cuad",
+        "repo_type": "dataset",
+        "revision": "a3c393f5d103fd0c516374e4fdff676c8176dcb1"
+      },
+      "official_archive": {
+        "archive_path": "data.zip",
+        "archive_sha256": "f8161d18bea4e9c05e78fa6dda61c19c846fb8087ea969c172753bc2f45b999a",
+        "full_member": "CUADv1.json",
+        "repo_id": "The-Atticus-Project/cuad",
+        "revision": "67faa0e6023b04fcaae6cc09497ab00e5d63a2a2",
+        "test_member": "test.json",
+        "train_member": "train_separate_questions.json"
+      }
+    },
+    "cuad_attribution": "docs/data attribution: data/raw/cuad/README.md; CUAD by The Atticus Project, CC BY 4.0",
+    "india_prompts": {
+      "document": "docs/ml/CategoryCatalogue.md",
+      "prompt_map_content_sha256": "1b5c23c43fa48898d2a2b8b54f5c53e19c66ce50c121fbe2a35061d43585232a",
+      "section": "Stable identity and source questions"
+    }
+  },
+  "question_set_version": "1.0.0",
+  "questions": [
+    {
+      "category_id": "cuad.document_name",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Document Name\" that should be reviewed by a lawyer. Details: The name of the contract",
+      "question_role": "cuad_benchmark",
+      "source_label": "Document Name"
+    },
+    {
+      "category_id": "cuad.parties",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Parties\" that should be reviewed by a lawyer. Details: The two or more parties who signed the contract",
+      "question_role": "cuad_benchmark",
+      "source_label": "Parties"
+    },
+    {
+      "category_id": "cuad.agreement_date",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Agreement Date\" that should be reviewed by a lawyer. Details: The date of the contract",
+      "question_role": "cuad_benchmark",
+      "source_label": "Agreement Date"
+    },
+    {
+      "category_id": "cuad.effective_date",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Effective Date\" that should be reviewed by a lawyer. Details: The date when the contract is effective ",
+      "question_role": "cuad_benchmark",
+      "source_label": "Effective Date"
+    },
+    {
+      "category_id": "cuad.expiration_date",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Expiration Date\" that should be reviewed by a lawyer. Details: On what date will the contract's initial term expire?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Expiration Date"
+    },
+    {
+      "category_id": "cuad.renewal_term",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Renewal Term\" that should be reviewed by a lawyer. Details: What is the renewal term after the initial term expires? This includes automatic extensions and unilateral extensions with prior notice.",
+      "question_role": "cuad_benchmark",
+      "source_label": "Renewal Term"
+    },
+    {
+      "category_id": "cuad.notice_period_renewal",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Notice Period To Terminate Renewal\" that should be reviewed by a lawyer. Details: What is the notice period required to terminate renewal?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Notice Period To Terminate Renewal"
+    },
+    {
+      "category_id": "cuad.governing_law",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Governing Law\" that should be reviewed by a lawyer. Details: Which state/country's law governs the interpretation of the contract?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Governing Law"
+    },
+    {
+      "category_id": "cuad.most_favored_nation",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Most Favored Nation\" that should be reviewed by a lawyer. Details: Is there a clause that if a third party gets better terms on the licensing or sale of technology/goods/services described in the contract, the buyer of such technology/goods/services under the contract shall be entitled to those better terms?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Most Favored Nation"
+    },
+    {
+      "category_id": "cuad.non_compete",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Non-Compete\" that should be reviewed by a lawyer. Details: Is there a restriction on the ability of a party to compete with the counterparty or operate in a certain geography or business or technology sector? ",
+      "question_role": "cuad_benchmark",
+      "source_label": "Non-Compete"
+    },
+    {
+      "category_id": "cuad.exclusivity",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Exclusivity\" that should be reviewed by a lawyer. Details: Is there an exclusive dealing  commitment with the counterparty? This includes a commitment to procure all “requirements” from one party of certain technology, goods, or services or a prohibition on licensing or selling technology, goods or services to third parties, or a prohibition on  collaborating or working with other parties), whether during the contract or  after the contract ends (or both).",
+      "question_role": "cuad_benchmark",
+      "source_label": "Exclusivity"
+    },
+    {
+      "category_id": "cuad.no_solicit_customers",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"No-Solicit Of Customers\" that should be reviewed by a lawyer. Details: Is a party restricted from contracting or soliciting customers or partners of the counterparty, whether during the contract or after the contract ends (or both)?",
+      "question_role": "cuad_benchmark",
+      "source_label": "No-Solicit Of Customers"
+    },
+    {
+      "category_id": "cuad.competitive_restriction_exception",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Competitive Restriction Exception\" that should be reviewed by a lawyer. Details: This category includes the exceptions or carveouts to Non-Compete, Exclusivity and No-Solicit of Customers above.",
+      "question_role": "cuad_benchmark",
+      "source_label": "Competitive Restriction Exception"
+    },
+    {
+      "category_id": "cuad.no_solicit_employees",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"No-Solicit Of Employees\" that should be reviewed by a lawyer. Details: Is there a restriction on a party’s soliciting or hiring employees and/or contractors from the  counterparty, whether during the contract or after the contract ends (or both)?",
+      "question_role": "cuad_benchmark",
+      "source_label": "No-Solicit Of Employees"
+    },
+    {
+      "category_id": "cuad.non_disparagement",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Non-Disparagement\" that should be reviewed by a lawyer. Details: Is there a requirement on a party not to disparage the counterparty?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Non-Disparagement"
+    },
+    {
+      "category_id": "cuad.termination_for_convenience",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Termination For Convenience\" that should be reviewed by a lawyer. Details: Can a party terminate this  contract without cause (solely by giving a notice and allowing a waiting  period to expire)?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Termination For Convenience"
+    },
+    {
+      "category_id": "cuad.rofr_rofo_rofn",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Rofr/Rofo/Rofn\" that should be reviewed by a lawyer. Details: Is there a clause granting one party a right of first refusal, right of first offer or right of first negotiation to purchase, license, market, or distribute equity interest, technology, assets, products or services?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Rofr/Rofo/Rofn"
+    },
+    {
+      "category_id": "cuad.change_of_control",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Change Of Control\" that should be reviewed by a lawyer. Details: Does one party have the right to terminate or is consent or notice required of the counterparty if such party undergoes a change of control, such as a merger, stock sale, transfer of all or substantially all of its assets or business, or assignment by operation of law?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Change Of Control"
+    },
+    {
+      "category_id": "cuad.anti_assignment",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Anti-Assignment\" that should be reviewed by a lawyer. Details: Is consent or notice required of a party if the contract is assigned to a third party?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Anti-Assignment"
+    },
+    {
+      "category_id": "cuad.revenue_profit_sharing",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Revenue/Profit Sharing\" that should be reviewed by a lawyer. Details: Is one party required to share revenue or profit with the counterparty for any technology, goods, or services?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Revenue/Profit Sharing"
+    },
+    {
+      "category_id": "cuad.price_restrictions",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Price Restrictions\" that should be reviewed by a lawyer. Details: Is there a restriction on the  ability of a party to raise or reduce prices of technology, goods, or  services provided?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Price Restrictions"
+    },
+    {
+      "category_id": "cuad.minimum_commitment",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Minimum Commitment\" that should be reviewed by a lawyer. Details: Is there a minimum order size or minimum amount or units per-time period that one party must buy from the counterparty under the contract?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Minimum Commitment"
+    },
+    {
+      "category_id": "cuad.volume_restriction",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Volume Restriction\" that should be reviewed by a lawyer. Details: Is there a fee increase or consent requirement, etc. if one party’s use of the product/services exceeds certain threshold?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Volume Restriction"
+    },
+    {
+      "category_id": "cuad.ip_ownership_assignment",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Ip Ownership Assignment\" that should be reviewed by a lawyer. Details: Does intellectual property created  by one party become the property of the counterparty, either per the terms of the contract or upon the occurrence of certain events?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Ip Ownership Assignment"
+    },
+    {
+      "category_id": "cuad.joint_ip_ownership",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Joint Ip Ownership\" that should be reviewed by a lawyer. Details: Is there any clause providing for joint or shared ownership of intellectual property between the parties to the contract?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Joint Ip Ownership"
+    },
+    {
+      "category_id": "cuad.license_grant",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"License Grant\" that should be reviewed by a lawyer. Details: Does the contract contain a license granted by one party to its counterparty?",
+      "question_role": "cuad_benchmark",
+      "source_label": "License Grant"
+    },
+    {
+      "category_id": "cuad.non_transferable_license",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Non-Transferable License\" that should be reviewed by a lawyer. Details: Does the contract limit the ability of a party to transfer the license being granted to a third party?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Non-Transferable License"
+    },
+    {
+      "category_id": "cuad.affiliate_license_licensor",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Affiliate License-Licensor\" that should be reviewed by a lawyer. Details: Does the contract contain a license grant by affiliates of the licensor or that includes intellectual property of affiliates of the licensor? ",
+      "question_role": "cuad_benchmark",
+      "source_label": "Affiliate License-Licensor"
+    },
+    {
+      "category_id": "cuad.affiliate_license_licensee",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Affiliate License-Licensee\" that should be reviewed by a lawyer. Details: Does the contract contain a license grant to a licensee (incl. sublicensor) and the affiliates of such licensee/sublicensor?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Affiliate License-Licensee"
+    },
+    {
+      "category_id": "cuad.unlimited_license",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Unlimited/All-You-Can-Eat-License\" that should be reviewed by a lawyer. Details: Is there a clause granting one party an “enterprise,” “all you can eat” or unlimited usage license?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Unlimited/All-You-Can-Eat-License"
+    },
+    {
+      "category_id": "cuad.irrevocable_perpetual_license",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Irrevocable Or Perpetual License\" that should be reviewed by a lawyer. Details: Does the contract contain a  license grant that is irrevocable or perpetual?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Irrevocable Or Perpetual License"
+    },
+    {
+      "category_id": "cuad.source_code_escrow",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Source Code Escrow\" that should be reviewed by a lawyer. Details: Is one party required to deposit its source code into escrow with a third party, which can be released to the counterparty upon the occurrence of certain events (bankruptcy,  insolvency, etc.)?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Source Code Escrow"
+    },
+    {
+      "category_id": "cuad.post_termination_services",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Post-Termination Services\" that should be reviewed by a lawyer. Details: Is a party subject to obligations after the termination or expiration of a contract, including any post-termination transition, payment, transfer of IP, wind-down, last-buy, or similar commitments?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Post-Termination Services"
+    },
+    {
+      "category_id": "cuad.audit_rights",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Audit Rights\" that should be reviewed by a lawyer. Details: Does a party have the right to  audit the books, records, or physical locations of the counterparty to ensure compliance with the contract?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Audit Rights"
+    },
+    {
+      "category_id": "cuad.uncapped_liability",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Uncapped Liability\" that should be reviewed by a lawyer. Details: Is a party’s liability uncapped upon the breach of its obligation in the contract? This also includes uncap liability for a particular type of breach such as IP infringement or breach of confidentiality obligation.",
+      "question_role": "cuad_benchmark",
+      "source_label": "Uncapped Liability"
+    },
+    {
+      "category_id": "cuad.cap_on_liability",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Cap On Liability\" that should be reviewed by a lawyer. Details: Does the contract include a cap on liability upon the breach of a party’s obligation? This includes time limitation for the counterparty to bring claims or maximum amount for recovery.",
+      "question_role": "cuad_benchmark",
+      "source_label": "Cap On Liability"
+    },
+    {
+      "category_id": "cuad.liquidated_damages",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Liquidated Damages\" that should be reviewed by a lawyer. Details: Does the contract contain a clause that would award either party liquidated damages for breach or a fee upon the termination of a contract (termination fee)?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Liquidated Damages"
+    },
+    {
+      "category_id": "cuad.warranty_duration",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Warranty Duration\" that should be reviewed by a lawyer. Details: What is the duration of any  warranty against defects or errors in technology, products, or services  provided under the contract?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Warranty Duration"
+    },
+    {
+      "category_id": "cuad.insurance",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Insurance\" that should be reviewed by a lawyer. Details: Is there a requirement for insurance that must be maintained by one party for the benefit of the counterparty?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Insurance"
+    },
+    {
+      "category_id": "cuad.covenant_not_to_sue",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Covenant Not To Sue\" that should be reviewed by a lawyer. Details: Is a party restricted from contesting the validity of the counterparty’s ownership of intellectual property or otherwise bringing a claim against the counterparty for matters unrelated to the contract?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Covenant Not To Sue"
+    },
+    {
+      "category_id": "cuad.third_party_beneficiary",
+      "cuad_annotated": true,
+      "question": "Highlight the parts (if any) of this contract related to \"Third Party Beneficiary\" that should be reviewed by a lawyer. Details: Is there a non-contracting party who is a beneficiary to some or all of the clauses in the contract and therefore can enforce its rights against a contracting party?",
+      "question_role": "cuad_benchmark",
+      "source_label": "Third Party Beneficiary"
+    },
+    {
+      "category_id": "in.arbitration",
+      "cuad_annotated": false,
+      "question": "Which text provides for arbitration of disputes?",
+      "question_role": "india_extension",
+      "source_label": null
+    },
+    {
+      "category_id": "in.seat_venue",
+      "cuad_annotated": false,
+      "question": "Which text states the seat or venue of arbitration?",
+      "question_role": "india_extension",
+      "source_label": null
+    },
+    {
+      "category_id": "in.stamping_registration",
+      "cuad_annotated": false,
+      "question": "Which text addresses stamp duty, stamping or registration?",
+      "question_role": "india_extension",
+      "source_label": null
+    },
+    {
+      "category_id": "in.forum_selection",
+      "cuad_annotated": false,
+      "question": "Which text selects courts or a judicial forum for disputes?",
+      "question_role": "india_extension",
+      "source_label": null
+    },
+    {
+      "category_id": "in.dispute_escalation",
+      "cuad_annotated": false,
+      "question": "Which text requires negotiation, mediation or another step before formal dispute resolution?",
+      "question_role": "india_extension",
+      "source_label": null
+    }
+  ],
+  "schema_version": 1,
+  "usage": {
+    "annotation_study": "The Indian-study export schema and its five CUAD study prompts are separate contracts.",
+    "cuad_annotated": "Annotation coverage only, not model support or per-record eligibility after duplicate review.",
+    "cuad_questions": "Preserve exact source wording for benchmark preparation; do not reconstruct from display names.",
+    "india_questions": "Project extension prompts; no CUAD annotations exist for these categories.",
+    "missing_labels": "Unannotated categories are unknown, never negative examples."
+  }
+}
