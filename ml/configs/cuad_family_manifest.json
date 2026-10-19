@@ -1,0 +1,335 @@
+{
+  "manifest_version": "1.0.0",
+  "review_scope": {
+    "screen_version": "1.0.0",
+    "candidate_report": "data/processed/cuad/similarity_candidates.json",
+    "candidate_report_canonical_sha256": "041c2352429db5b2acb2f79356fbbf0400aca018eba8d6ab2caf51b742e24d85",
+    "screen_candidates_reviewed": true,
+    "broader_family_review": "pending",
+    "ready_for_internal_splits": false
+  },
+  "provenance": {
+    "files": {
+      "full": {
+        "archive_member": "CUADv1.json",
+        "path": "data/raw/cuad/CUAD_v1/CUAD_v1.json",
+        "sha256": "ed0b77d85bdf4014d7495800e8e4a70565b48ee6f8a2e5dca9cf8655dbf10eae",
+        "size_bytes": 40128638
+      },
+      "test": {
+        "archive_member": "test.json",
+        "path": "data/raw/cuad/official/test.json",
+        "sha256": "007b6a40b0c65247f881627375c3d2e9b6aeeb5dfa89957494feed0765a1a073",
+        "size_bytes": 7378232
+      },
+      "train": {
+        "archive_member": "train_separate_questions.json",
+        "path": "data/raw/cuad/official/train_separate_questions.json",
+        "sha256": "7de21d2bb741ac939e2a839ef9640634a5e0f9f40ea2b82c6833baf7db33dab4",
+        "size_bytes": 35065844
+      }
+    },
+    "full_source": {
+      "filename": "CUAD_v1/CUAD_v1.json",
+      "repo_id": "theatticusproject/cuad",
+      "repo_type": "dataset",
+      "revision": "a3c393f5d103fd0c516374e4fdff676c8176dcb1"
+    },
+    "official_archive": {
+      "archive_path": "data.zip",
+      "archive_sha256": "f8161d18bea4e9c05e78fa6dda61c19c846fb8087ea969c172753bc2f45b999a",
+      "full_member": "CUADv1.json",
+      "repo_id": "The-Atticus-Project/cuad",
+      "revision": "67faa0e6023b04fcaae6cc09497ab00e5d63a2a2",
+      "test_member": "test.json",
+      "train_member": "train_separate_questions.json"
+    }
+  },
+  "policies": {
+    "internal_partitions": [
+      "fit",
+      "dev_select",
+      "dev_cal",
+      "dev_policy"
+    ],
+    "related_records": "keep_connected_family_together",
+    "cross_split_training_members": "exclude_from_all_internal_partitions",
+    "official_memberships": "preserve",
+    "test_reporting": "full_official_test_plus_separate_known_overlap_sensitivity",
+    "source_annotations": "preserve_per_record_no_automatic_transfer",
+    "duplicate_label_conflicts": "hold_disputed_questions_until_adjudicated"
+  },
+  "families": [
+    {
+      "family_id": "cuad-family-v1:61340768b8fb31e25bfcd88704eef88c7de5db1fc05e1db99c2fd7ba51e532c0",
+      "members": [
+        {
+          "group_id": "cuad-exact-v1:496c0446e173090ccf5605b657cfd497da22c927d635540dcc969a87cf610c46",
+          "official_split": "train",
+          "source_titles": [
+            "IdeanomicsInc_20160330_10-K_EX-10.26_9512211_EX-10.26_Content License Agreement"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 40866,
+              "index": 0,
+              "text_sha256": "709a7a9cfe66a11f2b9ef2e18ea813e3fba4bd9a8ceb3816f0fbaf9664066e97"
+            }
+          ]
+        },
+        {
+          "group_id": "cuad-exact-v1:9b0df2e9e32f3bf7c19b0e61b331cf05e5ed2beb648be1d2b3075d36f204922c",
+          "official_split": "test",
+          "source_titles": [
+            "IdeanomicsInc_20151124_8-K_EX-10.2_9354744_EX-10.2_Content License Agreement"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 35189,
+              "index": 0,
+              "text_sha256": "c538e198298848d2e29a5e608ac164c5995768059b85485f564d184ae354f1c5"
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "review_id": "similarity-001",
+          "group_ids": [
+            "cuad-exact-v1:496c0446e173090ccf5605b657cfd497da22c927d635540dcc969a87cf610c46",
+            "cuad-exact-v1:9b0df2e9e32f3bf7c19b0e61b331cf05e5ed2beb648be1d2b3075d36f204922c"
+          ],
+          "decision": "confirmed_related_for_split_grouping",
+          "relationship": "agreement_variants",
+          "evidence_document": "docs/ml/CUAD_CrossSplitReview.md",
+          "reason": "Shared named parties and long agreement sections; form versus filled-date/signed variant, with substantive licensing differences."
+        }
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:3366d889e13e6d29095c2079b855c6848a6b981ff4155b17f52c8d2555bdd756",
+      "members": [
+        {
+          "group_id": "cuad-exact-v1:25760695ffcc7d9c73db7a9d3d0babca55eb4b01b9910ef849c5f717c4ede83b",
+          "official_split": "test",
+          "source_titles": [
+            "WOMENSGOLFUNLIMITEDINC_03_29_2000-EX-10.13-ENDORSEMENT AGREEMENT"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 32371,
+              "index": 0,
+              "text_sha256": "4409b6e45aec52486aef45e86a94f12aaa5c36246a131e1d7311585a9d37ad39"
+            }
+          ]
+        },
+        {
+          "group_id": "cuad-exact-v1:b5e4d537dbb1da2d53c36c627b8d00b090eb1f352d2fe8d2af53caf5c3e90393",
+          "official_split": "train",
+          "source_titles": [
+            "WOMENSGOLFUNLIMITEDINC_03_29_2000-EX-10.13-ENDORSEMENT AGREEMENT - Intellectual Property Rights                 Confidentiality and Non-Use Obligations Agreement"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 7042,
+              "index": 0,
+              "text_sha256": "326b491f5f1079ba35a2f03ae6a9dd9c009668e7e2a8156dedf3bbaf553b1d34"
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "review_id": "similarity-002",
+          "group_ids": [
+            "cuad-exact-v1:25760695ffcc7d9c73db7a9d3d0babca55eb4b01b9910ef849c5f717c4ede83b",
+            "cuad-exact-v1:b5e4d537dbb1da2d53c36c627b8d00b090eb1f352d2fe8d2af53caf5c3e90393"
+          ],
+          "decision": "confirmed_related_for_split_grouping",
+          "relationship": "parent_attachment",
+          "evidence_document": "docs/ml/CUAD_CrossSplitReview.md",
+          "reason": "The shorter closing/Exhibit A record is the whitespace-normalized suffix of the parent endorsement agreement, with explicit attachment linkage."
+        }
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:a2feafce611d1bc5e3825702f73e775c1b3dc24f436352e3c7a52db02b27add7",
+      "members": [
+        {
+          "group_id": "cuad-exact-v1:073b83439a183fb911be23eade348bb07e38d33035e3351c0f3e930a52e8638b",
+          "official_split": "train",
+          "source_titles": [
+            "LejuHoldingsLtd_20140121_DRS (on F-1)_EX-10.26_8473102_EX-10.26_Content License Agreement2"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 2180,
+              "index": 0,
+              "text_sha256": "01ebcd4dc1fdc164d0f68fd217be2b99ba76c39f5d842288808a1dca8c8d839c"
+            }
+          ]
+        },
+        {
+          "group_id": "cuad-exact-v1:1ba4a1ff167c30273cb0680cb323acb187edd67c17c020b9c1aede8cca3d46e8",
+          "official_split": "train",
+          "source_titles": [
+            "LejuHoldingsLtd_20140121_DRS (on F-1)_EX-10.26_8473102_EX-10.26_Content License Agreement1"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 46696,
+              "index": 0,
+              "text_sha256": "edb50810e93b97e83365e7e66f2bf583cfee3981ea1ffdbbcb9f0783d9050e2e"
+            }
+          ]
+        },
+        {
+          "group_id": "cuad-exact-v1:c2466bae8d8436ab8001f7729c9a7836c6037753fe68e1a15219a68283fcd182",
+          "official_split": "train",
+          "source_titles": [
+            "ChinaRealEstateInformationCorp_20090929_F-1_EX-10.32_4771615_EX-10.32_Content License Agreement"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 49191,
+              "index": 0,
+              "text_sha256": "8881b5815dde9e3f52c43311f80baaf25e10dd15ed5b52740e94ca4a0aba433a"
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "review_id": "similarity-003",
+          "group_ids": [
+            "cuad-exact-v1:1ba4a1ff167c30273cb0680cb323acb187edd67c17c020b9c1aede8cca3d46e8",
+            "cuad-exact-v1:c2466bae8d8436ab8001f7729c9a7836c6037753fe68e1a15219a68283fcd182"
+          ],
+          "decision": "confirmed_related_for_split_grouping",
+          "relationship": "agreement_attachment_coverage",
+          "evidence_document": "docs/ml/CUAD_TrainingFamilyReview.md",
+          "reason": "Shared domain-name/content licence parties and extensive matching provisions; the China Real Estate record also contains Exhibit B."
+        },
+        {
+          "review_id": "similarity-006",
+          "group_ids": [
+            "cuad-exact-v1:073b83439a183fb911be23eade348bb07e38d33035e3351c0f3e930a52e8638b",
+            "cuad-exact-v1:c2466bae8d8436ab8001f7729c9a7836c6037753fe68e1a15219a68283fcd182"
+          ],
+          "decision": "confirmed_related_for_split_grouping",
+          "relationship": "parent_attachment",
+          "evidence_document": "docs/ml/CUAD_TrainingFamilyReview.md",
+          "reason": "The separate Exhibit B matches the termination exhibit within the China Real Estate record, connecting it to the family also reviewed in similarity-003."
+        }
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:5f63124db9dd7a22881fee5090dd006dd2659084ce8ec5a7e33231afd4260be3",
+      "members": [
+        {
+          "group_id": "cuad-exact-v1:1571c735d94f7aef8a458d0182be8c57662e2a4ba737b08003b8a86af637e958",
+          "official_split": "train",
+          "source_titles": [
+            "ARMSTRONGFLOORING,INC_01_07_2019-EX-10.2-INTELLECTUAL PROPERTY AGREEMENT"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 69759,
+              "index": 0,
+              "text_sha256": "8ff1a7503594d70ad15a6cdad9242ff5d5d8ca9db2e75074d02834d9b1b47b3d"
+            }
+          ]
+        },
+        {
+          "group_id": "cuad-exact-v1:aa870826a1af38874d1b4fa36e4c4bcde0f2c70e392ebb24172f5441f55a2bfc",
+          "official_split": "train",
+          "source_titles": [
+            "ArmstrongFlooringInc_20190107_8-K_EX-10.2_11471795_EX-10.2_Intellectual Property Agreement"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 56858,
+              "index": 0,
+              "text_sha256": "4311463a9da996c008b3c16e323d32c517ed1b785f283a30ee1aceccacf90558"
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "review_id": "similarity-004",
+          "group_ids": [
+            "cuad-exact-v1:1571c735d94f7aef8a458d0182be8c57662e2a4ba737b08003b8a86af637e958",
+            "cuad-exact-v1:aa870826a1af38874d1b4fa36e4c4bcde0f2c70e392ebb24172f5441f55a2bfc"
+          ],
+          "decision": "confirmed_related_for_split_grouping",
+          "relationship": "agreement_attachment_coverage",
+          "evidence_document": "docs/ml/CUAD_TrainingFamilyReview.md",
+          "reason": "Same dated intellectual-property agreement and named parties; records differ in source footers and assignment attachment coverage."
+        }
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:daa99fa1722fc32f24f80018b7cb114faaf93d40bc9641e035ba7dc978c2a3c1",
+      "members": [
+        {
+          "group_id": "cuad-exact-v1:04993e9fb171451eb13473b9cdf36d9ec5d6e0f3f6c39e193ec0d8db3bfc34a0",
+          "official_split": "train",
+          "source_titles": [
+            "NETGEAR,INC_04_21_2003-EX-10.16- AMENDMENT #2 TO THE DISTRIBUTION AGREEMENT"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 4567,
+              "index": 0,
+              "text_sha256": "40b9a08eaf9a9a4cb8062d44af4289e0cb7732b2fe464b083505594978f1b776"
+            }
+          ]
+        },
+        {
+          "group_id": "cuad-exact-v1:aacfd33dfc6f28e8a4dd6cd384df7ab9ad8f865545d5c18c39c6ae94af5d2f63",
+          "official_split": "train",
+          "source_titles": [
+            "NETGEAR,INC_04_21_2003-EX-10.16-AMENDMENT TO THE DISTRIBUTOR AGREEMENT BETWEEN INGRAM MICRO AND NETGEAR"
+          ],
+          "paragraphs": [
+            {
+              "code_points": 8113,
+              "index": 0,
+              "text_sha256": "a26d0a46ae672963f96e729745f458b9684cbee0ac2b723045a6fe227cbd1fd7"
+            }
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "review_id": "similarity-005",
+          "group_ids": [
+            "cuad-exact-v1:04993e9fb171451eb13473b9cdf36d9ec5d6e0f3f6c39e193ec0d8db3bfc34a0",
+            "cuad-exact-v1:aacfd33dfc6f28e8a4dd6cd384df7ab9ad8f865545d5c18c39c6ae94af5d2f63"
+          ],
+          "decision": "confirmed_related_for_split_grouping",
+          "relationship": "exact_context_containment",
+          "evidence_document": "docs/ml/CUAD_TrainingFamilyReview.md",
+          "reason": "The complete 4567-code-point shorter context equals the longer context at [3546, 8113); keep both source annotation sets distinct."
+        }
+      ]
+    }
+  ],
+  "expected_summary": {
+    "source_documents": 510,
+    "exact_text_groups": 509,
+    "official_train_documents": 408,
+    "official_test_documents": 102,
+    "reviewed_candidate_pairs": 6,
+    "reviewed_families": 5,
+    "reviewed_member_groups": 11,
+    "training_only_families": 3,
+    "cross_split_families": 2,
+    "prospective_training_exclusions": 2,
+    "prospective_eligible_training_documents": 406,
+    "prospective_eligible_exact_groups": 405,
+    "prospective_internal_family_units": 401,
+    "prospective_sensitivity_test_documents": 100
+  }
+}
