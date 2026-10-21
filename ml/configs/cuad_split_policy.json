@@ -1,0 +1,19 @@
+{
+  "split_policy_version": "1.0.0",
+  "scope": "proposal_only",
+  "plan_reference": "ClauseAnchor_Plan.md v1.2, section 4.2",
+  "algorithm": "cohort_balanced_iterative_multilabel_family_v1",
+  "seed": 42,
+  "split_percentages": {
+    "fit": 70,
+    "dev_select": 10,
+    "dev_cal": 10,
+    "dev_policy": 10
+  },
+  "size_unit": "source_documents",
+  "stratification_unit": "positive_category_presence_per_family",
+  "integer_rounding": "largest_remainder_ties_in_split_order",
+  "preparation_pool_canonical_sha256": "a0cc27eff8e1da774e59745cf070ba6f63497872f0100faaee3a03597dd10a7e",
+  "family_manifest_canonical_sha256": "382e22fc2d10b135951866761e80922829c58d79445fe0e51c57d31b1d781f6a",
+  "question_set_canonical_sha256": "8381cd8b00a8f90a9f9f21032a3cadc35af784d804374e6ee774097fe54d4709"
+}
