@@ -1,0 +1,25 @@
+{
+  "freeze_version": "1.0.0",
+  "split_id": "cuad-clean-v1",
+  "scope": "partition_membership_only",
+  "reviewed_proposal_commit": "84af8789c03e768af96f4531942ab65bfbc8b2bc",
+  "assignment_canonical_sha256": "0bfcf2312ce174b0668f79765cd413bd37184e3069509390eb732a0dad053a40",
+  "proposal_canonical_sha256": "dc74c9b6895deea11b9e5578c8b116c1f43f62098cdfd61e71aa785991ef9dd3",
+  "proposal_report_canonical_sha256": "6317e438246c32513dd1fc3e1a123d2b1657be19dc9327f6aa347c0345c7cd89",
+  "proposal_policy_canonical_sha256": "34a182311962f5731a2f30e3f3b77e73807d03dce198b1dee70225cdd90fa55e",
+  "preparation_pool_canonical_sha256": "a0cc27eff8e1da774e59745cf070ba6f63497872f0100faaee3a03597dd10a7e",
+  "partition_roles": {
+    "fit": "weight_training",
+    "dev_select": "checkpoint_and_decoder_selection",
+    "dev_cal": "calibrator_fitting",
+    "dev_policy": "operating_threshold_selection"
+  },
+  "support_limitations": {
+    "categories_without_no_answer_examples_in_all_partitions": [
+      "cuad.document_name",
+      "cuad.parties"
+    ],
+    "per_category_presence_calibration_size_gate_met": false,
+    "model_based_support_assessed": false
+  }
+}
