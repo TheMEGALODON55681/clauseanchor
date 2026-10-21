@@ -1,48 +1,49 @@
 {
-  "manifest_version": "1.0.0",
+  "manifest_version": "2.0.0",
   "review_scope": {
-    "screen_version": "1.0.0",
-    "candidate_report": "data/processed/cuad/similarity_candidates.json",
-    "candidate_report_canonical_sha256": "041c2352429db5b2acb2f79356fbbf0400aca018eba8d6ab2caf51b742e24d85",
-    "screen_candidates_reviewed": true,
-    "broader_family_review": "pending",
+    "legacy_manifest": "ml/configs/cuad_family_manifest_v1.json",
+    "legacy_manifest_canonical_sha256": "7576938a012b45b30121887b6db7d9d9dd77e0886256a554c70085f3a8fc8dea",
+    "title_candidate_report": "data/processed/cuad/title_candidates.json",
+    "title_report_canonical_sha256": "c9a962bba49d410bc12ddc90dabf5eeeb2458a6abf38face809968acb609c312",
+    "title_screen_version": "1.0.0",
+    "broader_family_review": "screened_candidates_reviewed_with_holds",
     "ready_for_internal_splits": false
   },
   "provenance": {
-    "files": {
-      "full": {
-        "archive_member": "CUADv1.json",
-        "path": "data/raw/cuad/CUAD_v1/CUAD_v1.json",
-        "sha256": "ed0b77d85bdf4014d7495800e8e4a70565b48ee6f8a2e5dca9cf8655dbf10eae",
-        "size_bytes": 40128638
-      },
-      "test": {
-        "archive_member": "test.json",
-        "path": "data/raw/cuad/official/test.json",
-        "sha256": "007b6a40b0c65247f881627375c3d2e9b6aeeb5dfa89957494feed0765a1a073",
-        "size_bytes": 7378232
-      },
-      "train": {
-        "archive_member": "train_separate_questions.json",
-        "path": "data/raw/cuad/official/train_separate_questions.json",
-        "sha256": "7de21d2bb741ac939e2a839ef9640634a5e0f9f40ea2b82c6833baf7db33dab4",
-        "size_bytes": 35065844
-      }
-    },
     "full_source": {
-      "filename": "CUAD_v1/CUAD_v1.json",
       "repo_id": "theatticusproject/cuad",
       "repo_type": "dataset",
-      "revision": "a3c393f5d103fd0c516374e4fdff676c8176dcb1"
+      "revision": "a3c393f5d103fd0c516374e4fdff676c8176dcb1",
+      "filename": "CUAD_v1/CUAD_v1.json"
     },
     "official_archive": {
+      "repo_id": "The-Atticus-Project/cuad",
+      "revision": "67faa0e6023b04fcaae6cc09497ab00e5d63a2a2",
       "archive_path": "data.zip",
       "archive_sha256": "f8161d18bea4e9c05e78fa6dda61c19c846fb8087ea969c172753bc2f45b999a",
       "full_member": "CUADv1.json",
-      "repo_id": "The-Atticus-Project/cuad",
-      "revision": "67faa0e6023b04fcaae6cc09497ab00e5d63a2a2",
-      "test_member": "test.json",
-      "train_member": "train_separate_questions.json"
+      "train_member": "train_separate_questions.json",
+      "test_member": "test.json"
+    },
+    "files": {
+      "full": {
+        "path": "data/raw/cuad/CUAD_v1/CUAD_v1.json",
+        "archive_member": "CUADv1.json",
+        "sha256": "ed0b77d85bdf4014d7495800e8e4a70565b48ee6f8a2e5dca9cf8655dbf10eae",
+        "size_bytes": 40128638
+      },
+      "train": {
+        "path": "data/raw/cuad/official/train_separate_questions.json",
+        "archive_member": "train_separate_questions.json",
+        "sha256": "7de21d2bb741ac939e2a839ef9640634a5e0f9f40ea2b82c6833baf7db33dab4",
+        "size_bytes": 35065844
+      },
+      "test": {
+        "path": "data/raw/cuad/official/test.json",
+        "archive_member": "test.json",
+        "sha256": "007b6a40b0c65247f881627375c3d2e9b6aeeb5dfa89957494feed0765a1a073",
+        "size_bytes": 7378232
+      }
     }
   },
   "policies": {
@@ -57,279 +58,965 @@
     "official_memberships": "preserve",
     "test_reporting": "full_official_test_plus_separate_known_overlap_sensitivity",
     "source_annotations": "preserve_per_record_no_automatic_transfer",
-    "duplicate_label_conflicts": "hold_disputed_questions_until_adjudicated"
+    "duplicate_label_conflicts": "hold_disputed_questions_until_adjudicated",
+    "unresolved_relationships": "hold_training_members_and_confirmed_family_closure",
+    "unresolved_test_records": "retain_in_full_and_known_overlap_sensitivity",
+    "held_question_uses": "exclude_loss_mining_selection_calibration_policy_and_scoring"
   },
-  "families": [
+  "title_decisions": [
     {
-      "family_id": "cuad-family-v1:61340768b8fb31e25bfcd88704eef88c7de5db1fc05e1db99c2fd7ba51e532c0",
-      "members": [
-        {
-          "group_id": "cuad-exact-v1:496c0446e173090ccf5605b657cfd497da22c927d635540dcc969a87cf610c46",
-          "official_split": "train",
-          "source_titles": [
-            "IdeanomicsInc_20160330_10-K_EX-10.26_9512211_EX-10.26_Content License Agreement"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 40866,
-              "index": 0,
-              "text_sha256": "709a7a9cfe66a11f2b9ef2e18ea813e3fba4bd9a8ceb3816f0fbaf9664066e97"
-            }
-          ]
-        },
-        {
-          "group_id": "cuad-exact-v1:9b0df2e9e32f3bf7c19b0e61b331cf05e5ed2beb648be1d2b3075d36f204922c",
-          "official_split": "test",
-          "source_titles": [
-            "IdeanomicsInc_20151124_8-K_EX-10.2_9354744_EX-10.2_Content License Agreement"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 35189,
-              "index": 0,
-              "text_sha256": "c538e198298848d2e29a5e608ac164c5995768059b85485f564d184ae354f1c5"
-            }
-          ]
-        }
+      "review_id": "title-001",
+      "group_ids": [
+        "cuad-exact-v1:0badecfb27a0d110b91223d274a06b0713d39329cd0de962f6a5795f3ece340a",
+        "cuad-exact-v1:f8247974eb9bda782b5a4344a46d9f12a29ccced94fc6cdafe4dc95b83c2500f"
       ],
-      "decisions": [
-        {
-          "review_id": "similarity-001",
-          "group_ids": [
-            "cuad-exact-v1:496c0446e173090ccf5605b657cfd497da22c927d635540dcc969a87cf610c46",
-            "cuad-exact-v1:9b0df2e9e32f3bf7c19b0e61b331cf05e5ed2beb648be1d2b3075d36f204922c"
-          ],
-          "decision": "confirmed_related_for_split_grouping",
-          "relationship": "agreement_variants",
-          "evidence_document": "docs/ml/CUAD_CrossSplitReview.md",
-          "reason": "Shared named parties and long agreement sections; form versus filled-date/signed variant, with substantive licensing differences."
-        }
-      ]
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_FederatedFamilyReview.md",
+      "reason": "Services agreement, amendments and linked power of attorney form one reviewed family."
     },
     {
-      "family_id": "cuad-family-v1:3366d889e13e6d29095c2079b855c6848a6b981ff4155b17f52c8d2555bdd756",
-      "members": [
-        {
-          "group_id": "cuad-exact-v1:25760695ffcc7d9c73db7a9d3d0babca55eb4b01b9910ef849c5f717c4ede83b",
-          "official_split": "test",
-          "source_titles": [
-            "WOMENSGOLFUNLIMITEDINC_03_29_2000-EX-10.13-ENDORSEMENT AGREEMENT"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 32371,
-              "index": 0,
-              "text_sha256": "4409b6e45aec52486aef45e86a94f12aaa5c36246a131e1d7311585a9d37ad39"
-            }
-          ]
-        },
-        {
-          "group_id": "cuad-exact-v1:b5e4d537dbb1da2d53c36c627b8d00b090eb1f352d2fe8d2af53caf5c3e90393",
-          "official_split": "train",
-          "source_titles": [
-            "WOMENSGOLFUNLIMITEDINC_03_29_2000-EX-10.13-ENDORSEMENT AGREEMENT - Intellectual Property Rights                 Confidentiality and Non-Use Obligations Agreement"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 7042,
-              "index": 0,
-              "text_sha256": "326b491f5f1079ba35a2f03ae6a9dd9c009668e7e2a8156dedf3bbaf553b1d34"
-            }
-          ]
-        }
+      "review_id": "title-002",
+      "group_ids": [
+        "cuad-exact-v1:0c8ea7af1de1d140b21b7f4eaedcd45e6310fd78177f331363e8bcaaf5ac1cd8",
+        "cuad-exact-v1:f8247974eb9bda782b5a4344a46d9f12a29ccced94fc6cdafe4dc95b83c2500f"
       ],
-      "decisions": [
-        {
-          "review_id": "similarity-002",
-          "group_ids": [
-            "cuad-exact-v1:25760695ffcc7d9c73db7a9d3d0babca55eb4b01b9910ef849c5f717c4ede83b",
-            "cuad-exact-v1:b5e4d537dbb1da2d53c36c627b8d00b090eb1f352d2fe8d2af53caf5c3e90393"
-          ],
-          "decision": "confirmed_related_for_split_grouping",
-          "relationship": "parent_attachment",
-          "evidence_document": "docs/ml/CUAD_CrossSplitReview.md",
-          "reason": "The shorter closing/Exhibit A record is the whitespace-normalized suffix of the parent endorsement agreement, with explicit attachment linkage."
-        }
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_FederatedFamilyReview.md",
+      "reason": "Services agreement, amendments and linked power of attorney form one reviewed family."
+    },
+    {
+      "review_id": "title-003",
+      "group_ids": [
+        "cuad-exact-v1:1a665c30fce38c79925bc557e010a46007f784a7a24d265f4f3ae174f5cd3045",
+        "cuad-exact-v1:4918cec952a22441ae0ea55480dcaba7dff0245135a6f12585c4495cf603eaf8"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_PCQuoteFamilyReview.md",
+      "reason": "Co-branding parent and amendments identify the same agreement."
+    },
+    {
+      "review_id": "title-004",
+      "group_ids": [
+        "cuad-exact-v1:31e8e7018dd3e72fc13b3dc851887c0bedd4b3ca7402c70c4623889bde05eb85",
+        "cuad-exact-v1:830f3b69669b402d5608b9e2149e3497bee1b68186d13ca39a7784ace8896e54"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_SoupmanFamilyReview.md",
+      "reason": "Shared franchise packet, parties and attachment evidence support one family."
+    },
+    {
+      "review_id": "title-005",
+      "group_ids": [
+        "cuad-exact-v1:31e8e7018dd3e72fc13b3dc851887c0bedd4b3ca7402c70c4623889bde05eb85",
+        "cuad-exact-v1:b141a25c7c4869417c27a4a93d593b93db2e9549a58cee70622b743737654ec5"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_SoupmanFamilyReview.md",
+      "reason": "Shared franchise packet, parties and attachment evidence support one family."
+    },
+    {
+      "review_id": "title-006",
+      "group_ids": [
+        "cuad-exact-v1:34f860050b3b0d3d0ec6d46d3cc1dba0751942a1a96d3cbf9d5ebedce7ce1b20",
+        "cuad-exact-v1:43d302fd787e2bd5a4c750124b617c519836774472403414f2dd9879c1d41cb6"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_CardlyticsFamilyReview.md",
+      "reason": "Agreement CW251207, addendum and named software schedules form one family."
+    },
+    {
+      "review_id": "title-007",
+      "group_ids": [
+        "cuad-exact-v1:43d302fd787e2bd5a4c750124b617c519836774472403414f2dd9879c1d41cb6",
+        "cuad-exact-v1:5a8626ce1052a7af2d7bb1b741b9f9c9c7ea55921d78a9bf09e43872422fc440"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_CardlyticsFamilyReview.md",
+      "reason": "Agreement CW251207, addendum and named software schedules form one family."
+    },
+    {
+      "review_id": "title-008",
+      "group_ids": [
+        "cuad-exact-v1:43d302fd787e2bd5a4c750124b617c519836774472403414f2dd9879c1d41cb6",
+        "cuad-exact-v1:f506aae37b6bc361164432c59672b08aa91601465452640937693fa476211d21"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_CardlyticsFamilyReview.md",
+      "reason": "Agreement CW251207, addendum and named software schedules form one family."
+    },
+    {
+      "review_id": "title-009",
+      "group_ids": [
+        "cuad-exact-v1:4918cec952a22441ae0ea55480dcaba7dff0245135a6f12585c4495cf603eaf8",
+        "cuad-exact-v1:f4b6288c6a093315b536d8033d30ec22f3caa18225630a90d1b6e2219d4023f7"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_PCQuoteFamilyReview.md",
+      "reason": "Co-branding parent and amendments identify the same agreement."
+    },
+    {
+      "review_id": "title-010",
+      "group_ids": [
+        "cuad-exact-v1:830f3b69669b402d5608b9e2149e3497bee1b68186d13ca39a7784ace8896e54",
+        "cuad-exact-v1:9936e3a4f1a28354536090480af41a5f8c26ffa027059d882ed0b8047b96ea99"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_SoupmanFamilyReview.md",
+      "reason": "Shared franchise packet, parties and attachment evidence support one family."
+    },
+    {
+      "review_id": "title-011",
+      "group_ids": [
+        "cuad-exact-v1:9936e3a4f1a28354536090480af41a5f8c26ffa027059d882ed0b8047b96ea99",
+        "cuad-exact-v1:b141a25c7c4869417c27a4a93d593b93db2e9549a58cee70622b743737654ec5"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_SoupmanFamilyReview.md",
+      "reason": "Shared franchise packet, parties and attachment evidence support one family."
+    },
+    {
+      "review_id": "title-012",
+      "group_ids": [
+        "cuad-exact-v1:e294c17356892668cb33d5f6ed53411170684696dd7dc83939394c3371d87514",
+        "cuad-exact-v1:f8247974eb9bda782b5a4344a46d9f12a29ccced94fc6cdafe4dc95b83c2500f"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_FederatedFamilyReview.md",
+      "reason": "Services agreement, amendments and linked power of attorney form one reviewed family."
+    },
+    {
+      "review_id": "title-013",
+      "group_ids": [
+        "cuad-exact-v1:2f6d12b1b89ba2aafba57934885509c281fd322944dfe1e6bf88549fd8468f7d",
+        "cuad-exact-v1:75251e416bb04b4fe9a30ea4b80f7c4606c67d29bb67dd705a65a5b44b50b57c"
+      ],
+      "decision": "unresolved",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Shared Village project; direct agreement-family linkage remains unresolved."
+    },
+    {
+      "review_id": "title-014",
+      "group_ids": [
+        "cuad-exact-v1:42e8c2a860190ef6da4616f43e5360953cd1257504f81bf173f481c44c9e358d",
+        "cuad-exact-v1:4cd6bb8fa83da8c48011f3bd2210f6eac647e03a0aab9d7bbfd8d14cb8a0f1b4"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Cisco distribution parent, incorporated Exhibit C and amendment are linked."
+    },
+    {
+      "review_id": "title-015",
+      "group_ids": [
+        "cuad-exact-v1:42e8c2a860190ef6da4616f43e5360953cd1257504f81bf173f481c44c9e358d",
+        "cuad-exact-v1:78541613a74bc16d31309b79b24e413390c4dd9ca817c6b646bd7a9bacafc816"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Cisco distribution parent, incorporated Exhibit C and amendment are linked."
+    },
+    {
+      "review_id": "title-016",
+      "group_ids": [
+        "cuad-exact-v1:101741281922f1b20675cc48bffa8fae789becb4174f7f8d671f6784f75ca1c2",
+        "cuad-exact-v1:8bb7576126d1e4f0c2a4692fb491d513da9d8895bad1d87ec29d447f3aff52ea"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Hemp-biomass supply and NFLA endorsement identify distinct transactions."
+    },
+    {
+      "review_id": "title-017",
+      "group_ids": [
+        "cuad-exact-v1:101741281922f1b20675cc48bffa8fae789becb4174f7f8d671f6784f75ca1c2",
+        "cuad-exact-v1:a2ec08d844cc8641b4e731258c35f9c3dbda446c37558f4c3dabb5a8d391a96e"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Hemp-biomass supply and NFLA endorsement identify distinct transactions."
+    },
+    {
+      "review_id": "title-018",
+      "group_ids": [
+        "cuad-exact-v1:2d7de823692d398321e73ba2e205e667ef0028b219ca6a519401501d8a85f04f",
+        "cuad-exact-v1:df47e7bb4dfd1d895472a6a414eae6024dc174c2000ff469c0d1ac61d6c86708"
+      ],
+      "decision": "unresolved",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Shared address and promotion; agreement linkage remains unresolved."
+    },
+    {
+      "review_id": "title-019",
+      "group_ids": [
+        "cuad-exact-v1:3a7fe94345a741c0793b7d4cc9eed7b99f1d52abe855576fac8afc7099626bca",
+        "cuad-exact-v1:ac14eb636bfe9073602f10cf4a1b6dde8ac4e37b3f0326f468b50a4fbd494930"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Aerojet and Yangqiao agreements identify distinct solar projects."
+    },
+    {
+      "review_id": "title-020",
+      "group_ids": [
+        "cuad-exact-v1:4cd6bb8fa83da8c48011f3bd2210f6eac647e03a0aab9d7bbfd8d14cb8a0f1b4",
+        "cuad-exact-v1:8c9c60e6a1e419e4149e67e76c4ed130e56dedce2ec1674201764a3c30361efd"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Zebra/Xplore distribution chain is distinct from the reviewed Cisco family."
+    },
+    {
+      "review_id": "title-021",
+      "group_ids": [
+        "cuad-exact-v1:78541613a74bc16d31309b79b24e413390c4dd9ca817c6b646bd7a9bacafc816",
+        "cuad-exact-v1:8c9c60e6a1e419e4149e67e76c4ed130e56dedce2ec1674201764a3c30361efd"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Zebra/Xplore distribution chain is distinct from the reviewed Cisco family."
+    },
+    {
+      "review_id": "title-022",
+      "group_ids": [
+        "cuad-exact-v1:04993e9fb171451eb13473b9cdf36d9ec5d6e0f3f6c39e193ec0d8db3bfc34a0",
+        "cuad-exact-v1:451dac44b1c3af9e17238377f5297ed1121605651eef739138c04aa31b8c7bc7"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Parent connects to the already reviewed NETGEAR/Ingram Micro amendment family."
+    },
+    {
+      "review_id": "title-023",
+      "group_ids": [
+        "cuad-exact-v1:0badecfb27a0d110b91223d274a06b0713d39329cd0de962f6a5795f3ece340a",
+        "cuad-exact-v1:0c8ea7af1de1d140b21b7f4eaedcd45e6310fd78177f331363e8bcaaf5ac1cd8"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_FederatedFamilyReview.md",
+      "reason": "Services agreement, amendments and linked power of attorney form one reviewed family."
+    },
+    {
+      "review_id": "title-024",
+      "group_ids": [
+        "cuad-exact-v1:0badecfb27a0d110b91223d274a06b0713d39329cd0de962f6a5795f3ece340a",
+        "cuad-exact-v1:e294c17356892668cb33d5f6ed53411170684696dd7dc83939394c3371d87514"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_FederatedFamilyReview.md",
+      "reason": "Services agreement, amendments and linked power of attorney form one reviewed family."
+    },
+    {
+      "review_id": "title-025",
+      "group_ids": [
+        "cuad-exact-v1:0c8ea7af1de1d140b21b7f4eaedcd45e6310fd78177f331363e8bcaaf5ac1cd8",
+        "cuad-exact-v1:e294c17356892668cb33d5f6ed53411170684696dd7dc83939394c3371d87514"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_FederatedFamilyReview.md",
+      "reason": "Services agreement, amendments and linked power of attorney form one reviewed family."
+    },
+    {
+      "review_id": "title-026",
+      "group_ids": [
+        "cuad-exact-v1:1a665c30fce38c79925bc557e010a46007f784a7a24d265f4f3ae174f5cd3045",
+        "cuad-exact-v1:f4b6288c6a093315b536d8033d30ec22f3caa18225630a90d1b6e2219d4023f7"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_PCQuoteFamilyReview.md",
+      "reason": "Co-branding parent and amendments identify the same agreement."
+    },
+    {
+      "review_id": "title-027",
+      "group_ids": [
+        "cuad-exact-v1:2f14d55171e68b8bb464513adbadcbb44243fe6b7729884f75174bee8c668494",
+        "cuad-exact-v1:812e9c2c1091369a44917781ace8283559d1bc26eac545cc4e863337ba6818c4"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Exhibit B explicitly incorporates the dated Kubient/AP master agreement."
+    },
+    {
+      "review_id": "title-028",
+      "group_ids": [
+        "cuad-exact-v1:31e8e7018dd3e72fc13b3dc851887c0bedd4b3ca7402c70c4623889bde05eb85",
+        "cuad-exact-v1:9936e3a4f1a28354536090480af41a5f8c26ffa027059d882ed0b8047b96ea99"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_SoupmanFamilyReview.md",
+      "reason": "Shared franchise packet, parties and attachment evidence support one family."
+    },
+    {
+      "review_id": "title-029",
+      "group_ids": [
+        "cuad-exact-v1:34f860050b3b0d3d0ec6d46d3cc1dba0751942a1a96d3cbf9d5ebedce7ce1b20",
+        "cuad-exact-v1:5a8626ce1052a7af2d7bb1b741b9f9c9c7ea55921d78a9bf09e43872422fc440"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_CardlyticsFamilyReview.md",
+      "reason": "Agreement CW251207, addendum and named software schedules form one family."
+    },
+    {
+      "review_id": "title-030",
+      "group_ids": [
+        "cuad-exact-v1:34f860050b3b0d3d0ec6d46d3cc1dba0751942a1a96d3cbf9d5ebedce7ce1b20",
+        "cuad-exact-v1:f506aae37b6bc361164432c59672b08aa91601465452640937693fa476211d21"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_CardlyticsFamilyReview.md",
+      "reason": "Agreement CW251207, addendum and named software schedules form one family."
+    },
+    {
+      "review_id": "title-031",
+      "group_ids": [
+        "cuad-exact-v1:3ecde3fb9f9228b8215b9ea765affb120cf07293bc51aea46642f357f568c6b6",
+        "cuad-exact-v1:68c9bb4c74f857c02d261ac9aac2a8ba7574ef0a8b3513f05128bac5b90e3877"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Agreement 12965 and its three amendments explicitly identify the same parent."
+    },
+    {
+      "review_id": "title-032",
+      "group_ids": [
+        "cuad-exact-v1:3ecde3fb9f9228b8215b9ea765affb120cf07293bc51aea46642f357f568c6b6",
+        "cuad-exact-v1:80c37884ed9d06f3478ca1e48b13a9ed04e71c3693a332c7d82b96b94e1043b5"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Agreement 12965 and its three amendments explicitly identify the same parent."
+    },
+    {
+      "review_id": "title-033",
+      "group_ids": [
+        "cuad-exact-v1:3ecde3fb9f9228b8215b9ea765affb120cf07293bc51aea46642f357f568c6b6",
+        "cuad-exact-v1:c8b46a8d5c3201f047d991112b7e9a66726fa990e722ba4150a9b70ccf6e8756"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Agreement 12965 and its three amendments explicitly identify the same parent."
+    },
+    {
+      "review_id": "title-034",
+      "group_ids": [
+        "cuad-exact-v1:44d3129af6e1879917728169fec6fe598cc1cf8bec5d0959ba067870fad3eadc",
+        "cuad-exact-v1:525904f1cdf56b4a2ff6df6c296ae1584fc7981cd4da4dab7e831c63f6f3fc90"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Hosting agreement incorporates the identified HealthGate escrow schedule."
+    },
+    {
+      "review_id": "title-035",
+      "group_ids": [
+        "cuad-exact-v1:451dac44b1c3af9e17238377f5297ed1121605651eef739138c04aa31b8c7bc7",
+        "cuad-exact-v1:aacfd33dfc6f28e8a4dd6cd384df7ab9ad8f865545d5c18c39c6ae94af5d2f63"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Parent connects to the already reviewed NETGEAR/Ingram Micro amendment family."
+    },
+    {
+      "review_id": "title-036",
+      "group_ids": [
+        "cuad-exact-v1:4c93bf1e0e0c6de9d48c21cf2e36504a44b4447a6b5c7fccca1385ea33cc8848",
+        "cuad-exact-v1:b7959d4c9ab61154735ddfee2ef6a88815f3b96d6eba168fe68915c1b67bd875"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Schedule A identifies Exhibit I certificate; retain the printed date/name discrepancies."
+    },
+    {
+      "review_id": "title-037",
+      "group_ids": [
+        "cuad-exact-v1:4cd6bb8fa83da8c48011f3bd2210f6eac647e03a0aab9d7bbfd8d14cb8a0f1b4",
+        "cuad-exact-v1:78541613a74bc16d31309b79b24e413390c4dd9ca817c6b646bd7a9bacafc816"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Cisco distribution parent, incorporated Exhibit C and amendment are linked."
+    },
+    {
+      "review_id": "title-038",
+      "group_ids": [
+        "cuad-exact-v1:536e97693c306864899c900066552dbe43bbdab1ba2f2d082c9a67228362d2dd",
+        "cuad-exact-v1:68445e22c58bf0cf9c1b80b3df3f0712782b13735b3729e388847122db9396fc"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Parent requires the attached Exhibit 8 supplier/subcontractor form."
+    },
+    {
+      "review_id": "title-039",
+      "group_ids": [
+        "cuad-exact-v1:5a8626ce1052a7af2d7bb1b741b9f9c9c7ea55921d78a9bf09e43872422fc440",
+        "cuad-exact-v1:f506aae37b6bc361164432c59672b08aa91601465452640937693fa476211d21"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_CardlyticsFamilyReview.md",
+      "reason": "Agreement CW251207, addendum and named software schedules form one family."
+    },
+    {
+      "review_id": "title-040",
+      "group_ids": [
+        "cuad-exact-v1:648a6df5bdf3449e62bc1d27007a43d16591323fa36c5a755ad5999c4ea10fc9",
+        "cuad-exact-v1:6aad1e1e571af0c973f060278073e0bc5b78df20cc419932d87389eeceb45f78"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Pelican Phase 1 statement of work is the incorporated Appendix A."
+    },
+    {
+      "review_id": "title-041",
+      "group_ids": [
+        "cuad-exact-v1:65d40347454dc227e2e61ec4b3f1cc69ceda226c14057ebec260c1000e41f62a",
+        "cuad-exact-v1:eaa9c158b838c90db91853fc6d4ca49060f2a5275bc5a4139798018234bd1b56"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "First amendment explicitly identifies the 1996 NEON distributor parent."
+    },
+    {
+      "review_id": "title-042",
+      "group_ids": [
+        "cuad-exact-v1:68c9bb4c74f857c02d261ac9aac2a8ba7574ef0a8b3513f05128bac5b90e3877",
+        "cuad-exact-v1:80c37884ed9d06f3478ca1e48b13a9ed04e71c3693a332c7d82b96b94e1043b5"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Agreement 12965 and its three amendments explicitly identify the same parent."
+    },
+    {
+      "review_id": "title-043",
+      "group_ids": [
+        "cuad-exact-v1:68c9bb4c74f857c02d261ac9aac2a8ba7574ef0a8b3513f05128bac5b90e3877",
+        "cuad-exact-v1:c8b46a8d5c3201f047d991112b7e9a66726fa990e722ba4150a9b70ccf6e8756"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Agreement 12965 and its three amendments explicitly identify the same parent."
+    },
+    {
+      "review_id": "title-044",
+      "group_ids": [
+        "cuad-exact-v1:804285fe8619e819c5affaa8c8b0f7b204a8de6b7471e8f6f634e9093d9552f0",
+        "cuad-exact-v1:efc8cf212b36ec33c5c6c33561b81b34116baf669acd47c572acd0bb84132997"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Amendment identifies Azul/ATR parent by date and issue; retain identifier discrepancy."
+    },
+    {
+      "review_id": "title-045",
+      "group_ids": [
+        "cuad-exact-v1:80c37884ed9d06f3478ca1e48b13a9ed04e71c3693a332c7d82b96b94e1043b5",
+        "cuad-exact-v1:c8b46a8d5c3201f047d991112b7e9a66726fa990e722ba4150a9b70ccf6e8756"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Agreement 12965 and its three amendments explicitly identify the same parent."
+    },
+    {
+      "review_id": "title-046",
+      "group_ids": [
+        "cuad-exact-v1:830f3b69669b402d5608b9e2149e3497bee1b68186d13ca39a7784ace8896e54",
+        "cuad-exact-v1:b141a25c7c4869417c27a4a93d593b93db2e9549a58cee70622b743737654ec5"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_SoupmanFamilyReview.md",
+      "reason": "Shared franchise packet, parties and attachment evidence support one family."
+    },
+    {
+      "review_id": "title-047",
+      "group_ids": [
+        "cuad-exact-v1:87dc2e1cd9b5243d4287c88beda7bf865a7ce5d75316daab6a0514cb5d080644",
+        "cuad-exact-v1:8baf03ddd067f02df5dd84766e5f27a4764010fa12c02e65a7dbf09a7029112e"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Three Heritage/Premier amendments explicitly identify the July 2017 parent."
+    },
+    {
+      "review_id": "title-048",
+      "group_ids": [
+        "cuad-exact-v1:87dc2e1cd9b5243d4287c88beda7bf865a7ce5d75316daab6a0514cb5d080644",
+        "cuad-exact-v1:953a47e2d6df5c8c6bd62fbd32d0068ea5ba354816a9de113bd705b6a906fc91"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Three Heritage/Premier amendments explicitly identify the July 2017 parent."
+    },
+    {
+      "review_id": "title-049",
+      "group_ids": [
+        "cuad-exact-v1:87dc2e1cd9b5243d4287c88beda7bf865a7ce5d75316daab6a0514cb5d080644",
+        "cuad-exact-v1:9709a8c9366069a76260c3e8795618c9f19205d88425b7419e5b090b7b8ffe51"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Three Heritage/Premier amendments explicitly identify the July 2017 parent."
+    },
+    {
+      "review_id": "title-050",
+      "group_ids": [
+        "cuad-exact-v1:8baf03ddd067f02df5dd84766e5f27a4764010fa12c02e65a7dbf09a7029112e",
+        "cuad-exact-v1:953a47e2d6df5c8c6bd62fbd32d0068ea5ba354816a9de113bd705b6a906fc91"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Three Heritage/Premier amendments explicitly identify the July 2017 parent."
+    },
+    {
+      "review_id": "title-051",
+      "group_ids": [
+        "cuad-exact-v1:8baf03ddd067f02df5dd84766e5f27a4764010fa12c02e65a7dbf09a7029112e",
+        "cuad-exact-v1:9709a8c9366069a76260c3e8795618c9f19205d88425b7419e5b090b7b8ffe51"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Three Heritage/Premier amendments explicitly identify the July 2017 parent."
+    },
+    {
+      "review_id": "title-052",
+      "group_ids": [
+        "cuad-exact-v1:953a47e2d6df5c8c6bd62fbd32d0068ea5ba354816a9de113bd705b6a906fc91",
+        "cuad-exact-v1:9709a8c9366069a76260c3e8795618c9f19205d88425b7419e5b090b7b8ffe51"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Three Heritage/Premier amendments explicitly identify the July 2017 parent."
+    },
+    {
+      "review_id": "title-053",
+      "group_ids": [
+        "cuad-exact-v1:b42bc5c5ccb3e95e48b14148274f015153a91807481a1007102710138883d97b",
+        "cuad-exact-v1:bb56fd6f1849a5d23e4a1223b38ecbd8218a00c0cb5b9979023664c74af921b5"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "BioAmber/Cargill amendment explicitly identifies the April 2010 parent."
+    },
+    {
+      "review_id": "title-054",
+      "group_ids": [
+        "cuad-exact-v1:bcf2fd3d8fa28d85a5102c596856e118e3cdc78183e5da1501a118bfe7df4676",
+        "cuad-exact-v1:e5bc3405b7c8811022636e193aed3ce9117d13a2ffb1c202a7012c3f7baa6958"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Pizza Fusion franchise provisions require the Appendix C personnel covenant."
+    },
+    {
+      "review_id": "title-055",
+      "group_ids": [
+        "cuad-exact-v1:8bb7576126d1e4f0c2a4692fb491d513da9d8895bad1d87ec29d447f3aff52ea",
+        "cuad-exact-v1:a2ec08d844cc8641b4e731258c35f9c3dbda446c37558f4c3dabb5a8d391a96e"
+      ],
+      "decision": "confirmed",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Addendum expressly attaches to the October 30, 2017 endorsement agreement."
+    },
+    {
+      "review_id": "title-056",
+      "group_ids": [
+        "cuad-exact-v1:f169dc817c1909b0febbfb113867eb4f37b3a8ac08f58a0240370bcd7900e761",
+        "cuad-exact-v1:fa958daf1b8feca371578c1fa597718730e710e70bebf0377767aeacce7c0d5c"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Newegg arena sponsorship and WPT/Zynga content licensing identify distinct transactions."
+    },
+    {
+      "review_id": "title-057",
+      "group_ids": [
+        "cuad-exact-v1:073b83439a183fb911be23eade348bb07e38d33035e3351c0f3e930a52e8638b",
+        "cuad-exact-v1:677fdd783bbbf77af015c65c56a1affee45889bbfeedea3e0338c47686cfa66d"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "SINA license/termination and Baidu channel rights identify distinct agreements."
+    },
+    {
+      "review_id": "title-058",
+      "group_ids": [
+        "cuad-exact-v1:1ba4a1ff167c30273cb0680cb323acb187edd67c17c020b9c1aede8cca3d46e8",
+        "cuad-exact-v1:677fdd783bbbf77af015c65c56a1affee45889bbfeedea3e0338c47686cfa66d"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "SINA license/termination and Baidu channel rights identify distinct agreements."
+    },
+    {
+      "review_id": "title-059",
+      "group_ids": [
+        "cuad-exact-v1:42e8c2a860190ef6da4616f43e5360953cd1257504f81bf173f481c44c9e358d",
+        "cuad-exact-v1:8c9c60e6a1e419e4149e67e76c4ed130e56dedce2ec1674201764a3c30361efd"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingCrossSplitReview.md",
+      "reason": "Zebra/Xplore distribution chain is distinct from the reviewed Cisco family."
+    },
+    {
+      "review_id": "title-060",
+      "group_ids": [
+        "cuad-exact-v1:4fe803d07fe2278a6b23755d91ecefe5565a72d08dfdde085c867ba84d43ad5b",
+        "cuad-exact-v1:d6d2e12a6cd12a1a860eaf13690277edce0df700969112e7b9a122461f856131"
+      ],
+      "decision": "unresolved",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Marrero production and rail-facility asset/successor linkage remains unresolved."
+    },
+    {
+      "review_id": "title-061",
+      "group_ids": [
+        "cuad-exact-v1:51cce0855a5417a689a4bdbe6e1b58ec41ab3e5331ed0c38e93f77835abd287b",
+        "cuad-exact-v1:97756f300a7602d09c3249f6f4f8f4d9c8dffda00b7fa6c39e1b46efc8a7e332"
+      ],
+      "decision": "unresolved",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Supply agreement linkage to the corporate transition package remains unresolved."
+    },
+    {
+      "review_id": "title-062",
+      "group_ids": [
+        "cuad-exact-v1:60ec1411ee5a21b7f444d88a72cc8ffa76efd3722a15f1f848b053c57d7c2106",
+        "cuad-exact-v1:82036ac559e23794546e59accc93def9c447bd7f66b4bae967dc68c527dd7ad7"
+      ],
+      "decision": "unresolved",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Same-date Light Sheets promotion/distribution transaction linkage remains unresolved."
+    },
+    {
+      "review_id": "title-063",
+      "group_ids": [
+        "cuad-exact-v1:64e9e245ab8e2d2c1ccdeda9a92e405ad50186c0913f5d80edca30142f1cb83e",
+        "cuad-exact-v1:eb7ccc0ee504d0aff7906f3528566e69655d0008d35ebd725de76adfd54114aa"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "iShip/MBE services and Intuit/Stamps.com sponsorship identify distinct transactions."
+    },
+    {
+      "review_id": "title-064",
+      "group_ids": [
+        "cuad-exact-v1:69b68bff5ed90636c9bee47d5c233af471ee5e7a21697c79906a70e4d4c4b5c3",
+        "cuad-exact-v1:b7637b4197c88e484d9471903a33dd481bd5ba9d22278840bb3ee2545602f0a8"
+      ],
+      "decision": "unresolved",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Rotino committee example does not establish consultancy linkage to the joint venture."
+    },
+    {
+      "review_id": "title-065",
+      "group_ids": [
+        "cuad-exact-v1:71df1c590a862d37ab3208dfa0d1a61892d4c4c671e08067e185d04f5c06f411",
+        "cuad-exact-v1:7e501da05a846c09bf525dc793839d3d72ffbe202c9226de2360400ca8187ad9"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Distinct talent programs: Tarek El Moussa development versus Robbie Fowler endorsement."
+    },
+    {
+      "review_id": "title-066",
+      "group_ids": [
+        "cuad-exact-v1:87dc2e1cd9b5243d4287c88beda7bf865a7ce5d75316daab6a0514cb5d080644",
+        "cuad-exact-v1:8fcf75ae1160e1c5fd36435bd238dbc468306abf90b30d42721fc3af59073d5f"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Fonterra ingredient supply is not linked to the Heritage manufacturing chain by the reviewed evidence."
+    },
+    {
+      "review_id": "title-067",
+      "group_ids": [
+        "cuad-exact-v1:8baf03ddd067f02df5dd84766e5f27a4764010fa12c02e65a7dbf09a7029112e",
+        "cuad-exact-v1:8fcf75ae1160e1c5fd36435bd238dbc468306abf90b30d42721fc3af59073d5f"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Fonterra ingredient supply is not linked to the Heritage manufacturing chain by the reviewed evidence."
+    },
+    {
+      "review_id": "title-068",
+      "group_ids": [
+        "cuad-exact-v1:8fcf75ae1160e1c5fd36435bd238dbc468306abf90b30d42721fc3af59073d5f",
+        "cuad-exact-v1:953a47e2d6df5c8c6bd62fbd32d0068ea5ba354816a9de113bd705b6a906fc91"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Fonterra ingredient supply is not linked to the Heritage manufacturing chain by the reviewed evidence."
+    },
+    {
+      "review_id": "title-069",
+      "group_ids": [
+        "cuad-exact-v1:8fcf75ae1160e1c5fd36435bd238dbc468306abf90b30d42721fc3af59073d5f",
+        "cuad-exact-v1:9709a8c9366069a76260c3e8795618c9f19205d88425b7419e5b090b7b8ffe51"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Fonterra ingredient supply is not linked to the Heritage manufacturing chain by the reviewed evidence."
+    },
+    {
+      "review_id": "title-070",
+      "group_ids": [
+        "cuad-exact-v1:c2f798432f519dffd4b4cba191732df70ed1fe51fdb4f7c5e2e3157de07ef590",
+        "cuad-exact-v1:cabe18b1a2a73b1a9340e8d1b6955f37c7a0f1a1868757404fa4a875b0ba935e"
+      ],
+      "decision": "rejected",
+      "evidence_document": "docs/ml/CUAD_RemainingTrainingFamilyReview.md",
+      "reason": "Venue-contract promotion and dated FLOODfest sponsorship identify distinct transactions."
+    }
+  ],
+  "manual_title_reviews": [
+    {
+      "source_title": "XACCT Technologies, Inc.SUPPORT AND MAINTENANCE AGREEMENT",
+      "group_id": "cuad-exact-v1:16f9c516114a2cd2f66096a8aa028645d82055f306a4363638b559283d881b0a",
+      "decision": "reviewed_no_additional_edge",
+      "evidence_document": "docs/ml/CUAD_XACCTTitleReview.md",
+      "reason": "XACCT form manually inspected; no additional source record identified; title metadata stays unparsed."
+    }
+  ],
+  "families": [
+    {
+      "family_id": "cuad-family-v1:ac2f1848ab2c806a170e759e832422cfd1dc7af0ddd1c1cefb030bf199623aac",
+      "group_ids": [
+        "cuad-exact-v1:04993e9fb171451eb13473b9cdf36d9ec5d6e0f3f6c39e193ec0d8db3bfc34a0",
+        "cuad-exact-v1:451dac44b1c3af9e17238377f5297ed1121605651eef739138c04aa31b8c7bc7",
+        "cuad-exact-v1:aacfd33dfc6f28e8a4dd6cd384df7ab9ad8f865545d5c18c39c6ae94af5d2f63"
       ]
     },
     {
       "family_id": "cuad-family-v1:a2feafce611d1bc5e3825702f73e775c1b3dc24f436352e3c7a52db02b27add7",
-      "members": [
-        {
-          "group_id": "cuad-exact-v1:073b83439a183fb911be23eade348bb07e38d33035e3351c0f3e930a52e8638b",
-          "official_split": "train",
-          "source_titles": [
-            "LejuHoldingsLtd_20140121_DRS (on F-1)_EX-10.26_8473102_EX-10.26_Content License Agreement2"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 2180,
-              "index": 0,
-              "text_sha256": "01ebcd4dc1fdc164d0f68fd217be2b99ba76c39f5d842288808a1dca8c8d839c"
-            }
-          ]
-        },
-        {
-          "group_id": "cuad-exact-v1:1ba4a1ff167c30273cb0680cb323acb187edd67c17c020b9c1aede8cca3d46e8",
-          "official_split": "train",
-          "source_titles": [
-            "LejuHoldingsLtd_20140121_DRS (on F-1)_EX-10.26_8473102_EX-10.26_Content License Agreement1"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 46696,
-              "index": 0,
-              "text_sha256": "edb50810e93b97e83365e7e66f2bf583cfee3981ea1ffdbbcb9f0783d9050e2e"
-            }
-          ]
-        },
-        {
-          "group_id": "cuad-exact-v1:c2466bae8d8436ab8001f7729c9a7836c6037753fe68e1a15219a68283fcd182",
-          "official_split": "train",
-          "source_titles": [
-            "ChinaRealEstateInformationCorp_20090929_F-1_EX-10.32_4771615_EX-10.32_Content License Agreement"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 49191,
-              "index": 0,
-              "text_sha256": "8881b5815dde9e3f52c43311f80baaf25e10dd15ed5b52740e94ca4a0aba433a"
-            }
-          ]
-        }
-      ],
-      "decisions": [
-        {
-          "review_id": "similarity-003",
-          "group_ids": [
-            "cuad-exact-v1:1ba4a1ff167c30273cb0680cb323acb187edd67c17c020b9c1aede8cca3d46e8",
-            "cuad-exact-v1:c2466bae8d8436ab8001f7729c9a7836c6037753fe68e1a15219a68283fcd182"
-          ],
-          "decision": "confirmed_related_for_split_grouping",
-          "relationship": "agreement_attachment_coverage",
-          "evidence_document": "docs/ml/CUAD_TrainingFamilyReview.md",
-          "reason": "Shared domain-name/content licence parties and extensive matching provisions; the China Real Estate record also contains Exhibit B."
-        },
-        {
-          "review_id": "similarity-006",
-          "group_ids": [
-            "cuad-exact-v1:073b83439a183fb911be23eade348bb07e38d33035e3351c0f3e930a52e8638b",
-            "cuad-exact-v1:c2466bae8d8436ab8001f7729c9a7836c6037753fe68e1a15219a68283fcd182"
-          ],
-          "decision": "confirmed_related_for_split_grouping",
-          "relationship": "parent_attachment",
-          "evidence_document": "docs/ml/CUAD_TrainingFamilyReview.md",
-          "reason": "The separate Exhibit B matches the termination exhibit within the China Real Estate record, connecting it to the family also reviewed in similarity-003."
-        }
+      "group_ids": [
+        "cuad-exact-v1:073b83439a183fb911be23eade348bb07e38d33035e3351c0f3e930a52e8638b",
+        "cuad-exact-v1:1ba4a1ff167c30273cb0680cb323acb187edd67c17c020b9c1aede8cca3d46e8",
+        "cuad-exact-v1:c2466bae8d8436ab8001f7729c9a7836c6037753fe68e1a15219a68283fcd182"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:4d5c100a20488e6263e085c88525896a57000af13f554a2df2bfbe87ea9c5bdc",
+      "group_ids": [
+        "cuad-exact-v1:0badecfb27a0d110b91223d274a06b0713d39329cd0de962f6a5795f3ece340a",
+        "cuad-exact-v1:0c8ea7af1de1d140b21b7f4eaedcd45e6310fd78177f331363e8bcaaf5ac1cd8",
+        "cuad-exact-v1:e294c17356892668cb33d5f6ed53411170684696dd7dc83939394c3371d87514",
+        "cuad-exact-v1:f8247974eb9bda782b5a4344a46d9f12a29ccced94fc6cdafe4dc95b83c2500f"
       ]
     },
     {
       "family_id": "cuad-family-v1:5f63124db9dd7a22881fee5090dd006dd2659084ce8ec5a7e33231afd4260be3",
-      "members": [
-        {
-          "group_id": "cuad-exact-v1:1571c735d94f7aef8a458d0182be8c57662e2a4ba737b08003b8a86af637e958",
-          "official_split": "train",
-          "source_titles": [
-            "ARMSTRONGFLOORING,INC_01_07_2019-EX-10.2-INTELLECTUAL PROPERTY AGREEMENT"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 69759,
-              "index": 0,
-              "text_sha256": "8ff1a7503594d70ad15a6cdad9242ff5d5d8ca9db2e75074d02834d9b1b47b3d"
-            }
-          ]
-        },
-        {
-          "group_id": "cuad-exact-v1:aa870826a1af38874d1b4fa36e4c4bcde0f2c70e392ebb24172f5441f55a2bfc",
-          "official_split": "train",
-          "source_titles": [
-            "ArmstrongFlooringInc_20190107_8-K_EX-10.2_11471795_EX-10.2_Intellectual Property Agreement"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 56858,
-              "index": 0,
-              "text_sha256": "4311463a9da996c008b3c16e323d32c517ed1b785f283a30ee1aceccacf90558"
-            }
-          ]
-        }
-      ],
-      "decisions": [
-        {
-          "review_id": "similarity-004",
-          "group_ids": [
-            "cuad-exact-v1:1571c735d94f7aef8a458d0182be8c57662e2a4ba737b08003b8a86af637e958",
-            "cuad-exact-v1:aa870826a1af38874d1b4fa36e4c4bcde0f2c70e392ebb24172f5441f55a2bfc"
-          ],
-          "decision": "confirmed_related_for_split_grouping",
-          "relationship": "agreement_attachment_coverage",
-          "evidence_document": "docs/ml/CUAD_TrainingFamilyReview.md",
-          "reason": "Same dated intellectual-property agreement and named parties; records differ in source footers and assignment attachment coverage."
-        }
+      "group_ids": [
+        "cuad-exact-v1:1571c735d94f7aef8a458d0182be8c57662e2a4ba737b08003b8a86af637e958",
+        "cuad-exact-v1:aa870826a1af38874d1b4fa36e4c4bcde0f2c70e392ebb24172f5441f55a2bfc"
       ]
     },
     {
-      "family_id": "cuad-family-v1:daa99fa1722fc32f24f80018b7cb114faaf93d40bc9641e035ba7dc978c2a3c1",
-      "members": [
-        {
-          "group_id": "cuad-exact-v1:04993e9fb171451eb13473b9cdf36d9ec5d6e0f3f6c39e193ec0d8db3bfc34a0",
-          "official_split": "train",
-          "source_titles": [
-            "NETGEAR,INC_04_21_2003-EX-10.16- AMENDMENT #2 TO THE DISTRIBUTION AGREEMENT"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 4567,
-              "index": 0,
-              "text_sha256": "40b9a08eaf9a9a4cb8062d44af4289e0cb7732b2fe464b083505594978f1b776"
-            }
-          ]
-        },
-        {
-          "group_id": "cuad-exact-v1:aacfd33dfc6f28e8a4dd6cd384df7ab9ad8f865545d5c18c39c6ae94af5d2f63",
-          "official_split": "train",
-          "source_titles": [
-            "NETGEAR,INC_04_21_2003-EX-10.16-AMENDMENT TO THE DISTRIBUTOR AGREEMENT BETWEEN INGRAM MICRO AND NETGEAR"
-          ],
-          "paragraphs": [
-            {
-              "code_points": 8113,
-              "index": 0,
-              "text_sha256": "a26d0a46ae672963f96e729745f458b9684cbee0ac2b723045a6fe227cbd1fd7"
-            }
-          ]
-        }
-      ],
-      "decisions": [
-        {
-          "review_id": "similarity-005",
-          "group_ids": [
-            "cuad-exact-v1:04993e9fb171451eb13473b9cdf36d9ec5d6e0f3f6c39e193ec0d8db3bfc34a0",
-            "cuad-exact-v1:aacfd33dfc6f28e8a4dd6cd384df7ab9ad8f865545d5c18c39c6ae94af5d2f63"
-          ],
-          "decision": "confirmed_related_for_split_grouping",
-          "relationship": "exact_context_containment",
-          "evidence_document": "docs/ml/CUAD_TrainingFamilyReview.md",
-          "reason": "The complete 4567-code-point shorter context equals the longer context at [3546, 8113); keep both source annotation sets distinct."
-        }
+      "family_id": "cuad-family-v1:ec5f892815f7ec2460ec5e534f4e74ba2a620d74ef067a201654410ddf44a5f9",
+      "group_ids": [
+        "cuad-exact-v1:1a665c30fce38c79925bc557e010a46007f784a7a24d265f4f3ae174f5cd3045",
+        "cuad-exact-v1:4918cec952a22441ae0ea55480dcaba7dff0245135a6f12585c4495cf603eaf8",
+        "cuad-exact-v1:f4b6288c6a093315b536d8033d30ec22f3caa18225630a90d1b6e2219d4023f7"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:3366d889e13e6d29095c2079b855c6848a6b981ff4155b17f52c8d2555bdd756",
+      "group_ids": [
+        "cuad-exact-v1:25760695ffcc7d9c73db7a9d3d0babca55eb4b01b9910ef849c5f717c4ede83b",
+        "cuad-exact-v1:b5e4d537dbb1da2d53c36c627b8d00b090eb1f352d2fe8d2af53caf5c3e90393"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:5c37c987d02657ad0e1594b6ef4e94274c205ccc790fa45a2c461cef4d43e58b",
+      "group_ids": [
+        "cuad-exact-v1:2f14d55171e68b8bb464513adbadcbb44243fe6b7729884f75174bee8c668494",
+        "cuad-exact-v1:812e9c2c1091369a44917781ace8283559d1bc26eac545cc4e863337ba6818c4"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:5933ee1e7fa6f00003347696b62c194faa033c03b898b27e6c3fb1bc31c1b15a",
+      "group_ids": [
+        "cuad-exact-v1:31e8e7018dd3e72fc13b3dc851887c0bedd4b3ca7402c70c4623889bde05eb85",
+        "cuad-exact-v1:830f3b69669b402d5608b9e2149e3497bee1b68186d13ca39a7784ace8896e54",
+        "cuad-exact-v1:9936e3a4f1a28354536090480af41a5f8c26ffa027059d882ed0b8047b96ea99",
+        "cuad-exact-v1:b141a25c7c4869417c27a4a93d593b93db2e9549a58cee70622b743737654ec5"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:0da453de77425e8107e75a1d5d9be081d1bbb6e7c62974be93c6bfc862b66186",
+      "group_ids": [
+        "cuad-exact-v1:34f860050b3b0d3d0ec6d46d3cc1dba0751942a1a96d3cbf9d5ebedce7ce1b20",
+        "cuad-exact-v1:43d302fd787e2bd5a4c750124b617c519836774472403414f2dd9879c1d41cb6",
+        "cuad-exact-v1:5a8626ce1052a7af2d7bb1b741b9f9c9c7ea55921d78a9bf09e43872422fc440",
+        "cuad-exact-v1:f506aae37b6bc361164432c59672b08aa91601465452640937693fa476211d21"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:3fa1d59e0077ddf2665233237332cfb7a30cbc59166da43ab89d7be3220b3c48",
+      "group_ids": [
+        "cuad-exact-v1:3ecde3fb9f9228b8215b9ea765affb120cf07293bc51aea46642f357f568c6b6",
+        "cuad-exact-v1:68c9bb4c74f857c02d261ac9aac2a8ba7574ef0a8b3513f05128bac5b90e3877",
+        "cuad-exact-v1:80c37884ed9d06f3478ca1e48b13a9ed04e71c3693a332c7d82b96b94e1043b5",
+        "cuad-exact-v1:c8b46a8d5c3201f047d991112b7e9a66726fa990e722ba4150a9b70ccf6e8756"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:91dd8be433356ef09000d2d27af50b852c74b946377dfbbd6973d4271b8b9412",
+      "group_ids": [
+        "cuad-exact-v1:42e8c2a860190ef6da4616f43e5360953cd1257504f81bf173f481c44c9e358d",
+        "cuad-exact-v1:4cd6bb8fa83da8c48011f3bd2210f6eac647e03a0aab9d7bbfd8d14cb8a0f1b4",
+        "cuad-exact-v1:78541613a74bc16d31309b79b24e413390c4dd9ca817c6b646bd7a9bacafc816"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:0f8b49ae2229addf4098295b4c9f83d848b5c54d09e8f64cd671de9fca621521",
+      "group_ids": [
+        "cuad-exact-v1:44d3129af6e1879917728169fec6fe598cc1cf8bec5d0959ba067870fad3eadc",
+        "cuad-exact-v1:525904f1cdf56b4a2ff6df6c296ae1584fc7981cd4da4dab7e831c63f6f3fc90"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:61340768b8fb31e25bfcd88704eef88c7de5db1fc05e1db99c2fd7ba51e532c0",
+      "group_ids": [
+        "cuad-exact-v1:496c0446e173090ccf5605b657cfd497da22c927d635540dcc969a87cf610c46",
+        "cuad-exact-v1:9b0df2e9e32f3bf7c19b0e61b331cf05e5ed2beb648be1d2b3075d36f204922c"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:1986eae9f6bd66ba43701ccbcb63f9939f93d67a643445df5d6a6653145cbcfe",
+      "group_ids": [
+        "cuad-exact-v1:4c93bf1e0e0c6de9d48c21cf2e36504a44b4447a6b5c7fccca1385ea33cc8848",
+        "cuad-exact-v1:b7959d4c9ab61154735ddfee2ef6a88815f3b96d6eba168fe68915c1b67bd875"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:db64ee5482cb74065a02feead50168c263f46a5669638d4b3233974c0da4f399",
+      "group_ids": [
+        "cuad-exact-v1:536e97693c306864899c900066552dbe43bbdab1ba2f2d082c9a67228362d2dd",
+        "cuad-exact-v1:68445e22c58bf0cf9c1b80b3df3f0712782b13735b3729e388847122db9396fc"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:bc2bb2d467f38f2387e2647b650891bbf0a3395486e8b7e4ad20bd9faf4ddcef",
+      "group_ids": [
+        "cuad-exact-v1:648a6df5bdf3449e62bc1d27007a43d16591323fa36c5a755ad5999c4ea10fc9",
+        "cuad-exact-v1:6aad1e1e571af0c973f060278073e0bc5b78df20cc419932d87389eeceb45f78"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:fa588aa424231b1165b42fe17486cc1462c7f7579f06bb799c7732a11ab09585",
+      "group_ids": [
+        "cuad-exact-v1:65d40347454dc227e2e61ec4b3f1cc69ceda226c14057ebec260c1000e41f62a",
+        "cuad-exact-v1:eaa9c158b838c90db91853fc6d4ca49060f2a5275bc5a4139798018234bd1b56"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:c0736a3c18403d0866b2437654a874e9f0c841e79d5ada7713c5401a75427591",
+      "group_ids": [
+        "cuad-exact-v1:804285fe8619e819c5affaa8c8b0f7b204a8de6b7471e8f6f634e9093d9552f0",
+        "cuad-exact-v1:efc8cf212b36ec33c5c6c33561b81b34116baf669acd47c572acd0bb84132997"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:3f3e5fdb9294edb3b253cb8b12e68479a75c84a30e38421138bc8029fa87c498",
+      "group_ids": [
+        "cuad-exact-v1:87dc2e1cd9b5243d4287c88beda7bf865a7ce5d75316daab6a0514cb5d080644",
+        "cuad-exact-v1:8baf03ddd067f02df5dd84766e5f27a4764010fa12c02e65a7dbf09a7029112e",
+        "cuad-exact-v1:953a47e2d6df5c8c6bd62fbd32d0068ea5ba354816a9de113bd705b6a906fc91",
+        "cuad-exact-v1:9709a8c9366069a76260c3e8795618c9f19205d88425b7419e5b090b7b8ffe51"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:ea9478a6ab60cae0b969dab8aa9c20007714f2dbea8f2ef921c68158666d6c0a",
+      "group_ids": [
+        "cuad-exact-v1:8bb7576126d1e4f0c2a4692fb491d513da9d8895bad1d87ec29d447f3aff52ea",
+        "cuad-exact-v1:a2ec08d844cc8641b4e731258c35f9c3dbda446c37558f4c3dabb5a8d391a96e"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:7be829872152cba031498c0fe753930e034cf6d4bbdd72de628c31d1cbb1297e",
+      "group_ids": [
+        "cuad-exact-v1:b42bc5c5ccb3e95e48b14148274f015153a91807481a1007102710138883d97b",
+        "cuad-exact-v1:bb56fd6f1849a5d23e4a1223b38ecbd8218a00c0cb5b9979023664c74af921b5"
+      ]
+    },
+    {
+      "family_id": "cuad-family-v1:e4eeb09080becd80e52c50c596a3aa0e307dfb6c3ebd97f9153842ba44a07ff0",
+      "group_ids": [
+        "cuad-exact-v1:bcf2fd3d8fa28d85a5102c596856e118e3cdc78183e5da1501a118bfe7df4676",
+        "cuad-exact-v1:e5bc3405b7c8811022636e193aed3ce9117d13a2ffb1c202a7012c3f7baa6958"
       ]
     }
   ],
+  "document_holds": [
+    "cuad-exact-v1:2d7de823692d398321e73ba2e205e667ef0028b219ca6a519401501d8a85f04f",
+    "cuad-exact-v1:4fe803d07fe2278a6b23755d91ecefe5565a72d08dfdde085c867ba84d43ad5b",
+    "cuad-exact-v1:51cce0855a5417a689a4bdbe6e1b58ec41ab3e5331ed0c38e93f77835abd287b",
+    "cuad-exact-v1:60ec1411ee5a21b7f444d88a72cc8ffa76efd3722a15f1f848b053c57d7c2106",
+    "cuad-exact-v1:69b68bff5ed90636c9bee47d5c233af471ee5e7a21697c79906a70e4d4c4b5c3",
+    "cuad-exact-v1:75251e416bb04b4fe9a30ea4b80f7c4606c67d29bb67dd705a65a5b44b50b57c",
+    "cuad-exact-v1:82036ac559e23794546e59accc93def9c447bd7f66b4bae967dc68c527dd7ad7",
+    "cuad-exact-v1:97756f300a7602d09c3249f6f4f8f4d9c8dffda00b7fa6c39e1b46efc8a7e332",
+    "cuad-exact-v1:b7637b4197c88e484d9471903a33dd481bd5ba9d22278840bb3ee2545602f0a8",
+    "cuad-exact-v1:d6d2e12a6cd12a1a860eaf13690277edce0df700969112e7b9a122461f856131"
+  ],
+  "question_holds": [
+    {
+      "group_id": "cuad-exact-v1:1b038e6c4dc7692bb93ac016c4d6e2da4188dcf44caa3dc22f362a333f4c7451",
+      "paragraph_index": 0,
+      "source_label": "Anti-Assignment",
+      "category_id": "cuad.anti_assignment",
+      "source_question_ids": [
+        "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT(1)__Anti-Assignment",
+        "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT__Anti-Assignment"
+      ],
+      "evidence_document": "docs/ml/CUAD_DataReview.md"
+    },
+    {
+      "group_id": "cuad-exact-v1:1b038e6c4dc7692bb93ac016c4d6e2da4188dcf44caa3dc22f362a333f4c7451",
+      "paragraph_index": 0,
+      "source_label": "Exclusivity",
+      "category_id": "cuad.exclusivity",
+      "source_question_ids": [
+        "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT(1)__Exclusivity",
+        "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT__Exclusivity"
+      ],
+      "evidence_document": "docs/ml/CUAD_DataReview.md"
+    }
+  ],
+  "evidence_documents": {
+    "docs/ml/CUAD_CardlyticsFamilyReview.md": "772ffc26a26373129635abc9aaad4bf287d22ad178fb23472de75a7ce11675b5",
+    "docs/ml/CUAD_CrossSplitReview.md": "73690b5b4a69b4043a44b7ff1022b35f97488bc4371a6305819bb74f5e6b2450",
+    "docs/ml/CUAD_DataReview.md": "cadb069e1cca893988eeee099904a192541ba913e7473f0e427241d8d7a689fd",
+    "docs/ml/CUAD_FederatedFamilyReview.md": "3e28721a33b8b214f2b12fbe6bb5b3ee8d6a7880b51123a12ffcbc69d46c73f2",
+    "docs/ml/CUAD_PCQuoteFamilyReview.md": "ab6b775dbd12f5e4cd63177e862b88cefb98b7cdfd6f8a6c64eafeab136721bc",
+    "docs/ml/CUAD_RemainingCrossSplitReview.md": "c9de0b55e33e442f99e70c2931811ada71ef8bbee4114d33b2caddd488b5dbcc",
+    "docs/ml/CUAD_RemainingTrainingFamilyReview.md": "2a918c2eaafdf5ca774efaf77b76ad296ce4d018e1bb2d50f17964facbbd0071",
+    "docs/ml/CUAD_SoupmanFamilyReview.md": "478df4c12a748ece2cab2c9299ba8cd7d5b857904895975464ba39725ac212c5",
+    "docs/ml/CUAD_TrainingFamilyReview.md": "1739913af696351819baf17efe68bcfd4f40ed652b2275f63d17b2d4b22e3b7b",
+    "docs/ml/CUAD_UnresolvedHandlingPolicy.md": "b6de06ff9c1a3be6430319fdbf5cc170c79526f2bb5a48002a737da037ceb872",
+    "docs/ml/CUAD_XACCTTitleReview.md": "f5e00340e7d5430c19d07a71892ce2d1c2d3f043e525776355c222d5fedb46f5"
+  },
   "expected_summary": {
     "source_documents": 510,
     "exact_text_groups": 509,
     "official_train_documents": 408,
     "official_test_documents": 102,
-    "reviewed_candidate_pairs": 6,
-    "reviewed_families": 5,
-    "reviewed_member_groups": 11,
-    "training_only_families": 3,
-    "cross_split_families": 2,
-    "prospective_training_exclusions": 2,
-    "prospective_eligible_training_documents": 406,
-    "prospective_eligible_exact_groups": 405,
-    "prospective_internal_family_units": 401,
-    "prospective_sensitivity_test_documents": 100
+    "lexical_reviewed_pairs": 6,
+    "title_reviewed_pairs": 70,
+    "title_already_reviewed_pairs": 5,
+    "title_confirmed_pairs": 48,
+    "title_rejected_pairs": 16,
+    "title_unresolved_pairs": 6,
+    "manual_title_reviews": 1,
+    "reviewed_families": 22,
+    "training_only_families": 14,
+    "cross_split_families": 7,
+    "test_only_families": 1,
+    "confirmed_cross_split_training_exclusions": 13,
+    "unresolved_training_hold_documents": 10,
+    "prospective_training_exclusions": 23,
+    "prospective_eligible_training_documents": 385,
+    "prospective_eligible_exact_groups": 384,
+    "prospective_internal_family_units": 364,
+    "prospective_sensitivity_test_documents": 93,
+    "held_group_category_questions": 2,
+    "held_original_question_records": 4
   }
 }

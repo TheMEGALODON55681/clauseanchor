@@ -2,6 +2,8 @@ r"""Screen CUAD source titles for further related-document review candidates.
 
 Run: python ml/scripts/review_cuad_titles.py
 Requires the verified official data, saved similarity report and family manifest.
+Uses the frozen cuad_family_manifest_v1.json so reviewed candidate IDs stay stable
+after the active family policy advances. It does not screen against the v2 graph.
 No new dependencies, downloads, source edits, family decisions or splits.
 Outputs (ignored by Git): data/processed/cuad/title_candidates.json and
 data/processed/cuad/title_review.md. Differing existing reports are not replaced.
@@ -33,7 +35,7 @@ import unicodedata
 from audit_cuad_questions import require
 from build_cuad_inventory import build_groups, load_sources
 from check_cuad_families import (
-    REPORT_PATH, canonical_sha256, member_record, read_json, validate_manifest,
+    LEGACY_MANIFEST_PATH, REPORT_PATH, canonical_sha256, member_record, read_json, validate_manifest,
 )
 from review_cuad_similarity import save_outputs
 
@@ -250,7 +252,7 @@ def main():
     repo = Path(__file__).resolve().parents[2]
     full, train, test, provenance = load_sources(repo)
     groups = build_groups(full, train, test)
-    manifest = read_json(repo / "ml/configs/cuad_family_manifest.json")
+    manifest = read_json(repo / LEGACY_MANIFEST_PATH)
     validate_manifest(manifest, read_json(repo / REPORT_PATH), groups, provenance)
     report = {
         "title_screen_version": SCREEN_VERSION, "provenance": provenance,
@@ -287,7 +289,8 @@ def main():
     print(f"Created {created} report files." if created else "Existing reports match; no files changed.")
     print("Review report: data/processed/cuad/title_review.md")
     print("PASS: source-title screening completed; source data and family decisions unchanged.")
-    print("REVIEW REQUIRED: title matches are candidates only; no exclusions or internal splits applied.")
+    print("Historical screen snapshot: its pending statuses do not include later review decisions.")
+    print("Run check_cuad_families.py for current policy; no exclusions or internal splits applied here.")
 
 
 if __name__ == "__main__":

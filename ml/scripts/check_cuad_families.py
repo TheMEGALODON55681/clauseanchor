@@ -1,18 +1,15 @@
 """Validate reviewed CUAD families without creating splits or changing data.
 
 Run from the repository root: python ml/scripts/check_cuad_families.py
-Requires the existing official downloads and similarity_candidates.json.
+Requires the official downloads and the frozen similarity/title reports.
 Uses only the project's existing data dependencies; no downloads are made.
 
-The manifest records decisions from CUAD_CrossSplitReview.md and
-CUAD_TrainingFamilyReview.md. It pins the saved screening report using SHA-256
-of sorted, compact UTF-8 JSON (ensure_ascii=False), independent of file spacing.
-Family IDs hash the sorted JSON array of member exact-text group IDs using the
-same encoding. Changing family membership therefore changes its family ID.
+Manifest 2.0.0 adds title decisions, manual title review and conservative holds.
+The unchanged 1.0.0 snapshot remains reproducible and defines the title screen's
+original IDs. Canonical JSON hashes ignore key order and file spacing.
 
-Passing means the recorded decisions are internally consistent with the pinned
-source and screen. It does not complete broader family review, apply exclusions,
-resolve annotation conflicts, or authorize internal partition assignment.
+Passing verifies prospective policy accounting. It does not write filtered
+examples, adjudicate unresolved evidence, or authorize internal partitions.
 """
 
 from collections import Counter
@@ -25,6 +22,7 @@ from build_cuad_inventory import build_groups, load_sources
 
 
 REPORT_PATH = "data/processed/cuad/similarity_candidates.json"
+LEGACY_MANIFEST_PATH = "ml/configs/cuad_family_manifest_v1.json"
 POLICIES = {
     "internal_partitions": ["fit", "dev_select", "dev_cal", "dev_policy"],
     "related_records": "keep_connected_family_together",
@@ -107,7 +105,7 @@ def components(ids, edges):
 
 
 def validate_manifest(manifest, report, groups, provenance):
-    """Return verified prospective counts; do not assign partitions or write files."""
+    """Validate the frozen v1 scope, also used to reproduce the title screen."""
     fields(manifest, {"manifest_version", "review_scope", "provenance", "policies",
                       "families", "expected_summary"}, "manifest")
     require(manifest["manifest_version"] == "1.0.0", "Unsupported family manifest version.")
@@ -239,6 +237,35 @@ def main():
     groups = build_groups(full, train, test)
     manifest = read_json(repo_root / "ml/configs/cuad_family_manifest.json")
     report = read_json(repo_root / REPORT_PATH)
+    if manifest["manifest_version"] == "2.0.0":
+        from cuad_review_policy import TITLE_PATH, validate_review_manifest
+
+        require((repo_root / TITLE_PATH).is_file(),
+                "Missing title report. Run python ml/scripts/review_cuad_titles.py first.")
+        summary = validate_review_manifest(
+            manifest, read_json(repo_root / LEGACY_MANIFEST_PATH), report,
+            read_json(repo_root / TITLE_PATH), groups, provenance, evidence_root=repo_root,
+        )
+        print("Pinned sources, spans, archived manifest, reports and review evidence: verified")
+        print("Family manifest version: 2.0.0")
+        print(f"Lexical decisions: {summary['lexical_reviewed_pairs']}; title decisions: "
+              f"{summary['title_reviewed_pairs']} ({summary['title_confirmed_pairs']} confirmed; "
+              f"{summary['title_rejected_pairs']} rejected; {summary['title_unresolved_pairs']} unresolved)")
+        print(f"Manual title reviews: {summary['manual_title_reviews']}")
+        print(f"Training reservations: {summary['prospective_training_exclusions']} documents "
+              f"({summary['confirmed_cross_split_training_exclusions']} confirmed cross-split; "
+              f"{summary['unresolved_training_hold_documents']} unresolved holds; union counted)")
+        print(f"Question holds: {summary['held_original_question_records']} original records; "
+              f"{summary['held_group_category_questions']} group/category questions")
+        print(f"Prospective internal pool: {summary['prospective_eligible_training_documents']} documents; "
+              f"{summary['prospective_eligible_exact_groups']} exact groups; "
+              f"{summary['prospective_internal_family_units']} family units")
+        print(f"Official test: {summary['official_test_documents']}; known-overlap sensitivity: "
+              f"{summary['prospective_sensitivity_test_documents']}")
+        print("PASS: reviewed decisions, connected families and conservative holds verified.")
+        print("Internal split assignment: not approved; preparation must enforce the validated policy.")
+        print("Read-only check: no source edits, filtered examples or partitions written.")
+        return
     summary = validate_manifest(manifest, report, groups, provenance)
     for relative in REVIEW_DOCS.values():
         require((repo_root / relative).is_file(), f"Missing evidence note: {relative}")
