@@ -1,0 +1,99 @@
+{
+  "config_version": 1,
+  "purpose": "official_baseline_reference_assets",
+  "archive": {
+    "url": "https://zenodo.org/api/records/4599830/files/roberta-base.zip/content",
+    "size_bytes": 447429160,
+    "sha256": "d77eda1c3737f995cedcce01dcb92ba33db11941224a3b193d41be795dba706e",
+    "published_md5": "63855b3d798f010164974cafc3ade2fa"
+  },
+  "members": {
+    "config.json": {
+      "size_bytes": 662,
+      "sha256": "e1e349cabc8e3e9c3eab0a6ff01c605ea2db8c95fc787ab7075abeaafcb0c070"
+    },
+    "merges.txt": {
+      "size_bytes": 456318,
+      "sha256": "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5"
+    },
+    "nbest_predictions_.json": {
+      "size_bytes": 46494467,
+      "sha256": "f0f8a6a3b130a9477c4c1287698cc07bdbac98d69449ccde53c288f920fb1d75"
+    },
+    "null_odds_.json": {
+      "size_bytes": 504735,
+      "sha256": "67698839b8506bdaeec7221943385acd4cbfedbcd08ee9e10111c4792d5a6cb1"
+    },
+    "predictions_.json": {
+      "size_bytes": 971316,
+      "sha256": "96f33aa13c18a2d5d5ccabcbcbe61156e3f7b14835f45765fcf549af794fc88a"
+    },
+    "pytorch_model.bin": {
+      "size_bytes": 496316087,
+      "sha256": "251347208d8d5bfda2eecf1fd675ac63c710977b053241d900239c8d7dd188e0"
+    },
+    "special_tokens_map.json": {
+      "size_bytes": 772,
+      "sha256": "c611b1f7d416eb001ee4f293d903ea8c88e703463f1d403f1866a0352743fd00"
+    },
+    "tokenizer_config.json": {
+      "size_bytes": 1069,
+      "sha256": "59e4bd576c694024f70be3998b93d158e2aefd591d5ef3123090ef02b85ef8bf"
+    },
+    "training_args.bin": {
+      "size_bytes": 2095,
+      "sha256": "4b055aeffd2a83b1d6f4a407746b6df945088b32f55d447569ccddd8d819d651"
+    },
+    "vocab.json": {
+      "size_bytes": 898822,
+      "sha256": "06b4d46c8e752d410213d9548eb27a54db70fda0319b6271fb8d59dead5e1cab"
+    }
+  },
+  "reference_source": {
+    "repo_id": "The-Atticus-Project/cuad",
+    "revision": "67faa0e6023b04fcaae6cc09497ab00e5d63a2a2"
+  },
+  "reference_files": {
+    "category_descriptions.csv": {
+      "size_bytes": 8987,
+      "sha256": "7499950ee04d2ed2841c0f8ec2ef96b91be039bc2ea3c4edcc36334a465b1f36"
+    },
+    "evaluate.py": {
+      "size_bytes": 7132,
+      "sha256": "5c56ac9fc82fe56ef77616a1dffba0707e4366ba916f7ab5d3e4434013d0a624"
+    },
+    "readme.md": {
+      "size_bytes": 2140,
+      "sha256": "81108440df6af9612acffb2271f27cf231eceda806d3729e998578b50a00a854"
+    },
+    "run.sh": {
+      "size_bytes": 668,
+      "sha256": "9158453af9b4a59b3ebd4a8dd1528e748020161ed55941da827508fe78ada6a1"
+    },
+    "train.py": {
+      "size_bytes": 36664,
+      "sha256": "1d79e5478fa547d878e42368ef85dffcc15033bc190447c1435c44d5d899ed36"
+    },
+    "utils.py": {
+      "size_bytes": 24502,
+      "sha256": "49ae1f33e090dddcdb416f12ffd53be80187f61c42d80dbea36288fdd5835d36"
+    }
+  },
+  "official_test": {
+    "path": "data/raw/cuad/official/test.json",
+    "size_bytes": 7378232,
+    "sha256": "007b6a40b0c65247f881627375c3d2e9b6aeeb5dfa89957494feed0765a1a073",
+    "source_documents": 102,
+    "questions": 4182
+  },
+  "reference_inference_settings": {
+    "max_seq_length": 512,
+    "doc_stride": 256,
+    "max_query_length": 64,
+    "max_answer_length": 512,
+    "n_best_size": 20,
+    "version_2_with_negative": true,
+    "do_lower_case": false,
+    "use_fast_tokenizer": false
+  }
+}
