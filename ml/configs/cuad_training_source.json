@@ -1,0 +1,40 @@
+{
+  "source_version": 1,
+  "purpose": "clean_training_backbone_and_fast_tokenizer",
+  "repo_id": "FacebookAI/roberta-base",
+  "revision": "e2da8e2f811d1448a5b465c236feacd80ffbac7b",
+  "files": {
+    "config.json": {
+      "size_bytes": 481,
+      "sha256": "ef0185e2aae6e06c5f105a285006952c340e20c7dbf43c86ec82601b13fc45e9"
+    },
+    "merges.txt": {
+      "size_bytes": 456318,
+      "sha256": "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5"
+    },
+    "model.safetensors": {
+      "size_bytes": 498818054,
+      "sha256": "5bde1d28afb363d0103324efeb5afc8b2b397fe5e04beabb9b1ef355255ade81"
+    },
+    "tokenizer.json": {
+      "size_bytes": 1355863,
+      "sha256": "847bbeab6174d66a88898f729d52fa8d355fafe1bea101cf960dd404581df70e"
+    },
+    "tokenizer_config.json": {
+      "size_bytes": 25,
+      "sha256": "994f46754c5bf4014f1aa92d34b1374319c3a6b3f702105cd5b742beaecd18ce"
+    },
+    "vocab.json": {
+      "size_bytes": 898823,
+      "sha256": "9e7f63c2d15d666b52e21d250d2e513b87c9b713cfa6987a82ed89e5e6e50655"
+    }
+  },
+  "feature_defaults": {
+    "max_seq_length": 512,
+    "max_question_tokens": 64,
+    "context_token_overlap": 128,
+    "max_answer_tokens": 256,
+    "add_prefix_space": false,
+    "trim_offsets": true
+  }
+}
