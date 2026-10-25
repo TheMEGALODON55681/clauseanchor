@@ -82,7 +82,7 @@ def latest(root, run_sha):
     return directory, manifest, read_json(directory / "progress.json")
 
 
-def save(root, run_sha, model, optimizer, scaler, progress, evaluation=None, new_best=False):
+def save(root, run_sha, model, optimizer, scaler, progress, evaluation=None, new_best=False, execution_sha=None):
     root = Path(root)
     checkpoints = root / "checkpoints"
     checkpoints.mkdir(parents=True, exist_ok=True)
@@ -110,6 +110,8 @@ def save(root, run_sha, model, optimizer, scaler, progress, evaluation=None, new
         staging = Path(temporary)
         payload = {"run_sha256": run_sha, "progress": state, "model": model.state_dict(),
                    "optimizer": optimizer.state_dict(), "scaler": scaler.state_dict(), "rng": rng_state(device)}
+        if execution_sha is not None:
+            payload["execution_sha256"] = execution_sha
         with (staging / "training.pt").open("wb") as handle:
             torch.save(payload, handle)
             handle.flush()
@@ -121,6 +123,8 @@ def save(root, run_sha, model, optimizer, scaler, progress, evaluation=None, new
             names.append("evaluation.json")
         manifest = {"run_sha256": run_sha, "checkpoint": name,
                     "files": {filename: file_spec(staging / filename) for filename in names}}
+        if execution_sha is not None:
+            manifest["execution_sha256"] = execution_sha
         atomic_json(staging / "manifest.json", manifest)
         os.replace(staging, checkpoints / name)
     replace_json(root / "latest.json", {"run_sha256": run_sha, "checkpoint": name,
@@ -142,12 +146,16 @@ def save(root, run_sha, model, optimizer, scaler, progress, evaluation=None, new
     return state
 
 
-def restore(root, run_sha, model, optimizer, scaler):
+def restore(root, run_sha, model, optimizer, scaler, execution_sha=None, allow_legacy=False):
     directory, manifest, progress = latest(Path(root), run_sha)
+    recorded = manifest.get("execution_sha256")
+    require(recorded == execution_sha or (recorded is None and allow_legacy),
+            "Checkpoint execution identity differs; refusing incompatible code.")
     # Restricted state-dict loading; never deserialize arbitrary Python classes.
     payload = torch.load(directory / "training.pt", map_location="cpu", weights_only=True)
     require(payload["run_sha256"] == run_sha and canonical_sha256(payload["progress"]) == canonical_sha256(progress),
             "Checkpoint state and progress disagree.")
+    require(payload.get("execution_sha256") == recorded, "Checkpoint execution binding disagrees with manifest.")
     model.load_state_dict(payload["model"], strict=True)
     optimizer.load_state_dict(payload["optimizer"])
     scaler.load_state_dict(payload["scaler"])

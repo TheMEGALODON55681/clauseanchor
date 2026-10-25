@@ -9,6 +9,7 @@ copies. A small LRU bounds open shard files (including on Windows).
 from bisect import bisect_right
 from collections import OrderedDict
 import hashlib
+import math
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +22,7 @@ from prepare_cuad_training_plan import POLICY, audit_features, pools, same, samp
 
 
 LOSS_POLICY = "negative_log_sum_of_unique_paired_start_end_probabilities_v1"
+AMP_MAX_RETRIES = 8
 
 
 def verify_training_plan(repo, feature_root, plan_root):
@@ -197,28 +199,67 @@ def make_optimizer(model):
 
 
 def optimizer_update(model, optimizer, scaler, microbatches, device):
-    """Accumulate an example-weighted mean; never silently skip an AMP update."""
+    """Finish one real update, retrying AMP overflow on the SAME effective batch.
+
+    GradScaler must see nonfinite gradients before clipping can raise. Its
+    skipped step leaves weights and Adam state untouched, then update() lowers
+    the scale. Replay the same microbatches and Torch RNG (including dropout),
+    with a bounded retry count. The caller advances progress only on success.
+    Nonfinite forward/loss values, FP32 gradients and invalid finite-gradient
+    norms still fail. No clipping or optimizer update uses nonfinite gradients.
+    """
     require(bool(microbatches), "Empty optimizer update.")
     total = sum(len(b["input_ids"]) for b in microbatches)
     require(total > 0, "No training examples.")
     model.train()
-    optimizer.zero_grad(set_to_none=True)
-    mean_loss = 0.0
-    for batch in microbatches:
-        inputs = {k: batch[k].to(device) for k in ("input_ids", "attention_mask", "gold_pairs", "pair_mask")}
-        with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=scaler.is_enabled()):
-            output = model(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"])
-            loss = joint_marginal_loss(output.start_logits, output.end_logits, inputs["gold_pairs"], inputs["pair_mask"])
-        require(torch.isfinite(loss).item(), "Nonfinite training loss.")
-        weight = len(batch["input_ids"]) / total
-        scaler.scale(loss * weight).backward()
-        mean_loss += float(loss.detach()) * weight
-    scaler.unscale_(optimizer)
-    norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0, error_if_nonfinite=True, foreach=False)
-    require(torch.isfinite(norm).item() and norm.item() > 0, "Gradients are nonfinite or zero; no optimizer step taken.")
-    scale = scaler.get_scale()
-    scaler.step(optimizer)
-    scaler.update()
-    require(scaler.get_scale() >= scale, "AMP skipped an update; smoke is incomplete.")
-    optimizer.zero_grad(set_to_none=True)
-    return {"mean_loss": mean_loss, "gradient_norm_before_clip": float(norm), "examples": total}
+    cpu_rng = torch.get_rng_state()
+    cuda_rng = torch.cuda.get_rng_state_all() if device.type == "cuda" else None
+    try:
+        for retry in range(AMP_MAX_RETRIES + 1):
+            if retry:
+                torch.set_rng_state(cpu_rng)
+                if cuda_rng is not None:
+                    torch.cuda.set_rng_state_all(cuda_rng)
+            optimizer.zero_grad(set_to_none=True)
+            mean_loss = 0.0
+            for batch in microbatches:
+                inputs = {k: batch[k].to(device) for k in ("input_ids", "attention_mask", "gold_pairs", "pair_mask")}
+                with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=scaler.is_enabled()):
+                    output = model(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"])
+                    loss = joint_marginal_loss(output.start_logits, output.end_logits, inputs["gold_pairs"], inputs["pair_mask"])
+                require(torch.isfinite(loss).item(), "Nonfinite training loss.")
+                weight = len(batch["input_ids"]) / total
+                scaler.scale(loss * weight).backward()
+                mean_loss += float(loss.detach()) * weight
+            scaler.unscale_(optimizer)
+            gradients = [p.grad for p in model.parameters() if p.grad is not None]
+            require(bool(gradients), "No gradients; no optimizer step taken.")
+            finite = torch.stack([torch.isfinite(g).all() for g in gradients]).all().item()
+            # Do not retain an extra model-sized set of gradients across a retry.
+            del gradients
+            scale = scaler.get_scale()
+            if not finite:
+                require(scaler.is_enabled(), "Nonfinite FP32 gradients; no optimizer step taken.")
+                # unscale_ has recorded the overflow; step MUST skip AdamW.
+                # Do not clip first: multiplying inf by zero would create NaNs.
+                scaler.step(optimizer)
+                scaler.update()
+                reduced = scaler.get_scale()
+                require(math.isfinite(reduced) and 0 < reduced < scale,
+                        "AMP did not reduce a valid loss scale; stopping without advancing progress.")
+                require(retry < AMP_MAX_RETRIES,
+                        f"AMP overflow persisted after {AMP_MAX_RETRIES} retries; no optimizer update or progress advance. "
+                        "Resume the last complete checkpoint only after reviewing this failure.")
+                print(f"AMP overflow: no optimizer update; loss scale {scale:g} -> {reduced:g}; "
+                      f"retrying the same {total} windows ({retry + 1}/{AMP_MAX_RETRIES}).", flush=True)
+                continue
+            norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0, error_if_nonfinite=True, foreach=False)
+            require(torch.isfinite(norm).item() and norm.item() > 0,
+                    "Gradients are nonfinite or zero; no optimizer step taken.")
+            scaler.step(optimizer)
+            scaler.update()
+            require(scaler.get_scale() >= scale, "Unexpected AMP skipped update; progress must not advance.")
+            return {"mean_loss": mean_loss, "gradient_norm_before_clip": float(norm), "examples": total,
+                    "amp_overflow_retries": retry, "loss_scale": scaler.get_scale()}
+    finally:
+        optimizer.zero_grad(set_to_none=True)
