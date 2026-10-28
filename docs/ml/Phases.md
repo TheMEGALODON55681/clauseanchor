@@ -1,6 +1,6 @@
 # ML phase status
 
-Updated: 2026-10-26. Owner: Tanishq Arya.
+Updated: 2026-10-28. Owner: Tanishq Arya.
 
 | Phase | Status | Completion gate |
 |---|---|---|
@@ -8,16 +8,45 @@ Updated: 2026-10-26. Owner: Tanishq Arya.
 | 2. CUAD data and official baseline | Frozen partitions and released-model baseline recorded | Preserve source/family exclusions and split provenance; keep released-model baseline metrics separate from the newly trained model |
 | 5. Clean-split extraction training | Completed training run; selected checkpoint recorded | `clean_training_v1`: three epochs, 3,474 optimizer updates; best `checkpoint-000022`; recovery and completed state verified |
 | 6. Evaluation and calibration | Source-span evidence reviewed; boundary/selection experiment, calibration and operating policy pending | Complete the ordered gates below before declaring usable calibrated category decisions |
-| 7. Rules and corpus adapters | Pending | Reviewed rule tests, verified judgment provenance and licenses |
-| 8. Retrieval | Pending | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
+| 7. Rules and corpus adapters | Deferred beyond this release | Reviewed rule tests, verified judgment provenance and licenses |
+| 8. Retrieval | Deferred beyond this release | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
 | 11. ML artifact release | Pending | Frozen model/decoder/calibration/policy artifacts, final evaluation, support limits, CPU benchmark and reproduction |
-| 12. Joint integration | Pending | Real local demo, honest partial states, exact highlighting and measured review workload |
+| 12. Joint integration | Pending | Real local demo, honest partial states, exact highlighting and runtime; formal workload study deferred |
 
 Keep the numbering aligned with ClauseAnchor_Plan.md. Phases 3, 4, 9 and 10 are primarily Aryan's app work. Update observed results after running each gate; do not mark future work complete because files have been named.
 
+## Fixed release window: October 29–November 7, 2026
+
+Deadlines are end of day Asia/Calcutta. October 28 is preparation; do not reset
+the clock in a later chat. This is an extraction-focused research prototype,
+not completion of rules, retrieval, India validation or the original programme.
+
+| Deadline | Deliverable and exit condition |
+|---|---|
+| October 30 | Real candidate-only AnalyzerProtocol adapter around checkpoint-000022, verified local export and non-fixture smoke. Exact missing artifacts/checks remain blockers; never substitute the stub. See [RealAnalyzer.md](RealAnalyzer.md). |
+| October 31 | At most one saved-candidate decoder variant under section 6.3; freeze the existing disjoint reference if the gate fails or time runs out. |
+| November 2 | One predeclared simple calibration assessment on dev_cal with held-out/out-of-fold reliability and support; otherwise keep confidence null and scope unvalidated. |
+| November 4 | Predeclared operating-policy decision on dev_policy; unsupported decisions stay abstained/unavailable. No absence without separate validation. |
+| November 5 | One final evaluation of the frozen available pipeline, official test plus required sensitivity slice; official scoring for baseline comparability, anchored metrics separately. No test-based tuning. |
+| November 6 | CPU loading/runtime, source offsets, progress/cancellation/partial-state checks and parser integration if available. Name missing app integration instead of claiming completion. |
+| November 7 | Versioned package, manifest, loading instructions, measured limitations and release handoff; fixes only, no further experiment. Candidate-only is an acceptable fallback. |
+
 ## Current handoff
 
-- Last confirmed committed code: `ae8a8ec` (`feat(ml): add verified CUAD source error review and record findings`).
+- Remote main rechecked October 28: `f4b6500ff78f2bef7022cd837870ad04b64adc94`.
+  The prior empty phase document was restored there; no repair is pending.
+- First real adapter batch locally verified October 28: checkpoint-000022
+  inference-only export, candidate-only adapter and non-fixture CPU smoke.
+  Tanishq's 32 focused tests passed in 11.751 seconds; all 9 smoke windows ran,
+  producing 5 unvalidated candidates. Load 24.35 seconds; inference 3.97 seconds
+  on this one input. Supplied report passed independent contract/source-slice
+  and receipt-binding checks. Actual artifact hashes and observed bad/overbroad
+  candidates are recorded in [RealAnalyzer.md](RealAnalyzer.md).
+- Cap-on-liability remains processing-incomplete because of first-64 question
+  truncation; the India extension is unavailable. This is not complete app
+  integration or validated extraction quality. No training/diagnostic rerun or
+  decoder experiment occurred. The October 30 local-adapter target is met early;
+  the October 29–November 7 execution window and later deadlines are unchanged.
 - User-reported local verification: 367 CUAD tests passed; the source-span
   exporter reproduced saved candidates, score curves and the diagnostic report.
 - Handoff review on 2026-10-26: all 410 ML tests passed on the committed code
@@ -116,29 +145,36 @@ entity/date extent differences, repeated occurrences and genuine category
 mistakes. The targeted miss sample is not a prevalence estimate. A benchmark
 false positive is not automatically a verified negative training example.
 
-Next, define and evaluate a small versioned boundary-aware candidate-selection
-comparison on the saved candidates and source text, with fixed model weights.
-Preserve alternative answer boundaries and multi-span capability; do not choose
-boundaries using gold annotations. Compare the full dev_select results against
-disjoint_full and the original decoder at comparable empirical precision and
-false-highlight burden. Record exact-boundary and multiple-answer recall,
-category regressions and sparse support. Keep calibration and deployment-policy
-selection pending until a justified extraction/scoring design is frozen.
+The completed source review is sufficient to motivate the ONE optional decoder
+experiment. No further source-audit prerequisite, unfamiliar-clause classifier,
+verifier, hyperparameter sweep, new candidate collection or retraining branch is
+in this release. Real integration starts first using the existing disjoint
+reference provisionally; its positive-margin cutoff is not an operating policy.
 
-If score separation is useful, freeze the candidate generation, decoder, score
-features, matching definition and selected checkpoint before calibration. If
-it is inadequate, record the specific failure and evaluate the smallest
-justified change, such as candidate coverage, a verifier or further fine-tuning.
-Do not initiate retraining solely because the fixed-margin F1 is low. Do not
-promise that calibration alone can repair a weak extractor.
+Before execution, write the deterministic boundary/selection algorithm and this
+promotion rule into a versioned config. Keep checkpoint-000022 fixed and use
+saved candidates/source only. Gold may score outputs, never generate or select
+boundaries. Do not key rules to reviewed documents or change source annotations.
 
-Any model, candidate or scoring change starts a new versioned experiment and
-requires renewed development validation. It must not reuse incompatible saved
-results or quietly overwrite the completed training/validation runs.
+On all 1,599 dev_select questions / 935 gold spans, choose each decoder's
+highest-recall whole-tie operating point satisfying BOTH empirical precision
+>=90% and at most 24 false highlights. Recompute the existing disjoint reference
+under the same rule; retain the original-decoder comparison. Promote the one
+candidate only if it adds at least 19 matched gold spans, with no decrease in
+exact-match count or matched spans in multiple-gold questions, and passes all
+source-integrity/provenance checks. Report category regressions and sparse
+support. If any gate fails, evidence is missing or time expires, retain the
+existing disjoint reference. Freeze by October 31 either way.
+
+This is an engineering decision on explored development data, not calibrated
+confidence or a production quality guarantee. No new variant follows failure.
+Freeze checkpoint, tokenizer, generation, decoder and score definition before
+calibration. A post-freeze correctness repair gets a new artifact identity and
+explicit downstream revalidation; do not hide its deadline cost.
 
 ### 6.4 Fit and assess confidence calibration on dev_cal
 
-Status: pending a frozen extractor and scoring design.
+Status: pending a frozen extractor and scoring design; assessment due November 2.
 
 Use only `dev_cal` to fit the calibration component. The extractor's weights
 remain fixed during this step. Evaluate probability reliability with an
@@ -152,7 +188,7 @@ rescaling cannot create missing answers or guarantee useful ranking.
 
 ### 6.5 Select the operating policy on dev_policy
 
-Status: pending calibrated outputs from the frozen pipeline.
+Status: pending; decision due November 4. If calibration/support fails, retain candidate-only output.
 
 Before selecting thresholds, record the acceptance criteria for precision,
 minimum useful recall, false highlights per document, absence errors and
@@ -181,12 +217,15 @@ protocol. Do not silently turn dev_policy into another unrestricted tuning set.
 
 ### 6.6 Freeze and evaluate the complete pipeline
 
-Status: pending the preceding gates.
+Status: pending; final frozen evaluation due November 5.
 
 Freeze model, tokenizer, candidate generation, decoder, calibrator, policy and
 supported categories before final evaluation. Evaluate the declared benchmark
 scope and required overlap-sensitivity slice separately. The previously run
 released-model official baseline is not a final result for this trained model.
+Use the official evaluator for a comparable baseline result; report anchored
+metrics separately. Development anchored precision/recall is not comparable to
+the published official-test word-set scoring, including its Parties handling.
 Do not use official-test results to tune thresholds or choose decoder variants.
 
 For the intended product scope, add a separately annotated, representative
@@ -194,17 +233,21 @@ document evaluation before generalizing from CUAD to arbitrary uploads. Keep
 new evaluation documents outside development and respect document/family
 grouping. Report misses as well as false highlights and abstentions.
 
-## Workload validation and remaining product work
+## Deferred scope and retained manual review
 
-At joint integration, measure review time and correction effort with and without
-ClauseAnchor on comparable documents. Account for order/learning effects and
-inspect missed clauses, not only the highlights users see. A release must meet
-the recorded extraction and support criteria and demonstrate useful assistance;
-the existence of an interface is not evidence that review work is reduced.
+Rules, verified judgment corpus/retrieval, the five India extensions and the
+Indian annotation/validation study remain deferred beyond this extraction
+release. No dates beyond November 7 are promised. A formal controlled review-time
+study is also parked; do not claim measured time savings without doing it.
+Keep false highlights, misses, runtime and integration checks in this release.
 
-The subsequent rules, corpus adapters, retrieval, artifact packaging and joint
-integration phases remain in the plan. A future stronger verifier or retraining
-branch is conditional on measured failures; neither is started by this update.
+Preserve full source access and the neutral manual-review navigation in
+[ScopeFixtures.md](ScopeFixtures.md): only accepted findings contribute coverage;
+review candidates remain separate. Incomplete work gives null completed inventory
+and count. Zero candidates/items does not establish absence, harmlessness or that
+nothing important was missed. Benchmark false positives are not an importance
+classifier or automatic negative training labels. No additional source audit is
+a prerequisite for the adapter, decoder freeze or calibration.
 
 ## Working cadence
 

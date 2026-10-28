@@ -1,0 +1,7 @@
+# Python 3.12. Keep the existing CUDA Torch build on Tanishq's machine.
+# CPU hosts: install torch==2.9.1 from the official CPU wheel index first.
+numpy==2.3.5
+torch==2.9.1
+transformers==4.57.6
+tokenizers==0.22.2
+safetensors==0.7.0

@@ -22,7 +22,7 @@ payload = to_dict(result)
 
 The call also accepts `progress(event)` and `cancelled() -> bool`. Cancellation is checked between categories in the stub and will be checked between batches in real inference. `AnalysisCancelled` signals a stopped call.
 
-`AnalyzerProtocol` defines this signature for the later real analyzer. Constructor options for real model artifacts will be added separately, without changing the call signature unless a reviewed contract revision is necessary.
+`CandidateOnlyAnalyzer` now implements this same signature. Its offline export, expected manifest hash, runtime options and parser bridge are documented in [RealAnalyzer.md](RealAnalyzer.md). It produces experimental unvalidated review candidates; actual local checkpoint smoke verification is tracked separately.
 
 ## Shapes and invariants
 
@@ -47,7 +47,7 @@ Confidence is either a measured probability or null. Null means not validated, n
 
 The backend wraps this result in its HTTP `Analysis` object: it adds analysis ID, job status, timestamps, jurisdiction and party binding; it maps core `doc_id` to the document ID and core `mode=stub` to API `mode=sample`. Do not copy the core object directly into the HTTP response without this adapter.
 
-The backend adds `polarity` and `actor_evidence` to its clause DTO. The ML core does not decide which party is helped or harmed. `StructureNode` is a minimal core input; the parser's full nodes also contain page and source-locator metadata.
+The backend adds `polarity` and `actor_evidence` to its clause DTO. The ML core does not decide which party is helped or harmed. `StructureNode` is a minimal core input. Current parser nodes add label, level and text; page, bounding box and source-locator metadata belong to parser blocks. The `context_from_parsed_document()` bridge transports decoration ranges using existing core nodes with `kind="decoration"`; it does not change the contract schema or canonical source.
 
 JavaScript indexes strings using UTF-16 units. Before highlighting, map code-point offsets to UTF-16 positions or validate with `Array.from(sourceText).slice(start, end).join('')`. The fixture includes an emoji before the spans to expose this mismatch.
 

@@ -5,6 +5,7 @@ from .contract import (
 )
 from .serialization import from_dict, result_json_schema, to_dict, to_json
 from .stub import StubAnalyzer, read_exact_text
+from .analyzer import CandidateOnlyAnalyzer, context_from_parsed_document
 
 __all__ = [
     "CONTRACT_VERSION", "AnalysisCancelled", "AnalysisContext", "AnalysisResult",
@@ -12,4 +13,5 @@ __all__ = [
     "RuleFlag", "Span", "StructureNode", "StubAnalyzer", "from_dict", "read_exact_text",
     "result_json_schema", "text_digest", "to_dict", "to_json", "validate_result",
     "validate_span",
+    "CandidateOnlyAnalyzer", "context_from_parsed_document",
 ]
