@@ -7,7 +7,7 @@ Updated: 2026-10-29, Asia/Calcutta. Owner: Tanishq Arya.
 | 1. Interface | Core locally verified; teammate integration pending | Preserve the version 2.0 contract and exact offsets; confirm the backend adapter and all four category states |
 | 2. CUAD data and official baseline | Frozen partitions and released-model baseline recorded | Preserve source/family exclusions and split provenance; keep released-model baseline metrics separate from the newly trained model |
 | 5. Clean-split extraction training | Completed training run; selected checkpoint recorded | `clean_training_v1`: three epochs, 3,474 optimizer updates; best `checkpoint-000022`; recovery and completed state verified |
-| 6. Evaluation and calibration | One decoder experiment closed; existing disjoint extractor frozen October 29; calibration and operating policy pending | Complete the ordered gates below before declaring usable calibrated category decisions |
+| 6. Evaluation and calibration | Disjoint extractor frozen; calibration assessed October 29 and unvalidated; candidate-only operating policy pending | Keep confidence null; record the policy and complete frozen evaluation without reopening failed experiments |
 | 7. Rules and corpus adapters | Deferred beyond this release | Reviewed rule tests, verified judgment provenance and licenses |
 | 8. Retrieval | Deferred beyond this release | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
 | 11. ML artifact release | Pending | Frozen model/decoder/calibration/policy artifacts, final evaluation, support limits, CPU benchmark and reproduction |
@@ -33,8 +33,9 @@ not completion of rules, retrieval, India validation or the original programme.
 
 ## Current handoff
 
-- Remote main rechecked October 29: `74fc4b312410fc9e29eba82e7ef2eb4c3da579ee`,
-  Tanishq's 11-file real-analyzer commit. The prior empty phase document was
+- Remote main rechecked October 29: `25922ab9a1da2f517b044b98757c79b056c4c112`,
+  Tanishq's five-file experiment/freeze commit, following the 11-file real-analyzer
+  commit `74fc4b3`. Both batches match their reviewed files. The prior empty phase document was
   already restored at `f4b6500`; no repair is pending.
 - First real adapter batch locally verified October 28: checkpoint-000022
   inference-only export, candidate-only adapter and non-fixture CPU smoke.
@@ -72,6 +73,15 @@ not completion of rules, retrieval, India validation or the original programme.
   Checkpoint, tokenizer, generation and raw-score definition remain unchanged.
   The real adapter keeps null-confidence, unvalidated review candidates and
   honest abstained/unavailable states; zero candidates never establishes absence.
+- Calibration assessment completed October 29 at 02:04:04 IST, before the
+  November 2 deadline. Tanishq's 37 tests passed in 10.843 seconds. All 1,558
+  dev_cal questions / 68,405 windows were processed. The one method was assessed
+  on 2,184 eligible candidates across 36 families; OOF Brier 0.103406 and ECE
+  0.040156. Two bins exceeded the fixed 0.10 absolute-gap limit, so the result
+  is **unvalidated**. All other assessment checks passed; 34/41 categories have
+  sparse support. See [CUAD_Calibration.md](CUAD_Calibration.md) for measured
+  results, hashes and review limits. Retain null confidence and candidate-only
+  behavior; no additional method or retraining attempt follows.
 
 ## Ordered Phase 6 gates
 
@@ -199,9 +209,30 @@ explicit downstream revalidation; do not hide its deadline cost.
 
 ### 6.4 Fit and assess confidence calibration on dev_cal
 
-Status: pending; extractor frozen October 29. Predeclare the calibration method
-and reliability/support assessment before opening dev_cal results. Assessment
-remains due November 2; no confidence claim is created by the decoder freeze.
+Status: assessment completed and reviewed October 29; **unvalidated**. The
+November 2 assessment deliverable is met with an explicit failed reliability
+gate. The frozen extractor and null-confidence candidate-only output remain.
+
+The method was predeclared in `ml/configs/cuad_calibration_v1.json` and
+[CUAD_Calibration.md](CUAD_Calibration.md): one pooled monotone regularized sigmoid,
+five whole-family folds, out-of-fold reliability/support checks and the same-method
+full refit. The target is candidate overlap eligibility, not exactness, absence or
+one-to-one accepted precision. Processing-incomplete questions are excluded from
+confidence fitting while all gold spans remain in miss/recall reporting. The new
+runner opened dev_cal examples only and preserved frozen artifacts. All 37 focused
+software tests passed before delivery and on Tanishq's machine. The supplied
+identity, calibrator, report and OOF rows were reviewed; the unchanged procedure's
+fits, predictions, metrics, family bootstrap and gate were reproduced from those
+rows. No model inference or alternative-method experiment was rerun in that review.
+
+Of 3,465 raw selected candidates, 2,184 were eligible for calibration (468
+overlap-eligible, 1,716 ineligible). The [0.2,0.4) probability bin predicted
+28.822% eligibility versus 16.429% observed; [0.6,0.8) predicted 69.433% versus
+81.071% observed. Their 12.394- and 11.638-percentage-point gaps exceed the fixed
+10-point limit. The overall ECE does not override this failure. No OOF values
+reached 0.8, and 34/41 categories have sparse support. All categories remain
+unvalidated; the fitted parameters stay offline with runtime activation false.
+No gate relaxation, new calibration method or retraining branch follows.
 
 Use only `dev_cal` to fit the calibration component. The extractor's weights
 remain fixed during this step. Evaluate probability reliability with an
@@ -215,7 +246,10 @@ rescaling cannot create missing answers or guarantee useful ranking.
 
 ### 6.5 Select the operating policy on dev_policy
 
-Status: pending; decision due November 4. If calibration/support fails, retain candidate-only output.
+Status: pending; decision due November 4. Calibration failed its predeclared
+reliability gate, so retain candidate-only output with null confidence. Record
+the exact fallback policy and evaluation criteria before opening dev_policy
+results; do not use policy data to rescue calibration or enable accepted findings.
 
 Before selecting thresholds, record the acceptance criteria for precision,
 minimum useful recall, false highlights per document, absence errors and
