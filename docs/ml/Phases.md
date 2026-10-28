@@ -1,13 +1,13 @@
 # ML phase status
 
-Updated: 2026-10-28. Owner: Tanishq Arya.
+Updated: 2026-10-29, Asia/Calcutta. Owner: Tanishq Arya.
 
 | Phase | Status | Completion gate |
 |---|---|---|
 | 1. Interface | Core locally verified; teammate integration pending | Preserve the version 2.0 contract and exact offsets; confirm the backend adapter and all four category states |
 | 2. CUAD data and official baseline | Frozen partitions and released-model baseline recorded | Preserve source/family exclusions and split provenance; keep released-model baseline metrics separate from the newly trained model |
 | 5. Clean-split extraction training | Completed training run; selected checkpoint recorded | `clean_training_v1`: three epochs, 3,474 optimizer updates; best `checkpoint-000022`; recovery and completed state verified |
-| 6. Evaluation and calibration | Source-span evidence reviewed; boundary/selection experiment, calibration and operating policy pending | Complete the ordered gates below before declaring usable calibrated category decisions |
+| 6. Evaluation and calibration | One decoder experiment closed; existing disjoint extractor frozen October 29; calibration and operating policy pending | Complete the ordered gates below before declaring usable calibrated category decisions |
 | 7. Rules and corpus adapters | Deferred beyond this release | Reviewed rule tests, verified judgment provenance and licenses |
 | 8. Retrieval | Deferred beyond this release | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
 | 11. ML artifact release | Pending | Frozen model/decoder/calibration/policy artifacts, final evaluation, support limits, CPU benchmark and reproduction |
@@ -33,8 +33,9 @@ not completion of rules, retrieval, India validation or the original programme.
 
 ## Current handoff
 
-- Remote main rechecked October 28: `f4b6500ff78f2bef7022cd837870ad04b64adc94`.
-  The prior empty phase document was restored there; no repair is pending.
+- Remote main rechecked October 29: `74fc4b312410fc9e29eba82e7ef2eb4c3da579ee`,
+  Tanishq's 11-file real-analyzer commit. The prior empty phase document was
+  already restored at `f4b6500`; no repair is pending.
 - First real adapter batch locally verified October 28: checkpoint-000022
   inference-only export, candidate-only adapter and non-fixture CPU smoke.
   Tanishq's 32 focused tests passed in 11.751 seconds; all 9 smoke windows ran,
@@ -45,7 +46,7 @@ not completion of rules, retrieval, India validation or the original programme.
 - Cap-on-liability remains processing-incomplete because of first-64 question
   truncation; the India extension is unavailable. This is not complete app
   integration or validated extraction quality. No training/diagnostic rerun or
-  decoder experiment occurred. The October 30 local-adapter target is met early;
+  decoder experiment occurred in that adapter batch. The October 30 local-adapter target is met early;
   the October 29–November 7 execution window and later deadlines are unchanged.
 - User-reported local verification: 367 CUAD tests passed; the source-span
   exporter reproduced saved candidates, score curves and the diagnostic report.
@@ -55,14 +56,22 @@ not completion of rules, retrieval, India validation or the original programme.
 - Full development coverage: 39 documents, 41 categories, 45,748 windows and
   935 annotated answer spans. Original coordinates, scores and match counts
   reproduced exactly for every question.
-- The latest completed run is source-span error-review export. All 155 exported
+- The earlier source-span error-review export is complete. All 155 exported
   cases have received an exploratory assistant review; annotation adjudication
   remains separate. No new training or inference was performed by that export.
 - Review and measured limitations: [CUAD_DecoderReview.md](CUAD_DecoderReview.md).
-- Source findings and the next experiment: [CUAD_SourceErrorReview.md](CUAD_SourceErrorReview.md).
-- `disjoint_full` remains the primary comparison for the next experiment. It has not
-  been adopted as an automatic-highlight policy, and the original checkpoint
-  selection and training score remain unchanged.
+- Source findings: [CUAD_SourceErrorReview.md](CUAD_SourceErrorReview.md).
+- The single decoder experiment completed October 29 at 00:53:54 IST.
+  Tanishq's 32 focused tests passed in 4.960 seconds. The candidate added one
+  matched gold span against the required 19, so the predeclared gate failed.
+  Report/identity bindings, arithmetic and gate were reviewed; see
+  [CUAD_DecoderExperiment.md](CUAD_DecoderExperiment.md) for hashes, results and
+  review limits. Retain `disjoint_full` and freeze the existing extractor now,
+  ahead of October 31. Decoder experimentation is closed; no second variant.
+- This freeze does not adopt a production cutoff or automatic-highlight policy.
+  Checkpoint, tokenizer, generation and raw-score definition remain unchanged.
+  The real adapter keeps null-confidence, unvalidated review candidates and
+  honest abstained/unavailable states; zero candidates never establishes absence.
 
 ## Ordered Phase 6 gates
 
@@ -122,8 +131,23 @@ For a fixed candidate pool, filtering cannot recover a missing candidate.
 
 ### 6.3 Decide whether the current extractor can support useful filtering
 
-Status: export completed and all 155 cases reviewed by the assistant; a bounded
-decoder experiment and the final extraction/scoring design remain pending.
+Status: completed October 29. All 155 source-review cases remain reviewed; the
+single allowed decoder experiment failed its promotion gate. The existing
+checkpoint/tokenizer/generation/disjoint decoder/raw-score definition is frozen.
+
+The one candidate was predeclared as `near_score_sentence_pack_v1` in
+`ml/configs/cuad_decoder_boundary_v1.json`; algorithm and fixed gate are in
+[CUAD_DecoderExperiment.md](CUAD_DecoderExperiment.md), with the reviewed result
+and frozen artifact hashes. The runtime adapter/export remains unchanged.
+
+At the fixed whole-tie comparison points, the reference has 217 TP / 24 FP /
+718 FN, 199 exact matches and 78 matches in multiple-gold questions. The candidate
+has 218 / 24 / 717, 200 exact and 79 multiple-gold matches. Its +1 TP misses the
+required +19. There are no category regressions at those selected points; 26/41
+categories have sparse support. The candidate has one extra Non-Compete FP at
+the positive-margin baseline. Neither result validates probabilities or broad
+review quality. Keep the existing reference; do not promote the diagnostic raw
+cutoff to the app. Calibration and operating-policy decisions remain separate.
 
 The exporter produced `error_review_v1/report.json` and `review.md`. Its counts,
 source evidence and bindings were checked. The separate
@@ -145,18 +169,19 @@ entity/date extent differences, repeated occurrences and genuine category
 mistakes. The targeted miss sample is not a prevalence estimate. A benchmark
 false positive is not automatically a verified negative training example.
 
-The completed source review is sufficient to motivate the ONE optional decoder
-experiment. No further source-audit prerequisite, unfamiliar-clause classifier,
+The completed source review motivated the ONE decoder experiment, now closed.
+No further source-audit prerequisite, unfamiliar-clause classifier,
 verifier, hyperparameter sweep, new candidate collection or retraining branch is
-in this release. Real integration starts first using the existing disjoint
-reference provisionally; its positive-margin cutoff is not an operating policy.
+in this release. Real integration continues using the frozen existing disjoint
+reference; its positive-margin cutoff is not an operating policy.
 
-Before execution, write the deterministic boundary/selection algorithm and this
-promotion rule into a versioned config. Keep checkpoint-000022 fixed and use
-saved candidates/source only. Gold may score outputs, never generate or select
-boundaries. Do not key rules to reviewed documents or change source annotations.
+The deterministic algorithm and following promotion rule were written into a
+versioned config before execution. Checkpoint-000022 stayed fixed; only saved
+candidates/source were used. Gold scored outputs without generating or selecting
+boundaries. No document-specific rules or source-annotation changes were made.
 
-On all 1,599 dev_select questions / 935 gold spans, choose each decoder's
+The predeclared rule, retained for the record: on all 1,599 dev_select questions /
+935 gold spans, choose each decoder's
 highest-recall whole-tie operating point satisfying BOTH empirical precision
 >=90% and at most 24 false highlights. Recompute the existing disjoint reference
 under the same rule; retain the original-decoder comparison. Promote the one
@@ -174,7 +199,9 @@ explicit downstream revalidation; do not hide its deadline cost.
 
 ### 6.4 Fit and assess confidence calibration on dev_cal
 
-Status: pending a frozen extractor and scoring design; assessment due November 2.
+Status: pending; extractor frozen October 29. Predeclare the calibration method
+and reliability/support assessment before opening dev_cal results. Assessment
+remains due November 2; no confidence claim is created by the decoder freeze.
 
 Use only `dev_cal` to fit the calibration component. The extractor's weights
 remain fixed during this step. Evaluate probability reliability with an
