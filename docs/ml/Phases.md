@@ -7,7 +7,7 @@ Updated: 2026-10-29, Asia/Calcutta. Owner: Tanishq Arya.
 | 1. Interface | Core locally verified; teammate integration pending | Preserve the version 2.0 contract and exact offsets; confirm the backend adapter and all four category states |
 | 2. CUAD data and official baseline | Frozen partitions and released-model baseline recorded | Preserve source/family exclusions and split provenance; keep released-model baseline metrics separate from the newly trained model |
 | 5. Clean-split extraction training | Completed training run; selected checkpoint recorded | `clean_training_v1`: three epochs, 3,474 optimizer updates; best `checkpoint-000022`; recovery and completed state verified |
-| 6. Evaluation and calibration | Disjoint extractor frozen; calibration assessed October 29 and unvalidated; candidate-only operating policy pending | Keep confidence null; record the policy and complete frozen evaluation without reopening failed experiments |
+| 6. Evaluation and calibration | Disjoint extractor frozen; calibration unvalidated; candidate-only policy measured and retained October 29 | Keep confidence null; complete final frozen evaluation without reopening failed experiments |
 | 7. Rules and corpus adapters | Deferred beyond this release | Reviewed rule tests, verified judgment provenance and licenses |
 | 8. Retrieval | Deferred beyond this release | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
 | 11. ML artifact release | Pending | Frozen model/decoder/calibration/policy artifacts, final evaluation, support limits, CPU benchmark and reproduction |
@@ -26,17 +26,18 @@ not completion of rules, retrieval, India validation or the original programme.
 | October 30 | Real candidate-only AnalyzerProtocol adapter around checkpoint-000022, verified local export and non-fixture smoke. Exact missing artifacts/checks remain blockers; never substitute the stub. See [RealAnalyzer.md](RealAnalyzer.md). |
 | October 31 | At most one saved-candidate decoder variant under section 6.3; freeze the existing disjoint reference if the gate fails or time runs out. |
 | November 2 | One predeclared simple calibration assessment on dev_cal with held-out/out-of-fold reliability and support; otherwise keep confidence null and scope unvalidated. |
-| November 4 | Predeclared operating-policy decision on dev_policy; unsupported decisions stay abstained/unavailable. No absence without separate validation. |
+| November 4 | Completed October 29: fixed dev_policy measurement reviewed; retain candidate-only output with documented limitations. Unsupported decisions stay abstained/unavailable; absence remains disabled. |
 | November 5 | One final evaluation of the frozen available pipeline, official test plus required sensitivity slice; official scoring for baseline comparability, anchored metrics separately. No test-based tuning. |
 | November 6 | CPU loading/runtime, source offsets, progress/cancellation/partial-state checks and parser integration if available. Name missing app integration instead of claiming completion. |
 | November 7 | Versioned package, manifest, loading instructions, measured limitations and release handoff; fixes only, no further experiment. Candidate-only is an acceptable fallback. |
 
 ## Current handoff
 
-- Remote main rechecked October 29: `25922ab9a1da2f517b044b98757c79b056c4c112`,
-  Tanishq's five-file experiment/freeze commit, following the 11-file real-analyzer
-  commit `74fc4b3`. Both batches match their reviewed files. The prior empty phase document was
-  already restored at `f4b6500`; no repair is pending.
+- Remote main rechecked October 29: `d882596ac662507e7d1b9c5c978d04408c90357d`,
+  Tanishq's six-file calibration commit, following decoder freeze `25922ab` and
+  real-analyzer commit `74fc4b3`. The reviewed policy batch is based on this
+  commit; its generated identity matches the delivered config and producer code.
+  The prior empty phase document was restored at `f4b6500`; no repair is pending.
 - First real adapter batch locally verified October 28: checkpoint-000022
   inference-only export, candidate-only adapter and non-fixture CPU smoke.
   Tanishq's 32 focused tests passed in 11.751 seconds; all 9 smoke windows ran,
@@ -82,6 +83,19 @@ not completion of rules, retrieval, India validation or the original programme.
   sparse support. See [CUAD_Calibration.md](CUAD_Calibration.md) for measured
   results, hashes and review limits. Retain null confidence and candidate-only
   behavior; no additional method or retraining attempt follows.
+- Candidate-only policy measurement completed October 29 at 16:55:33 IST and
+  its supplied evidence was reviewed. Tanishq's 32 tests passed in 8.674 seconds.
+  After VS Code closed, collection resumed: 734 saved + 2 pilot + 822 final new
+  questions = 1,558. Coverage is 38 documents / 37 families / 41 categories /
+  54,622 windows / 991 gold spans. No training restart occurred.
+- The fixed policy returned 3,128 review candidates: 680 TP / 2,448 FP / 311 FN,
+  precision 21.739%, recall 68.618%, 564 exact matches. Mean false candidate
+  highlights/document is 64.42; 433 questions remain processing-incomplete,
+  741 have zero candidates, and 33/41 categories have sparse support. These
+  limitations do not justify automatic acceptance. See
+  [CUAD_CandidatePolicy.md](CUAD_CandidatePolicy.md) for hashes, uncertainty,
+  strata, restart accounting and review limits. Retain null confidence and the
+  unchanged candidate-only policy; final test evaluation is still pending.
 
 ## Ordered Phase 6 gates
 
@@ -181,9 +195,10 @@ false positive is not automatically a verified negative training example.
 
 The completed source review motivated the ONE decoder experiment, now closed.
 No further source-audit prerequisite, unfamiliar-clause classifier,
-verifier, hyperparameter sweep, new candidate collection or retraining branch is
-in this release. Real integration continues using the frozen existing disjoint
-reference; its positive-margin cutoff is not an operating policy.
+verifier, hyperparameter sweep, extra dev_select candidate collection or retraining
+branch is in this release. Real integration continues using the frozen existing
+disjoint reference. Section 6.5 retains its positive-margin pool as unvalidated
+review candidates; it establishes no automatic-acceptance cutoff.
 
 The deterministic algorithm and following promotion rule were written into a
 versioned config before execution. Checkpoint-000022 stayed fixed; only saved
@@ -246,16 +261,41 @@ rescaling cannot create missing answers or guarantee useful ranking.
 
 ### 6.5 Select the operating policy on dev_policy
 
-Status: pending; decision due November 4. Calibration failed its predeclared
-reliability gate, so retain candidate-only output with null confidence. Record
-the exact fallback policy and evaluation criteria before opening dev_policy
-results; do not use policy data to rescue calibration or enable accepted findings.
+Status: completed and reviewed October 29, ahead of November 4. **Retain the
+existing candidate-only v0 policy.** Config and evaluation rules were fixed
+before dev_policy. Calibration failure already blocked automatic acceptance;
+no threshold search, calibrator application, decoder change or retraining occurred.
 
-Before selecting thresholds, record the acceptance criteria for precision,
-minimum useful recall, false highlights per document, absence errors and
-supported scope. Choose operating thresholds on `dev_policy`, separately from
-calibrator fitting. Report achieved rates, denominators and uncertainty; high
-precision on a tiny number of returned answers is not a sufficient success.
+The [policy document](CUAD_CandidatePolicy.md) records the predeclared engineering
+requirements: validated confidence and complete processing, accepted precision
+at least 95%, all-gold accepted recall at least 50%, mean false accepted highlights
+per document at most 1 and p95 at most 3, plus minimum category evidence. The
+actual accepted set is empty: precision null, recall zero on the 991 gold spans.
+Zero accepted false positives is not a quality success; no absence decision or
+absence error rate is produced. Candidate metrics cannot replace accepted metrics.
+
+On all 1,558 dev_policy questions, the unchanged fallback returned 3,128 review
+candidates with 680 anchored matches, 2,448 false highlights, 311 misses and 564
+exact matches. Precision is 21.739%, recall 68.618%. The fixed whole-family
+bootstrap gives descriptive 95% intervals of 18.505%–25.786% precision and
+65.505%–71.667% recall. Mean false candidate highlights/document is 64.42
+(p95 157.35, maximum 327); mean missed gold/document is 8.18. This is a noisy
+candidate pool, not validated automatic extraction or measured review efficiency.
+
+All windows completed; 433 questions still have truncation/boundary issues.
+All gold remains in recall and incomplete candidates retain visible limitations.
+There are 741 zero-output questions, including 15 with gold. All 1,558 projected
+category states are abstained. All catalogue categories remain not_validated;
+33 of the 41 measured categories have sparse support. India extensions remain
+unavailable for inference. Neutral manual review is unchanged.
+
+The assistant verified supplied hashes/code bindings, coverage and projection
+invariants, and reproduced aggregation, support flags and the fixed family
+bootstrap from the rows. Full source/gold and raw question records were not
+attached; local source equality, matching and saved-record checks rely on the
+hash-matched runner. No source audit, model rerun or new experiment is required.
+Offline projections do not establish live parser/app integration. Preserve the
+generated report's creation status; the dated Markdown review records closure.
 
 Preserve the existing [core interface](Interface.md):
 
@@ -272,13 +312,15 @@ does not become `validated` from a nonzero development F1. Pooled support must
 be explicitly documented, and the five India extensions are not validated by
 CUAD results. Parser limitations and partial coverage must remain visible.
 
-If policy selection exposes a need to redesign the model or score features,
-record that the policy data has influenced development and revise the evaluation
-protocol. Do not silently turn dev_policy into another unrestricted tuning set.
+Poor candidate quality is recorded. Do not redesign the model, fit another
+calibrator or use dev_policy to choose a new cutoff. Retain the declared behavior
+for the final frozen evaluation; no quality or release-readiness claim is added.
 
 ### 6.6 Freeze and evaluate the complete pipeline
 
-Status: pending; final frozen evaluation due November 5.
+Status: next batch; final frozen evaluation due November 5. The decoder,
+unvalidated calibration outcome and retained candidate-only policy are closed.
+No official-test result for this trained pipeline has yet been produced.
 
 Freeze model, tokenizer, candidate generation, decoder, calibrator, policy and
 supported categories before final evaluation. Evaluate the declared benchmark
@@ -313,7 +355,8 @@ a prerequisite for the adapter, decoder freeze or calibration.
 ## Working cadence
 
 Prepare one small batch, install it in VS Code, run its relevant checks, review
-the actual output, then commit and push through VS Code Source Control. Supply
-a descriptive commit message rather than terminal Git commands. Keep weights,
+the actual output, then provide the exact staging list and descriptive commit
+message for Tanishq to use in VS Code Source Control. Do not commit/push on his
+behalf or supply terminal commit/push commands. Keep weights,
 feature arrays, saved candidate records and generated JSON reports outside Git;
 commit code, tests, configurations and measured Markdown summaries.
