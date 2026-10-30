@@ -576,8 +576,13 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 
 ## 15. To agree
 
-1. The separators and offsets in section 3, which the core reads without change.
-2. How the core treats `decorations` (mask them) and `partial` (report "not checked", never "not found"). Core v2.0's `AnalysisContext` has no field for `decorations`, so either it gains one or the core ignores furniture.
-3. The shape of `name_span` in section 8, before the parser builds it.
-4. Which ceilings in section 12 the core wants a warning for. Each one needs a signal the parser does not have today.
-5. What `AnalysisContext.parser_complete` and `warnings` must hold. The backend sends `not coverage.partial` and the warning codes (`Phases.md`, 2-D).
+State on 30 October 2026, read from Tanishq's code in `ml/clauseanchor_core` and from `docs/ml/RealAnalyzer.md`. The answers change no parser output, so `parser_version` stays 1.1.0.
+
+1. The separators and offsets in section 3, which the core reads without change. **Answered.** The core takes `source_text` as it is and never cleans or reflows it. Every span is a code point slice of that text, with `end` exclusive.
+2. How the core treats `decorations` (mask them) and `partial` (report "not checked", never "not found"). **Answered.** `AnalysisContext` still has no field for `decorations`. `context_from_parsed_document` adds one `StructureNode(kind="decoration")` for each `[start, end]` range instead, so contract 2.0 does not change. For model input the core blanks the non-whitespace characters in those ranges, omits any candidate that crosses one and marks that search incomplete. A partial parse also marks it incomplete. A processed category comes back `abstained` and never `absent`.
+3. The shape of `name_span` in section 8, before the parser builds it. **Open.**
+4. Which ceilings in section 12 the core wants a warning for. Each one needs a signal the parser does not have today. **Open.**
+5. What `AnalysisContext.parser_complete` and `warnings` must hold. **Answered.** The bridge sets `parser_complete` to `not coverage.partial` and `warnings` to the warning codes, which is what the backend planned (`Phases.md`, 2-D). The core keeps the codes. A warning alone does not mean omitted text, and `coverage.partial` decides whether the parse is complete.
+6. Spans, added on 30 October 2026. **Answered.** The core stays single-span per finding (`ClauseFinding.span`). The disjoint decoder can return several findings for one category, each with its own span, and the core does not merge them. How an annotation that joins several spans into one finding is grouped and scored stays open (`AnnotationGuidelines.md`, section 9).
+
+`docs/ml/Interface.md` is corrected on parser nodes. It now says a node adds label, level and text, and that page, bounding box and locator belong to blocks, which matches sections 4 and 7.

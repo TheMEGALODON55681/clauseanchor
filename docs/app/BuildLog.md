@@ -2208,3 +2208,69 @@ Blockers: the catalogue still blocks ticking 2-A. Nothing blocks 2-C.
 Held `[CONTRACT]` items for Tanishq: no new ones. 2-B changes no parser output and no field he consumes. The 2-A list stands.
 
 Next action: commit with `feat(store): add in-memory document store and expiring sessions`. Then 2-C (upload validation, parse jobs, document read and delete). D1 to D3 are decided.
+
+## 2026-10-30: Part 2-A close, load the real category catalogue
+
+Part: 2-A, closed. Tanishq committed the catalogue as `ml/configs/catalogue.json` (version 1.0.0, 46 rows, every row `not_validated`), and the backend now reads it in place. No parser output moved, so `parser_version` stays 1.1.0. `ml/` and `docs/ml/` are Tanishq's: nothing in them was created, edited, moved or deleted (`git status --short -- ml docs/ml` is empty), and the loader was not touched. 2-B stays `[x]`, 2-C has not started, and 2-0A still waits on contracts 001 to 025.
+
+Start checks, before any code:
+- `git status`: clean tree on `main`, level with `origin/main`. `git log --oneline -8`: HEAD is `93d2942` (Tanishq's final-evaluation commit), newer than the `d882596` the brief named. `git merge-base --is-ancestor 1f7c4f8 HEAD`: true. `git diff --name-only 1f7c4f8 HEAD -- backend docs/app frontend README.md`: no output. So nothing under the backend, the app docs, the frontend or the README moved since 2-B, and the brief's stop conditions did not fire.
+- Baseline at `93d2942` in `backend/.venv`: 921 passed, 1 warning, `ruff check` clean.
+
+Read: Rules, Phases (2-A, 2-D, 2-E, 4-B, the D1 to D9 table), API.md section 5, Architecture (the catalogue row, the tree, section 5), the 2-A and 2-B BuildLog entries, `config.py`, `main.py`, `api/routes.py`, `services/scope.py`, `tests/conftest.py`, `test_api.py`, `test_config.py` and `test_catalogue.py`. Read only: `ml/configs/catalogue.json`, `ml/clauseanchor_core/__init__.py`, `analyzer.py` (the bridge), `contract.py` (`ClauseFinding`), `ml/scripts/check_catalogue.py`, `docs/ml/Interface.md`, `docs/ml/RealAnalyzer.md` and `docs/ml/CategoryCatalogue.md`. A direct read of the file: 46 unique ids, 41 `cuad` and 5 `india_extension`, the four fields on every row, all ten plan 4.3 ids present.
+
+Files changed:
+- `backend/app/config.py`: `DEFAULT_CATALOGUE_PATH` is `Path(__file__).resolve().parents[2] / "ml" / "configs" / "catalogue.json"`. It stays a `Settings` field and not an environment variable (D8). The loader is unchanged.
+- `backend/tests/test_real_catalogue.py` (new, 3 tests): the default path is the ml file when an interpreter starts in another directory; the file loads through `load_catalogue` with 46 unique ids, 41 `cuad`, 5 `india_extension` and the ten plan 4.3 ids; `/ready` reports the catalogue `ok` and `/capabilities` answers 200 with 46 categories on `Settings()`, with `catalogue_version` and the rows equal to the file's own. No test pins `catalogue_version` or a `support_status`. The synthetic-catalogue tests keep their temp files.
+- Docs: `API.md` section 5, `Architecture.md` (catalogue row, tree, section 5), `README.md` backend section, `Phases.md` (2-A, 2-D, 2-E, 4-B, D6), `ParserContract.md` section 15, and this entry.
+
+Decisions for Aryan to confirm or change:
+1. The API reads Tanishq's file where it lives and keeps no copy. `docs/ml/CategoryCatalogue.md` suggests an exact copy at `backend/app/catalogue.json`. A copy could drift from his file, so none exists. The cost: the image of 4-B must ship `ml/configs/catalogue.json` at the same place relative to `backend/`. `Phases.md` 4-B now says so.
+2. No backend test pins `catalogue_version` or any `support_status`. The same document asks for that pin, and the brief overrode it: Tanishq changes both as categories get validated, and a backend test must not break when he does. The test compares the response to the file instead, so pass-through is still checked.
+3. The brief says "Item 5 (decorations)". In `ParserContract.md` section 15 the decorations question is item 2, and item 5 is `parser_complete` and `warnings`. Both are answered under their real numbers. Spans had no item, so it is item 6.
+4. Items 3 (`name_span`) and 4 (ceiling warnings) stay open. The grouping and scoring of a multi-span annotation stays open in `AnnotationGuidelines.md` section 9.
+
+Test-driven record:
+- Red first: the three new tests failed against the old default (`CatalogueError: missing`, a 503 from `/ready`). Green after the one-line path change: 924 passed.
+- The first draft of the path test compared `Settings().catalogue_path` to the file in this process. The jury review (below) saw that a path built from `Path.cwd()` would pass it whenever pytest starts in the repository root. It now starts a fresh interpreter in a temp directory and compares the printed path.
+- Mutation check on a copy of `app/` and `tests/` in the scratchpad, never the repo: 3 one-line mutants of the path. A path from `Path.cwd()` (run from the copy's root): only the fresh-interpreter test fails, which is why it exists. One level too shallow (`parents[1]`): all 3 fail. The old `app/catalogue.json` path: all 3 fail. The unmutated copy passes before and after.
+
+Code review in this session, with no outside tool.
+- Jury review of the diff. Six perspectives each read it on their own terms, one after another in this session, then one verdict.
+  - Correctness: `parents[2]` from `app/config.py` reaches the repository root, and `resolve()` removes the short-name and case differences Windows adds. The test derives the same root from its own location with `parents[2]`, so the two agree for a reason.
+  - Test quality: found the working-directory gap above. Fixed.
+  - Privacy and security: the path is fixed, read-only and not user input. A failure still reports only `missing` or `invalid`, never the path. No document text is involved. No dependency was added, scikit-learn is not imported, and `clauseanchor_core` is not imported.
+  - Ownership: backend and `docs/app/` only, plus the README. Git stayed read-only. `ml/` and `docs/ml/` show no change.
+  - Docs: found the places that still described a missing catalogue, a copy under `backend/app/`, a core without decoration transport and a core with multi-span findings. All are listed below and fixed, except Tanishq's own file.
+  - Deployment: the in-place read means the 4-B image needs the file. Fixed with the 4-B line.
+  - Verdict: ship, with those two fixes applied.
+- ponytail review: no cuts. The change is one line of code and three tests, with no new module, setting or dependency. The fresh-interpreter test stays because the mutation check shows nothing else catches a working-directory path.
+
+Checks:
+- `ruff format --check`: 39 files already formatted. `ruff check`: all checks passed. `pytest`: 924 passed, 1 warning (921 before, 3 new). The warning is the same Starlette `httpx` deprecation 2-A reported, and it still waits for Aryan's yes on `httpx2`.
+- Frontend: untouched, so its build and tests did not run.
+- No server and no browser. `TestClient` runs the route checks. `ml/scripts/check_catalogue.py` was not run: it needs the CUAD source files, and it is Tanishq's.
+- Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`, with the exact command in Rules: no output.
+- Tool-name grep, both forms: the first over `backend/app`, `backend/tests`, the three backend config files, `backend/.env.example` and `README.md`, and the second over the lines this part added to the tracked docs other than `BuildLog.md` and `Rules.md`. No output from either. A control string (`ponytail`) matched the pattern.
+- Dash scan for U+2014 and U+2013 over the 6 changed files and the 1 new file, then over this entry: no hit. A control string holding both dashes matched.
+- Copy passes: `copywriting`, `copy-editing` and `stop-slop` ran in that order over the new prose in `API.md`, `Architecture.md`, `README.md`, `Phases.md` and `ParserContract.md`. The edits were active voice and shorter sentences: the 2-A deviation note went from a clause chain to two sentences, one per deviation, and "which matches section 4 and section 7" became "sections 4 and 7".
+
+Docs checked for staleness:
+- Changed: `API.md` (section 5: the path, the in-place read, what the test pins), `Architecture.md` (the catalogue row, the `config.py` and `test_real_catalogue.py` tree entries, the deleted `catalogue.json` entry, section 5 on the core), `README.md` (the Run the API paragraph), `Phases.md` (2-A ticked with status and deviations, the path bullet, the "took the catalogue" paragraph, 2-D open points, the settled context mapping and the candidate-only analyzer line, the D6 row, the 2-E `Interface.md` sentence, the 4-B image line), `ParserContract.md` (section 15 only), `BuildLog.md` (this entry).
+- Checked and left alone: `Rules.md`, `FrontendDesign.md` (its 46-category statements still hold), `DesignSystem.md`, `AnnotationGuidelines.md` (the section 9 open item stands), `parser_output.schema.json` and the contract's other sections (no output moved), `backend/.env.example` (the catalogue is not a variable) and the frontend `catalogue.ts` (the frontend track).
+- Stale in Tanishq's files, not touched: `docs/ml/CategoryCatalogue.md` still says the API defaults to `backend/app/catalogue.json` and suggests copying the file there and pinning the version and statuses. It is his to update.
+
+Not verified:
+- A real server. The brief bars one, so the start path ran only under `TestClient`.
+- Linux or the deploy host. Every check ran on this laptop, and `Path` handles the separators.
+- That the 4-B image holds the file. Nothing builds an image yet.
+
+Pinned versions added: none. `constraints.txt` and both requirements files are unchanged.
+
+Processes. Started 35, closed 35: 26 Python-family runs from the shell (12 `pytest`, 12 `ruff`, 1 inline `python -I` read of the catalogue and 1 `python3 --version` that printed nothing), 8 interpreters that the new test starts inside 8 of those `pytest` runs (the 5 mutation runs and 3 others), and 1 PowerShell call. Every one ran in the foreground to exit. The last check, a read-only PowerShell query of the process list, found no `python`, `pytest`, `ruff` or `uvicorn` process left from this session. No server, no browser, no `pnpm`. Short read-only shell commands (git, grep, ls, cat, sed, wc, od) are not counted.
+
+Blockers: none. 2-C is next and is unblocked.
+
+Held `[CONTRACT]` items for Tanishq: `ParserContract.md` section 15 items 3 and 4, the multi-span grouping in `AnnotationGuidelines.md` section 9, and the stale lines in `docs/ml/CategoryCatalogue.md`.
+
+Next action: commit with `feat(api): load the category catalogue from the ml configs`. Then 2-C (upload validation, parse jobs, document read and delete).

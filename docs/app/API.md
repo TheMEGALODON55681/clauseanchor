@@ -161,7 +161,7 @@ The three numbers must be whole numbers of at least 1. The parser's own limits (
 
 ## 5. Catalogue `[CONTRACT]`
 
-Tanishq owns the categories: 41 CUAD categories plus 5 India extensions, 46 in all. The API loads them from one JSON file, `backend/app/catalogue.json`, through `load_catalogue` in `app/services/scope.py`. The API reads the file once, at start, so a new file needs a restart.
+Tanishq owns the categories: 41 CUAD categories plus 5 India extensions, 46 in all. The API loads them from one JSON file, `ml/configs/catalogue.json`, through `load_catalogue` in `app/services/scope.py`. It reads Tanishq's file in place and keeps no copy. `DEFAULT_CATALOGUE_PATH` in `app/config.py` finds the file from its own location, so the working directory does not matter. The API reads the file once, at start, so a changed file needs a restart.
 
 ```json
 {
@@ -186,7 +186,7 @@ The ids above are placeholders. The API invents no id.
 
 Each row has exactly these four fields, and the top level has exactly the two keys above. An extra or missing key makes the file `invalid`.
 
-The API reports two failure states and never guesses. With no file, `/ready` says `catalogue: missing` and `/capabilities` answers 503. With a broken file, `/ready` says `catalogue: invalid` and `/capabilities` answers 503. No real catalogue is committed yet. The change that adds it also adds a test for the count of 41 and 5.
+The API reports two failure states and never guesses. With no file, `/ready` says `catalogue: missing` and `/capabilities` answers 503. With a broken file, `/ready` says `catalogue: invalid` and `/capabilities` answers 503. The committed file loads, and `tests/test_real_catalogue.py` pins what Tanishq's file promises: 46 unique ids, 41 `cuad` and 5 `india_extension`, and the ten categories that plan 4.3 annotates. It pins neither `catalogue_version` nor any `support_status`. Tanishq changes both as categories get validated, and `/capabilities` passes them through unchanged.
 
 ## 6. Differences from plan section 9
 

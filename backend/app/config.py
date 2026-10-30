@@ -26,7 +26,8 @@ MAX_SESSIONS = 25
 MAX_DOCUMENTS_PER_SESSION = 5
 SWEEP_INTERVAL_SECONDS = 30  # after expiry a session is unreachable at once and gone within this
 
-DEFAULT_CATALOGUE_PATH = Path(__file__).parent / "catalogue.json"
+# Tanishq's file, read in place. Found from this file and not from the working directory.
+DEFAULT_CATALOGUE_PATH = Path(__file__).resolve().parents[2] / "ml" / "configs" / "catalogue.json"
 
 
 class ConfigError(ValueError):
@@ -63,7 +64,7 @@ class Settings:
     session_ttl_minutes: int = SESSION_TTL_MINUTES
     parse_kill_seconds: int = PARSE_KILL_SECONDS
     parse_queue_length: int = PARSE_QUEUE_LENGTH
-    # Not an environment variable: the catalogue is a file that ships with the code (D8)
+    # Not an environment variable: the catalogue is a file in the repository (D8)
     catalogue_path: Path = DEFAULT_CATALOGUE_PATH
 
     @property

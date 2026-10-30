@@ -28,7 +28,7 @@ From `backend/` with the virtual environment active:
 uvicorn app.main:create_app --factory
 ```
 
-The API listens on `http://127.0.0.1:8000`, and `GET /api/v1/health` should answer `{"status":"ok"}`. `GET /api/v1/ready` and `GET /api/v1/capabilities` answer 503 until `backend/app/catalogue.json` exists. The category catalogue comes from Tanishq and is not committed yet. API.md section 5 gives its shape.
+The API listens on `http://127.0.0.1:8000`, and `GET /api/v1/health` should answer `{"status":"ok"}`. `GET /api/v1/capabilities` lists the 46 categories from `ml/configs/catalogue.json`, which Tanishq maintains and the API reads in place at start. If that file is missing or broken, `GET /api/v1/ready` names the problem and `GET /api/v1/capabilities` answers 503. API.md section 5 gives the file's shape.
 
 `POST /api/v1/sessions` starts a session and returns a bearer token once. A session lasts 60 minutes, or less if `CLAUSEANCHOR_SESSION_TTL_MINUTES` says so, and `DELETE /api/v1/sessions/current` ends it sooner. Sessions and the documents they will hold live in memory only, so stopping the API deletes them all. `GET /api/v1/ready` also checks the session store and the database.
 
