@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack
 from dataclasses import replace
@@ -12,8 +14,9 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
+from app.services import parse_jobs
 from tests.fixtures.build import Fixtures, build_all
-from tests.synthetic import FakeClock, synthetic_catalogue
+from tests.synthetic import FakeClock, synthetic_catalogue, wait_until
 
 
 @pytest.fixture(scope="session")
@@ -46,10 +49,13 @@ def clock() -> FakeClock:
 
 
 @pytest.fixture
-def make_client(catalogue_file: Path, clock: FakeClock) -> Iterator[Callable[..., TestClient]]:
+def make_client(
+    catalogue_file: Path, clock: FakeClock, spawned: list[subprocess.Popen[bytes]]
+) -> Iterator[Callable[..., TestClient]]:
     """Builds an app on the synthetic catalogue and the fake clock, with its lifespan running.
 
-    Keyword arguments override Settings fields. Every client closes when the test ends.
+    Keyword arguments override Settings fields. Every client closes when the test ends, and then
+    `spawned` checks that no parse child is left.
     """
     with ExitStack() as stack:
 
@@ -63,3 +69,38 @@ def make_client(catalogue_file: Path, clock: FakeClock) -> Iterator[Callable[...
 @pytest.fixture
 def client(make_client: Callable[..., TestClient]) -> TestClient:
     return make_client()
+
+
+@pytest.fixture
+def spawned(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[subprocess.Popen[bytes]]]:
+    """Every parse child the app starts during a test. One still alive at the end fails the test."""
+    made: list[subprocess.Popen[bytes]] = []
+    real = parse_jobs.CappedProcess
+
+    class Recorded(real):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            made.append(self.popen)
+
+    monkeypatch.setattr(parse_jobs, "CappedProcess", Recorded)
+    yield made
+    leaked = [child for child in made if child.poll() is None]
+    for child in leaked:
+        child.kill()
+        child.wait()
+    assert leaked == []
+
+
+@pytest.fixture
+def hanging(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Callable[[], int]:
+    """Parse children that never finish. The first one writes its interpreter's pid to a file and
+    sleeps. The returned function waits for that file and gives the pid, so a test can check
+    the interpreter itself is gone, and not only the launcher that Popen holds on Windows."""
+    pid_file = tmp_path / "child.pid"
+    code = "import os, sys, time; open(sys.argv[1], 'w').write(str(os.getpid())); time.sleep(600)"
+    monkeypatch.setattr(parse_jobs, "WORKER_ARGS", [sys.executable, "-c", code, str(pid_file)])
+
+    def child_pid() -> int:
+        return wait_until(lambda: pid_file.exists() and int(pid_file.read_text() or 0))
+
+    return child_pid

@@ -30,7 +30,15 @@ uvicorn app.main:create_app --factory
 
 The API listens on `http://127.0.0.1:8000`, and `GET /api/v1/health` should answer `{"status":"ok"}`. `GET /api/v1/capabilities` lists the 46 categories from `ml/configs/catalogue.json`, which Tanishq maintains and the API reads in place at start. If that file is missing or broken, `GET /api/v1/ready` names the problem and `GET /api/v1/capabilities` answers 503. API.md section 5 gives the file's shape.
 
-`POST /api/v1/sessions` starts a session and returns a bearer token once. A session lasts 60 minutes, or less if `CLAUSEANCHOR_SESSION_TTL_MINUTES` says so, and `DELETE /api/v1/sessions/current` ends it sooner. Sessions and the documents they will hold live in memory only, so stopping the API deletes them all. `GET /api/v1/ready` also checks the session store and the database.
+`POST /api/v1/sessions` starts a session and returns a bearer token once. A session lasts 60 minutes, or less if `CLAUSEANCHOR_SESSION_TTL_MINUTES` says so, and `DELETE /api/v1/sessions/current` ends it sooner. Sessions and the documents they hold live in memory only, so stopping the API deletes them all. `GET /api/v1/ready` also checks the session store and the database.
+
+`POST /api/v1/documents` takes one PDF or DOCX of up to 10 MiB as the raw request body, not as multipart. It answers 202 with a document id and a parse job id. The file name travels in `Content-Disposition` as `filename*`.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/documents -H "Authorization: Bearer $TOKEN" -H "Content-Disposition: attachment; filename*=UTF-8''contract.pdf" --data-binary @contract.pdf
+```
+
+Poll `GET /api/v1/jobs/{job_id}` until the job has succeeded or failed. Then `GET /api/v1/documents/{document_id}` returns the parsed text, and `DELETE /api/v1/documents/{document_id}` removes the document at once. The API parses each file in a child process with a time limit and a memory cap, so a bad file cannot take the server down. The file and its text stay in memory and are never written to disk. `docs/app/API.md` has the request and reply shapes, and section 9 describes the child process.
 
 The API reads these environment variables once, at start, and does not read a `.env` file. Every one is optional.
 
@@ -40,8 +48,9 @@ The API reads these environment variables once, at start, and does not read a `.
 | `CLAUSEANCHOR_ARTIFACTS_DIR` | none | The analyzer's artifacts directory. Required when the analyzer is `real` |
 | `CLAUSEANCHOR_DB_PATH` | `:memory:` | The SQLite path for session metadata. The default writes nothing to disk. A file path is emptied at every start |
 | `CLAUSEANCHOR_SESSION_TTL_MINUTES` | `60` | Session lifetime, from 1 to 60 |
-| `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse. Provisional |
-| `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait |
+| `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse |
+| `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait while one runs |
+| `CLAUSEANCHOR_PARSE_MEMORY_MIB` | `1536` | Memory cap for the process that parses one file, in MiB |
 
 A bad value stops the start and the message names the variable. `docs/app/API.md` section 4 has the details.
 

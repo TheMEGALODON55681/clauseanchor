@@ -17,6 +17,7 @@ from fastapi import FastAPI
 from app.api.errors import install_error_handling
 from app.api.routes import router
 from app.config import PREFIX, SWEEP_INTERVAL_SECONDS, ConfigError, Settings
+from app.services.parse_jobs import ParseQueue
 from app.services.scope import CatalogueError, load_catalogue
 from app.services.store import Store
 
@@ -37,11 +38,14 @@ async def _sweep_forever(store: Store) -> None:
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     sweeper = asyncio.create_task(_sweep_forever(app.state.store))
     app.state.sweeper = sweeper
+    app.state.parse_queue.start()
     try:
         yield
     finally:
         sweeper.cancel()
         await asyncio.gather(sweeper, return_exceptions=True)
+        # Kills the running child and waits for it, off the event loop
+        await asyncio.to_thread(app.state.parse_queue.stop)
         app.state.store.close()
 
 
@@ -65,6 +69,7 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
         # Name the variable and not the path, as every other bad setting does
         raise ConfigError(f"{PREFIX}DB_PATH cannot be opened") from None
     app.state.sweeper = None  # the lifespan starts it
+    app.state.parse_queue = ParseQueue(app.state.store, settings)  # and this one
     # Loaded once at start. A missing or broken file is a state to report, not a crash:
     # /ready says which, and /capabilities answers 503.
     try:

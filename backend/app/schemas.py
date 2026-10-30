@@ -6,7 +6,7 @@ A response model also filters: a field that is not declared here cannot leave th
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -56,3 +56,34 @@ class ErrorBody(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: ErrorBody
+
+
+class Upload(BaseModel):
+    document_id: str
+    parse_job_id: str
+    expires_at: datetime
+
+
+class DocumentView(BaseModel):
+    id: str
+    filename: str
+    status: Literal["parsing", "parsed", "failed"]
+    media_type: str
+    byte_count: int
+    expires_at: datetime
+    # The full parser output once parsed, in the shape of docs/app/parser_output.schema.json
+    parsed: dict[str, Any] | None
+
+
+class JobError(BaseModel):
+    code: str
+    message: str
+    retryable: bool
+
+
+class Job(BaseModel):
+    id: str
+    kind: Literal["parse", "analysis"]
+    document_id: str
+    status: Literal["queued", "running", "succeeded", "partial", "failed", "cancelled"]
+    error: JobError | None

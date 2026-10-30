@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import tempfile
 import time
 from collections.abc import Callable
@@ -17,7 +16,7 @@ from app.api.errors import ERRORS
 from app.config import MAX_SESSIONS, ConfigError, Settings
 from app.main import create_app
 from app.services.store import Session, Store
-from tests.synthetic import FakeClock
+from tests.synthetic import FakeClock, snapshot
 
 SESSIONS = "/api/v1/sessions"
 CURRENT = "/api/v1/sessions/current"
@@ -270,17 +269,6 @@ def test_a_file_database_works_through_the_api(make_client: MakeClient, tmp_path
     assert client.delete(CURRENT, headers=bearer(token)).status_code == 204
 
 
-def _snapshot(root: Path) -> set[tuple[str, int, int]]:
-    skip = {".venv", ".git", "node_modules", "__pycache__", ".pytest_cache", ".ruff_cache", "dist"}
-    found = set()
-    for folder, dirs, files in os.walk(root):
-        dirs[:] = [d for d in dirs if d not in skip]
-        for name in files:
-            stat = os.stat(os.path.join(folder, name))
-            found.add((os.path.join(folder, name), stat.st_size, stat.st_mtime_ns))
-    return found
-
-
 def test_a_whole_session_cycle_writes_nothing_to_the_temp_directory_or_the_repo(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, catalogue_file: Path, clock: FakeClock
 ) -> None:
@@ -292,7 +280,7 @@ def test_a_whole_session_cycle_writes_nothing_to_the_temp_directory_or_the_repo(
         monkeypatch.setenv(name, str(temp))
     monkeypatch.setattr(tempfile, "tempdir", str(temp))
     backend = Path(__file__).parents[1]
-    before = _snapshot(backend)
+    before = snapshot(backend)
 
     settings = Settings(catalogue_path=catalogue_file)
     assert settings.db_path == ":memory:"
@@ -312,7 +300,7 @@ def test_a_whole_session_cycle_writes_nothing_to_the_temp_directory_or_the_repo(
 
     assert list(work.iterdir()) == []
     assert list(temp.iterdir()) == []
-    assert _snapshot(backend) == before
+    assert snapshot(backend) == before
 
 
 def test_the_sweep_loop_stops_when_the_app_stops(

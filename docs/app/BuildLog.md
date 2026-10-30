@@ -2274,3 +2274,139 @@ Blockers: none. 2-C is next and is unblocked.
 Held `[CONTRACT]` items for Tanishq: `ParserContract.md` section 15 items 3 and 4, the multi-span grouping in `AnnotationGuidelines.md` section 9, and the stale lines in `docs/ml/CategoryCatalogue.md`.
 
 Next action: commit with `feat(api): load the category catalogue from the ml configs`. Then 2-C (upload validation, parse jobs, document read and delete).
+
+## 2026-10-30: Part 2-C, upload validation, parse jobs, document read and delete
+
+Part: 2-C. Ticked `[x]` in `Phases.md`. `from_json` is new, and no parser output moved, so `parser_version` stays 1.1.0. 2-0A stays `[~]` and was not touched. `ml/` and `docs/ml/` were not touched either.
+
+Start checks, before any code:
+- `git status`, `git log --oneline -8` and `git log --oneline -3 -- backend docs/app`: HEAD is `829ac16`, the 2-A close, and it is the latest commit that touches `backend/` or `docs/app/`. The tree held one untracked zero-byte file, `main`, at the repository root, created at 20:51 on 30 October, after the 2-A commit. The brief says to stop when the tree is not clean. The file is empty, sits outside `backend/` and `docs/`, and nothing in it can affect a test, so work went on and the file was not touched. Aryan decides what it is.
+- Baseline at `829ac16` in `backend/.venv`: 924 passed, 1 warning, `ruff check` clean.
+
+Read: Rules, Phases (Review scope, all of Phase 2, the Phase 1 ceiling table, D1 to D9), `ParserContract.md` (sections 2, 9, 11, 12), Architecture, API, the 2-A and 2-B entries and "Checks before 1-D", `config.py`, `main.py`, `api/` (`auth.py`, `errors.py`, `routes.py`), `services/store.py`, `schemas.py`, `parsing/model.py`, `parse_document` and `schema.to_json`, `frontend/src/api/client.ts`, and plan sections 9.1 to 9.3 (revision 1.1, `ClauseAnchor_Plan (1).md`; the plan was not edited). `ml/clauseanchor_core/analyzer.py` was read for the fields `context_from_parsed_document` expects.
+
+Files changed:
+- `backend/app/parsing/schema.py`: `from_json`, the way back from `to_json`. It refuses a text that does not hash to `text_sha256`, which also refuses the text-free form.
+- `backend/app/parse_worker.py` (new): the child, `python -m app.parse_worker`. Stdin bytes in, one ASCII JSON object out, a `MemoryError` mapped to `PARSE_MEMORY_LIMIT`.
+- `backend/app/services/memcap.py` (new): `CappedProcess`, the only platform code. A Windows job object through `ctypes` (the child starts suspended, joins the job and is resumed), `RLIMIT_AS` on POSIX.
+- `backend/app/services/parse_jobs.py` (new): `ParseQueue`, the bounded queue, one worker thread, one capped child per parse, the wall-clock timer and the result rule.
+- `backend/app/services/store.py`: document `media_type`, `byte_count` and `status`, the `JobRecord`, `jobs.error`, `delete_document`, `get_job`, `start_job`, `finish_job`, and the `on_drop` hook.
+- `backend/app/api/routes.py`: `POST /documents`, `GET` and `DELETE /documents/{id}`, `GET /jobs/{id}`, and the file name rules. `backend/app/api/errors.py`: five new API codes and `JOB_ERRORS`. `backend/app/schemas.py`: `Upload`, `DocumentView`, `JobError`, `Job`. `backend/app/main.py`: the queue in `create_app`, started and stopped in the lifespan. `backend/app/config.py` and `backend/.env.example`: `PARSE_MEMORY_MIB`.
+- `backend/tests/`: new `test_from_json.py`, `test_store_jobs.py`, `test_memcap.py`, `test_parse_worker.py`, `test_parse_jobs.py` and `test_documents_api.py`. Edited `conftest.py` (the `spawned` and `hanging` fixtures, and `make_client` depends on `spawned`), `synthetic.py` (`wait_until`, `process_alive`, and `snapshot` moved here), `test_config.py`, `test_docs.py` and `test_sessions.py`.
+- Docs: `API.md`, `Phases.md`, `ParserContract.md`, `Architecture.md`, `README.md` and this entry.
+
+Measurements. Method: every one ran inside a capped child, never in the test process, one at a time. The cap was never above 1.5 GiB. Free RAM was at least 3 GiB before each child (it was only 363 MiB at one point, so the run waited until 4.4 GiB were free, and no measurement was skipped). 52 measurement children started and 52 were confirmed gone, each logged by process id. The inputs are synthetic or from the smoke set, and no contract text was written anywhere. The scripts and the 43 result rows are in the session's scratchpad, outside the repository. "Peak" is the job object's `PeakProcessMemoryUsed`, which is committed memory.
+
+Time, dense 8 MiB Flate PDF (the most `MAX_DECODED_CONTENT_BYTES` accepts), three runs of the operator and text mix:
+
+| Input | Wall time | Peak | Result |
+|---|---|---|---|
+| Operators and text, run 1 | 22.55 s | 1,028 MiB | `TOO_MUCH_TEXT` |
+| Operators and text, run 2 | 22.67 s | 1,028 MiB | `TOO_MUCH_TEXT` |
+| Operators and text, run 3 | 22.72 s | 1,028 MiB | `TOO_MUCH_TEXT` |
+| Operators only | 12.68 s | 50.8 MiB | `NO_TEXT_FOUND` |
+| Paths | 21.59 s | 1,332 MiB | `NO_TEXT_FOUND` |
+
+The slowest took 22.7 s. `PARSE_KILL_SECONDS` stays 120, about 5 times that, and is no longer provisional. The 18 s the 1-C smoke check logged for a 33-page file did not reproduce: it took 4.7 s here. A different machine state or the 1-R changes may explain it, and this part cannot tell which.
+
+Memory, DOCX of empty paragraphs:
+
+| `document.xml` | Peak (committed) | Working set | Result | Time |
+|---|---|---|---|---|
+| 12 MiB | 334.4 MiB | 331.5 MiB | `TOO_MUCH_TEXT` | 1 to 2.4 s |
+| 25 MiB | 663.6 MiB | 648.7 MiB | `TOO_MUCH_TEXT` | 1 to 2.4 s |
+| 50 MiB | 1,298.4 MiB | 1,258.1 MiB | `TOO_MUCH_TEXT` | 1 to 2.4 s |
+
+The slope is about 25.4 MiB for each MiB of part, plus a base of about 30 MiB (a least-squares line through the three peaks). A 100 MiB part, which was not built, would need about 2.5 GiB (extrapolated). The 1-R figure of 279 MiB for 12 MB was a different measure.
+
+Memory and time, the smoke set (3 runs each):
+
+| File | Pages | Wall time | Peak (commit) | Characters |
+|---|---|---|---|---|
+| 01 Cybergy 2014 | 16 | 1.16 s | 94.6 MiB | 33,440 |
+| 02 Healthgate 1999 | 33 | 3.25 s | 313.5 MiB | 118,521 |
+| 03 Athens 2009 | 33 | 4.72 s | 314.3 MiB | 143,916 |
+| 04 Dova 2018 | 44 | 4.0 s | 373.2 MiB | 174,855 |
+| 05 Theravance 2020 | 14 | 1.1 s | 93.6 MiB | 32,768 |
+| Bonterms template (DOCX) | | 0.49 s | 31.6 MiB | 1,655 |
+| Common Paper template (DOCX) | | 0.5 s | 37.5 MiB | 37,864 |
+| Buying for Victoria conditions (DOCX) | | 0.53 s | 42.0 MiB | 33,584 |
+
+The largest peak is 04 Dova, 373 MiB. A PDF costs about 2.0 to 2.5 KiB of commit for each extracted character, so one at the 500,000-character limit would peak at about 1.2 GiB (extrapolated). 100 pages at the slowest rate (0.143 s per page) is about 14 s.
+
+The cap, 1,536 MiB. 1,024 MiB would reject a legitimate 500,000-character PDF, and the dense PDFs peaked at 1.03 and 1.33 GiB. At 1,536 MiB the kill threshold is 1,459 MiB (95 percent), which leaves those alone and ends the 100 MiB DOCX at about 57 percent of its peak.
+
+RAM per stored document, from `tracemalloc` inside a capped child after `from_json` (Python allocations only, not allocator overhead):
+
+| File | Bytes |
+|---|---|
+| 01 | 358,195 |
+| 02 | 1,201,681 |
+| 03 | 1,254,845 |
+| 04 | 2,024,268 (1.93 MiB, the largest) |
+| 05 | 401,801 |
+| DOCX, three files | 22,846 / 448,348 / 383,162 |
+
+The worst ratio is 12.3 bytes for each character (the smallest DOCX 13.8), so a document at 500,000 characters takes 6.2 to 6.9 MB. 25 sessions of 5 documents are 125 documents: 241 MiB at the size of 04, and about 822 MiB at the 500,000-character worst case. The stored documents alone fit in 1 GiB. The child at its 1,536 MiB cap does not fit beside them on a 1 GiB host, which 4-B decides (D2). The JSON a child sends was 171 KB to 971 KB for the smoke set.
+
+Decisions for Aryan to confirm or change:
+1. The plan's 409 for sample mode on upload is not enforced. A parse does not depend on the analyzer and the default analyzer is the stub, so every upload would get the 409.
+2. There is no `include_text` query. The full text is always available (Review scope).
+3. `GET /documents/{id}` returns metadata and the whole parser output under `parsed`. The plan's `Document` is flat. 2-E fixes the final names.
+4. A failed job's `error` is `{code, message, retryable}`, with no request id or details.
+5. An unreadable ZIP passes the upload and fails the job with `MALFORMED_FILE`. The media type is recorded as DOCX.
+6. The Windows child starts suspended and is resumed with `NtResumeProcess`, an undocumented but long-stable `ntdll` export. The brief's order (assign to the job, then write the input) fails with a virtualenv, because its `python.exe` is a launcher that starts the real interpreter at once.
+7. A peak of 95 percent of the cap fails the job as `PARSE_MEMORY_LIMIT`, so a legitimate parse within 5 percent of the cap fails too. The cap leaves about 18 percent of room at the 500,000-character worst case.
+8. The queue holds one running parse and `PARSE_QUEUE_LENGTH` (2) waiting ones. A waiting upload keeps its bytes in RAM, up to 3 x 10 MiB, and a delete drops them.
+9. Session expiry also ends a running child, through the store's drop hook. The brief asked for it on an explicit session delete only.
+10. `/ready` has no worker-alive check. The worker survives job errors, so a dead one would be rare and silent. A later part may add it.
+11. `created_at` on the three tables is still never read. 2-B kept it because "2-C needs it to order the parse queue", and the queue is a plain FIFO. Dropping the three columns is a schema-string edit. It was left for Aryan, because it reverses 2-B decision 8.
+
+Test-driven record. The earlier session's handoff lists the tests and their final state and does not report the red runs, so this entry gives no red counts. The mutation check below is the evidence that the tests can fail. Tests added: 260, from 924 to 1184. 247 are in six new files (`test_from_json.py` 78, `test_parse_worker.py` 70, `test_documents_api.py` 54, `test_parse_jobs.py` 26, `test_store_jobs.py` 12, `test_memcap.py` 7), and 13 are in the edited files. They cover the brief's list: 413 from `Content-Length` and from a stream that lies about its length, the empty and wrong-type rejections in the error envelope, a 10 MiB upload parsed end to end that leaves the temp directory and `backend/` unchanged (D3), the job path from queued to running to succeeded and to failed with a parser code, the timeout with a one-second limit and a child that hangs, the memory cap with a 64 MiB cap, a full queue, a delete mid-parse, a session delete, an expiry and a shutdown that each leave no child, 404 across sessions, stderr that reaches no log and no reply (a fixture that makes pdfminer complain), and the `from_json` round trip over every fixture and every smoke-set file.
+
+Mutation check on copies of `app/` and `tests/` in the scratchpad, never the repo: 42 one-line mutants of the 2-C code, covering the upload boundaries, the stream limit, the file name rules, the owner checks, the drop hook, the job states, the hash check, the cap and the kill, the result rule, the retryable flags and the lifespan. The unmutated copy passed before each pass (358 passed and 1 skipped, then 362 and 1; the skip is the smoke-set test, and the copy has no `data/`).
+- First pass: 35 killed, 7 alive. Five of the seven were gaps in the tests, and each got a test. A child that wrote a valid answer and then exited with status 1 was never tried, so the exit-status rule could go unnoticed. Nothing showed that the queue hands the configured cap to the child, because the peak rule gives the memory code with or without an OS cap (a spy test pins it now; `test_memcap.py` already shows the cap works). `finish_job`'s result-or-code check had no test. And `assert_error` read `retryable` from the table it was checking, so flipping the flag for `QUEUE_FULL` or `PARSE_FAILED` passed. Both are pinned with literal values now.
+- Second pass over those five: all killed.
+- Two stay alive. A `kill()` that skips `TerminateJobObject` still ends the child, most likely because the virtualenv launcher ends its own child when it is terminated and because closing the job handle kills the rest. That is not verified. The call stays as a guarantee that does not rest on the launcher. And a child started without the suspended flag passes, as expected: the launcher race cannot be tested deterministically.
+
+Code review in this session, with no outside tool.
+- Jury review of the diff. Six perspectives each read it on their own terms, one after another, then one verdict.
+  - Concurrency: the lock order is the store's lock, then the queue's, and the worker never holds the queue's lock while it calls the store. `kill_documents` waits for the child outside the queue's lock, so no cycle forms. Found one race: `kill_documents` could call `kill()` on a `CappedProcess` while the worker was closing its job handle. The window is microseconds and the handle cannot be reused in it by another job object, so the harm was nil in practice, but the fix is two lines: the worker clears `item.capped` under the queue's lock before it calls `close()`. Fixed. No deterministic test can hit that window.
+  - Privacy and security: stderr goes to the null device, the worker logs a class name and nothing else, the upload is bounded by a running count, `from_json` and the job error messages name no text, and a stranger's id gets 404. One low finding left: the file name keeps Unicode direction marks, which can reorder how a name displays to its own owner. It is display only, so no code changed.
+  - API contract: the status codes, the 404 for other sessions, the 401 before the body is read, and the raw-body OpenAPI entry match `API.md`. A client that drops mid-upload raises `ClientDisconnect`, which the crash guard logs as one `unhandled ClientDisconnect` line. It is noise and not a leak.
+  - Store and data: `finish_job` after a delete leaves no trace, and a rolled-back upload (queue full) leaves no row. A delete holds the store's lock until the child has exited, up to 5 s, which stalls other requests for that time. A ceiling, listed under "Not verified".
+  - Windows and the cap: `Popen._handle` is a private attribute of CPython 3.12, and the code depends on it. The suspended start fails closed. Listed as a ceiling.
+  - Docs: five statements were corrected while writing. An expired document is unreachable because the bearer check fails first, so 404 does not cover it. The uploaded bytes leave RAM when the parse ends, not when it starts. A claim that an API crash leaves no child behind was dropped, because no test shows it. "A damaged pipe cannot give back a wrong text" became "a text that arrives changed is refused". The 1 GiB sentence in `API.md` section 8 pointed at section 9, which does not say it.
+  - Verdict: ship, with the race fixed.
+- ponytail review: two findings. `created_at` is read nowhere (decision 11), so it is not applied. `job_error` fell back to the upload table for three codes that a job cannot carry, and `CHILD_CODES` admitted them. Applied: `CHILD_CODES` drops those three, `job_error` is gone, `routes.py` reads `JOB_ERRORS` directly, and `test_docs.py` now asserts that the codes a job can carry equal `JOB_ERRORS` exactly. Net -6 lines in `app/`. Kept with reasons: the 5 percent peak rule (the probe showed a capped child exits 0 with `MALFORMED_FILE`), `CappedProcess.wait` polling the job until it is empty (the no-surviving-process tests need it), the `PARSE_MEMORY_MIB` variable (4-B tunes it for a 1 GiB host and the tests set it small), and the `WORKER_ARGS` constant (the tests swap it for stand-in children).
+
+Checks:
+- `ruff format --check`: 48 files already formatted. `ruff check`: all checks passed.
+- `pytest`: 1184 passed, 1 warning, in 122.3 s on the final run, after the last doc edit (96.6 s on the run before it; the laptop was slower, no test changed). 924 before, 260 new. The warning is the same Starlette `httpx` deprecation 2-A reported, and it still waits for Aryan's yes on `httpx2`. The three `test_docs.py` guards for `API.md` were red on purpose until it named every code and the new variable.
+- Frontend: untouched, so its build and tests did not run.
+- No server and no browser. `TestClient` runs the route checks, and the parse tests start real child processes.
+- Rules section 1 attribution scrub, with the exact command in Rules, over `backend/`, `frontend/` and `docs/app/`: no output. The same pattern over `README.md` and `backend/.env.example`: no output.
+- Tool-name grep, both forms: the first over `backend/app`, `backend/tests`, the three backend config files, `backend/.env.example` and `README.md`, and the second over the lines added to the tracked docs other than `BuildLog.md` and `Rules.md`. No output from either. A control string (`ponytail`) matched the pattern.
+- Dash scan for U+2014 and U+2013 over the 28 changed or new files, this file included: no hit. A control file that holds both dashes matched twice. The scan ran again after this entry was filled in.
+- Copy passes: `copywriting`, `copy-editing` and `stop-slop` ran in that order over the new prose in `API.md`, `README.md`, `Architecture.md`, `Phases.md` and `ParserContract.md`. The skills are written for marketing pages, so only their clarity, specificity and active-voice rules applied. The edits: "Then 25 sessions" became "So 25 sessions", the heading "Gone means ended" became "Delete and expiry", "the child's own report is not trusted" became "the API does not trust a child that came within 5 percent of its cap", the upload intro lost "as raw bytes", and the `API.md` section 8 sentence about a 1 GiB host now says what it means.
+
+Docs checked for staleness:
+- Changed: `API.md` (intro, five error rows, the four endpoints with the job errors table, three variable rows, six new differences from the plan, the document limit row and its RAM paragraph, and new section 9), `Phases.md` (2-C ticked with status and deviations, the three 2-C ceiling rows, the "Plan both" line, the 2-B replacement line, the document limit status and the 4-C adapter line), `ParserContract.md` (section 2 `from_json`, the 2.1 note, the section 11 closing line and three section 12.4 rows), `Architecture.md` (the diagram, flow steps 3 and 4, the worker model, storage, database and store lock rows, four new rows, and the tree), `README.md` (the endpoints, an upload example and the new variable), and this entry.
+- Checked and left alone: `Rules.md`, `FrontendDesign.md` (its "10 MB" upload copy is looser than the API's 10 MiB, which is 10.49 MB. A file between the two passes the API. The frontend track owns the copy and 4-C checks it), `DesignSystem.md`, `AnnotationGuidelines.md`, `parser_output.schema.json` (no output moved), `backend/.env.example` (already carries the new line), `constraints.txt` and both requirements files (no dependency), and `docs/ml/`.
+
+Pinned versions added: none. The part uses `subprocess`, `ctypes`, `threading`, `queue`, `hashlib` and `json` from the standard library. No new dependency, and `constraints.txt` is unchanged.
+
+Not verified:
+- Linux and `RLIMIT_AS`. Every check ran on this Windows laptop. On POSIX there is no peak, so only the worker's own `MemoryError` gives `PARSE_MEMORY_LIMIT`, and an lxml out-of-memory would read as `MALFORMED_FILE`.
+- A real server. The brief bars one, so the lifespan, the shutdown order and the README's `curl` example ran only as `TestClient` requests of the same shape.
+- The launcher race. It cannot be tested deterministically (0 of 20 children escaped the job before the fix). The test for a child that cannot join its cap proves only that a failure stops the child.
+- Behaviour under a loaded CPU, and a delete that waits on a child that will not die (the wait is capped at 5 s).
+- The red-first order of each test slice (see the test-driven record).
+
+Processes. Started 75, closed 75: 70 Python-family runs from the shell and 5 PowerShell calls. The Python-family runs were 6 `pytest` (the `test_docs.py` guard, three full runs, a 3-file run and a `--collect-only`), 6 `ruff`, 7 dash scans, and 2 mutation drivers with the 49 `pytest` runs under them (43 on the first pass, 6 on the second). Every one ran to exit. A pytest plugin in the scratchpad, outside the repository, logged every subprocess launcher that the tests started: 1,789 in the 49 mutation runs and 74 in the final full run, and the closing summary of each pytest process showed 0 still running. The three earlier runs had no ledger, so their test children are not counted. The real interpreter sits behind each launcher, inside a job object that ends with it, and the tests check the real process id. The last check, a read-only PowerShell query of the process list after the final run and the final dash scan (earlier ones at 22:13, 22:14, 22:16 and 22:21 found nothing too), found no `python`, `pytest`, `ruff`, `uvicorn` or `pnpm` process. It also listed `msedge.exe` processes (Aryan's own Edge, started at 21:18 with no start-up window) and 2 `node.exe` processes that run an MCP server for the host app. None came from this part, none is in a ledger, and none was touched. The 52 measurement children are counted under Measurements. No server, no browser. Short read-only shell commands (git, grep, ls, cat, sed, wc, awk) are not counted.
+
+Blockers: none. The untracked `main` file at the repository root is Aryan's to remove or keep.
+
+Held `[CONTRACT]` items for Tanishq: none new. `from_json` is internal to the backend and changes nothing he consumes. The 2-A list stands.
+
+Next action: commit with `feat(api): add document upload with validation and parse jobs`. Then 2-D (analysis jobs through the core analyzer) when Aryan says so.

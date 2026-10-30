@@ -16,8 +16,9 @@ PREFIX = "CLAUSEANCHOR_"
 
 # API-owned limits, each with an environment variable of the same name under PREFIX.
 SESSION_TTL_MINUTES = 60  # also the ceiling: the privacy promise is deletion within 60 minutes
-PARSE_KILL_SECONDS = 120  # provisional, 2-C re-measures it (Phases.md, 2-C)
-PARSE_QUEUE_LENGTH = 2  # queue capacity of plan 9.3
+PARSE_KILL_SECONDS = 120  # the slowest parse measured in 2-C took 23 s (Phases.md, 2-C)
+PARSE_QUEUE_LENGTH = 2  # queue capacity of plan 9.3: parses that can wait while one runs
+PARSE_MEMORY_MIB = 1536  # 1.2 GiB for a 500,000-character PDF, 2.5 GiB for a 100 MiB DOCX bomb
 
 # Store limits and the sweep interval, not environment variables. Plan 9.2 names a 429 for the
 # session limit and gives no number, and neither plan section gives a document limit, so these are
@@ -64,6 +65,7 @@ class Settings:
     session_ttl_minutes: int = SESSION_TTL_MINUTES
     parse_kill_seconds: int = PARSE_KILL_SECONDS
     parse_queue_length: int = PARSE_QUEUE_LENGTH
+    parse_memory_mib: int = PARSE_MEMORY_MIB
     # Not an environment variable: the catalogue is a file in the repository (D8)
     catalogue_path: Path = DEFAULT_CATALOGUE_PATH
 
@@ -89,4 +91,5 @@ class Settings:
             ),
             parse_kill_seconds=_int(env, "PARSE_KILL_SECONDS", PARSE_KILL_SECONDS),
             parse_queue_length=_int(env, "PARSE_QUEUE_LENGTH", PARSE_QUEUE_LENGTH),
+            parse_memory_mib=_int(env, "PARSE_MEMORY_MIB", PARSE_MEMORY_MIB),
         )

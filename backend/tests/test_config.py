@@ -6,7 +6,7 @@ import pytest
 
 from app.config import ConfigError, Settings
 
-INT_VARS = ["SESSION_TTL_MINUTES", "PARSE_KILL_SECONDS", "PARSE_QUEUE_LENGTH"]
+INT_VARS = ["SESSION_TTL_MINUTES", "PARSE_KILL_SECONDS", "PARSE_QUEUE_LENGTH", "PARSE_MEMORY_MIB"]
 
 
 def test_defaults() -> None:
@@ -18,6 +18,7 @@ def test_defaults() -> None:
     assert s.session_ttl_minutes == 60
     assert s.parse_kill_seconds == 120
     assert s.parse_queue_length == 2
+    assert s.parse_memory_mib == 1536
 
 
 def test_every_variable_is_read(tmp_path: Path) -> None:
@@ -29,12 +30,14 @@ def test_every_variable_is_read(tmp_path: Path) -> None:
             "CLAUSEANCHOR_SESSION_TTL_MINUTES": "30",
             "CLAUSEANCHOR_PARSE_KILL_SECONDS": "45",
             "CLAUSEANCHOR_PARSE_QUEUE_LENGTH": "5",
+            "CLAUSEANCHOR_PARSE_MEMORY_MIB": "512",
         }
     )
     assert (s.analyzer, s.mode) == ("real", "real")
     assert s.artifacts_dir == tmp_path
     assert s.db_path == "sessions.db"
     assert (s.session_ttl_minutes, s.parse_kill_seconds, s.parse_queue_length) == (30, 45, 5)
+    assert s.parse_memory_mib == 512
 
 
 def test_reads_the_process_environment_when_given_none(monkeypatch: pytest.MonkeyPatch) -> None:
