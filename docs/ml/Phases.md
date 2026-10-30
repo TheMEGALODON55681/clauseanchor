@@ -1,16 +1,16 @@
 # ML phase status
 
-Updated: 2026-10-29, Asia/Calcutta. Owner: Tanishq Arya.
+Updated: 2026-10-30, Asia/Calcutta. Owner: Tanishq Arya.
 
 | Phase | Status | Completion gate |
 |---|---|---|
 | 1. Interface | Core locally verified; teammate integration pending | Preserve the version 2.0 contract and exact offsets; confirm the backend adapter and all four category states |
 | 2. CUAD data and official baseline | Frozen partitions and released-model baseline recorded | Preserve source/family exclusions and split provenance; keep released-model baseline metrics separate from the newly trained model |
 | 5. Clean-split extraction training | Completed training run; selected checkpoint recorded | `clean_training_v1`: three epochs, 3,474 optimizer updates; best `checkpoint-000022`; recovery and completed state verified |
-| 6. Evaluation and calibration | Disjoint extractor frozen; calibration unvalidated; candidate-only policy measured and retained October 29 | Keep confidence null; complete final frozen evaluation without reopening failed experiments |
+| 6. Evaluation and calibration | Final frozen evaluation completed and reviewed October 30; calibration unvalidated; candidate-only policy retained | Keep confidence null; report measured limitations; no test-based tuning |
 | 7. Rules and corpus adapters | Deferred beyond this release | Reviewed rule tests, verified judgment provenance and licenses |
 | 8. Retrieval | Deferred beyond this release | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
-| 11. ML artifact release | Pending | Frozen model/decoder/calibration/policy artifacts, final evaluation, support limits, CPU benchmark and reproduction |
+| 11. ML artifact release | Packaging next; final evaluation recorded | Verified package and loading instructions, measured support limits, CPU checks and reproduction |
 | 12. Joint integration | Pending | Real local demo, honest partial states, exact highlighting and runtime; formal workload study deferred |
 
 Keep the numbering aligned with ClauseAnchor_Plan.md. Phases 3, 4, 9 and 10 are primarily Aryan's app work. Update observed results after running each gate; do not mark future work complete because files have been named.
@@ -27,16 +27,16 @@ not completion of rules, retrieval, India validation or the original programme.
 | October 31 | At most one saved-candidate decoder variant under section 6.3; freeze the existing disjoint reference if the gate fails or time runs out. |
 | November 2 | One predeclared simple calibration assessment on dev_cal with held-out/out-of-fold reliability and support; otherwise keep confidence null and scope unvalidated. |
 | November 4 | Completed October 29: fixed dev_policy measurement reviewed; retain candidate-only output with documented limitations. Unsupported decisions stay abstained/unavailable; absence remains disabled. |
-| November 5 | One final evaluation of the frozen available pipeline, official test plus required sensitivity slice; official scoring for baseline comparability, anchored metrics separately. No test-based tuning. |
+| November 5 | Completed and reviewed October 30: final frozen actual-analyzer evaluation and separate official reference comparison on full test and required sensitivity. No test-based tuning. |
 | November 6 | CPU loading/runtime, source offsets, progress/cancellation/partial-state checks and parser integration if available. Name missing app integration instead of claiming completion. |
 | November 7 | Versioned package, manifest, loading instructions, measured limitations and release handoff; fixes only, no further experiment. Candidate-only is an acceptable fallback. |
 
 ## Current handoff
 
-- Remote main rechecked October 29: `d882596ac662507e7d1b9c5c978d04408c90357d`,
-  Tanishq's six-file calibration commit, following decoder freeze `25922ab` and
-  real-analyzer commit `74fc4b3`. The reviewed policy batch is based on this
-  commit; its generated identity matches the delivered config and producer code.
+- Remote main rechecked October 30: `8614cc1503d90625d1d4359fedf690133f1dfda5`,
+  Tanishq's six-file candidate-policy commit, following calibration `d882596`,
+  decoder freeze `25922ab` and real-analyzer commit `74fc4b3`. The final-evaluation
+  batch is based on this commit. No newer remote main change was found.
   The prior empty phase document was restored at `f4b6500`; no repair is pending.
 - First real adapter batch locally verified October 28: checkpoint-000022
   inference-only export, candidate-only adapter and non-fixture CPU smoke.
@@ -95,7 +95,26 @@ not completion of rules, retrieval, India validation or the original programme.
   limitations do not justify automatic acceptance. See
   [CUAD_CandidatePolicy.md](CUAD_CandidatePolicy.md) for hashes, uncertainty,
   strata, restart accounting and review limits. Retain null confidence and the
-  unchanged candidate-only policy; final test evaluation is still pending.
+  unchanged candidate-only policy; its final test evaluation is recorded below.
+
+- Final evaluation completed October 30 at 10:15:24 IST and the supplied
+  evidence was reviewed. Tanishq's 35 focused tests passed in 80.387 seconds
+  after the one-line Windows test-path normalization fix. Both arms contain
+  all 4,182 questions; the final invocation reused the entire candidate arm
+  and completed the remaining 411 official-reference questions. This was
+  resumed evaluation inference, not training. No recollection is required.
+- Actual analyzer full-test results: 8,174 review candidates, 1,797 TP / 6,377 FP /
+  846 FN, precision 21.984%, recall 67.991%, 1,488 exact matches. Sensitivity
+  precision is 21.712%, recall 67.964%. There are 1,176 processing-incomplete
+  full-test questions and 2,242 zero-output questions, including 36 with gold.
+  Automatic acceptance and absence remain disabled; all categories unvalidated.
+- The separate clean-checkpoint authors-reference path has official AUPR
+  43.635% versus the released reference's 42.586%. Clean P@80R and P@90R are zero
+  under the unchanged official lookup grid; these are not deployed-analyzer
+  accuracy. See [CUAD_FinalEvaluation.md](CUAD_FinalEvaluation.md) for both
+  slices, uncertainty, score interpretation, hashes, resume accounting and
+  review limits. Final evaluation is closed early; packaging/integration remains
+  due November 6 and release handoff November 7.
 
 ## Ordered Phase 6 gates
 
@@ -318,23 +337,46 @@ for the final frozen evaluation; no quality or release-readiness claim is added.
 
 ### 6.6 Freeze and evaluate the complete pipeline
 
-Status: next batch; final frozen evaluation due November 5. The decoder,
-unvalidated calibration outcome and retained candidate-only policy are closed.
-No official-test result for this trained pipeline has yet been produced.
+Status: completed and reviewed October 30, ahead of November 5. The predeclared
+protocol in `ml/configs/cuad_final_evaluation_v1.json` evaluated both fixed arms
+on the full official test and known-overlap sensitivity. The frozen decoder,
+failed calibration outcome and retained candidate-only policy remain unchanged.
+No official-test result selects a threshold, model, decoder or calibration method.
 
-Freeze model, tokenizer, candidate generation, decoder, calibrator, policy and
-supported categories before final evaluation. Evaluate the declared benchmark
-scope and required overlap-sensitivity slice separately. The previously run
-released-model official baseline is not a final result for this trained model.
-Use the official evaluator for a comparable baseline result; report anchored
-metrics separately. Development anchored precision/recall is not comparable to
-the published official-test word-set scoring, including its Parties handling.
-Do not use official-test results to tune thresholds or choose decoder variants.
+The [final evaluation record](CUAD_FinalEvaluation.md) contains measured results,
+artifact identities and explicit review limits. Full coverage is 102 documents /
+99 families / 4,182 questions / 2,643 gold spans. Sensitivity contains 93 documents /
+92 families / 3,813 questions / 2,441 gold spans, excluding nine already-reviewed
+confirmed-overlap documents while retaining two unresolved documents.
 
-For the intended product scope, add a separately annotated, representative
-document evaluation before generalizing from CUAD to arbitrary uploads. Keep
-new evaluation documents outside development and respect document/family
-grouping. Report misses as well as false highlights and abstentions.
+The actual candidate analyzer's anchored precision/recall is 21.984%/67.991% on
+full test and 21.712%/67.964% on sensitivity. Full-test false candidate highlights
+per document average 62.52 (p95 198.25, maximum 597); missed gold averages 8.29.
+The 95% descriptive whole-family intervals are 19.618%–24.766% precision and
+65.581%–70.329% recall. Sixteen of 41 measured categories have sparse support;
+all 46 catalogue entries remain not_validated. These measurements support an
+honestly labelled noisy candidate-only prototype, not automatic acceptance or
+validated absence. Null confidence and neutral manual review are preserved.
+
+The separate authors-reference inference path yields clean-checkpoint official
+AUPR 43.635% full / 44.024% sensitivity, versus released-reference 42.586% / 42.992%.
+Clean P@80R and P@90R are zero because the preserved P@recall grid does not reach
+those targets. This is not a claim of zero correct predictions or of overall
+superiority from AUPR. It is also not the deployed disjoint pipeline's accuracy;
+training exposure and inference settings differ between reporting contexts.
+
+The supplied predictions reproduce all anchored matching and aggregate results,
+support flags, fixed family bootstrap and clean-reference official curves. The
+review checked contract/source-ID structural invariants and both arms' curve
+arithmetic. Full source strings, weights, raw caches and released raw predictions
+were not supplied; corresponding local checks were not independently rerun here.
+Keep the generated JSON creation status unchanged; dated Markdown records review
+closure. There is no new source audit, inference rerun or post-test tuning step.
+
+Representative arbitrary-upload/India validation remains outside this release;
+CUAD evidence cannot establish that scope. Packaging and integration checks are
+next, due November 6. Confirm the app boundary only when it is actually exercised;
+Aryan owns parser/backend/frontend/deployment. Release handoff remains November 7.
 
 ## Deferred scope and retained manual review
 
