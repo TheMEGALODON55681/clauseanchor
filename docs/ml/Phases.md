@@ -1,17 +1,17 @@
 # ML phase status
 
-Updated: 2026-10-30, Asia/Calcutta. Owner: Tanishq Arya.
+Updated: 2026-10-31, Asia/Calcutta. Owner: Tanishq Arya.
 
 | Phase | Status | Completion gate |
 |---|---|---|
-| 1. Interface | Core locally verified; teammate integration pending | Preserve the version 2.0 contract and exact offsets; confirm the backend adapter and all four category states |
+| 1. Interface | Core locally verified; backend analyzer path present; live check pending | Preserve the version 2.0 contract and exact offsets; confirm the backend adapter and all four category states |
 | 2. CUAD data and official baseline | Frozen partitions and released-model baseline recorded | Preserve source/family exclusions and split provenance; keep released-model baseline metrics separate from the newly trained model |
 | 5. Clean-split extraction training | Completed training run; selected checkpoint recorded | `clean_training_v1`: three epochs, 3,474 optimizer updates; best `checkpoint-000022`; recovery and completed state verified |
 | 6. Evaluation and calibration | Final frozen evaluation completed and reviewed October 30; calibration unvalidated; candidate-only policy retained | Keep confidence null; report measured limitations; no test-based tuning |
 | 7. Rules and corpus adapters | Deferred beyond this release | Reviewed rule tests, verified judgment provenance and licenses |
 | 8. Retrieval | Deferred beyond this release | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
-| 11. ML artifact release | Packaging next; final evaluation recorded | Verified package and loading instructions, measured support limits, CPU checks and reproduction |
-| 12. Joint integration | Pending | Real local demo, honest partial states, exact highlighting and runtime; formal workload study deferred |
+| 11. ML artifact release | Portable package and isolated CPU check completed/reviewed October 31; release handoff pending | Preserve package/evidence hashes and measured support limits; hand off by November 7 |
+| 12. Joint integration | Analyzer-backed app jobs present; trained-bundle live integration unverified | Real local demo, honest partial states, exact highlighting and runtime; formal workload study deferred |
 
 Keep the numbering aligned with ClauseAnchor_Plan.md. Phases 3, 4, 9 and 10 are primarily Aryan's app work. Update observed results after running each gate; do not mark future work complete because files have been named.
 
@@ -28,15 +28,17 @@ not completion of rules, retrieval, India validation or the original programme.
 | November 2 | One predeclared simple calibration assessment on dev_cal with held-out/out-of-fold reliability and support; otherwise keep confidence null and scope unvalidated. |
 | November 4 | Completed October 29: fixed dev_policy measurement reviewed; retain candidate-only output with documented limitations. Unsupported decisions stay abstained/unavailable; absence remains disabled. |
 | November 5 | Completed and reviewed October 30: final frozen actual-analyzer evaluation and separate official reference comparison on full test and required sensitivity. No test-based tuning. |
-| November 6 | CPU loading/runtime, source offsets, progress/cancellation/partial-state checks and parser integration if available. Name missing app integration instead of claiming completion. |
+| November 6 | ML package CPU loading, source offsets, progress/cancellation and simulated partial-state checks completed October 31. Live parser/API/UI checks remain unverified; record their actual outcome. |
 | November 7 | Versioned package, manifest, loading instructions, measured limitations and release handoff; fixes only, no further experiment. Candidate-only is an acceptable fallback. |
 
 ## Current handoff
 
-- Remote main rechecked October 30: `8614cc1503d90625d1d4359fedf690133f1dfda5`,
-  Tanishq's six-file candidate-policy commit, following calibration `d882596`,
-  decoder freeze `25922ab` and real-analyzer commit `74fc4b3`. The final-evaluation
-  batch is based on this commit. No newer remote main change was found.
+- Remote main rechecked October 31: `49c2c17ff67bba942d9bb609cd8a2e7f08371c89`.
+  Tanishq's seven-file final-evaluation commit is `93d2942`. Aryan added catalogue
+  loading (`829ac16`), document upload/parse jobs (`53f2ed1`) and analyzer-backed
+  jobs (`49c2c17`). The real CPU analyzer path now exists, including parser
+  context, progress/cancellation and partial states. This is source inspection,
+  not a trained-bundle live app test. The recent app commits leave ML unchanged.
   The prior empty phase document was restored at `f4b6500`; no repair is pending.
 - First real adapter batch locally verified October 28: checkpoint-000022
   inference-only export, candidate-only adapter and non-fixture CPU smoke.
@@ -115,6 +117,27 @@ not completion of rules, retrieval, India validation or the original programme.
   slices, uncertainty, score interpretation, hashes, resume accounting and
   review limits. Final evaluation is closed early; packaging/integration remains
   due November 6 and release handoff November 7.
+
+- Portable package built and isolated CPU smoke completed October 31 at
+  13:56:32 IST; supplied receipt/report/binding review passed. Tanishq's 23
+  packaging tests passed in 76.350 seconds. The previously delivered 17 neutral
+  manual-review fixture tests also passed assistant-side; that feature is unchanged.
+- Release `clauseanchor-candidate-prototype-v0` has outer manifest SHA-256
+  `29b4553786eb4e9f8cba8f6fb2244358406d101e460f77f3200542386ff84184`.
+  The receipt records a 509,869,238-byte ZIP. CPU load was 25.81 seconds; the
+  full authored-source call took 3.34 seconds and completed 8/8 windows with
+  seven candidates. Partial and limited calls added three returned slices;
+  all 10 exact source slices and candidate-only fields passed independent review.
+- Cancellation before inference/after one window, work-limit denominators,
+  all five unsupported India categories and simulated partial parser/decoration
+  transport behaved as declared. All confidence remains null; no acceptance
+  or absence is enabled. These are package checks, not new accuracy measurements.
+- Preserve the tested ZIP, source, original instructions and generated JSON.
+  [CandidateReleaseVerification.md](CandidateReleaseVerification.md) records the
+  hashes, observed results, noisy outputs and review limits separately from the
+  immutable package snapshot. No rebuild or model/evaluation rerun is required.
+  Actual parser/API/UI integration and deploy-host loading remain unverified.
+  The app path now exists for the next check; November 6/7 deadlines are unchanged.
 
 ## Ordered Phase 6 gates
 
@@ -374,9 +397,10 @@ Keep the generated JSON creation status unchanged; dated Markdown records review
 closure. There is no new source audit, inference rerun or post-test tuning step.
 
 Representative arbitrary-upload/India validation remains outside this release;
-CUAD evidence cannot establish that scope. Packaging and integration checks are
-next, due November 6. Confirm the app boundary only when it is actually exercised;
-Aryan owns parser/backend/frontend/deployment. Release handoff remains November 7.
+CUAD evidence cannot establish that scope. The portable ML package and isolated
+CPU checks were completed/reviewed October 31. Live parser/API/UI checks remain
+unverified and due November 6; confirm them only when actually exercised. Aryan
+owns parser/backend/frontend/deployment. Release handoff remains November 7.
 
 ## Deferred scope and retained manual review
 
