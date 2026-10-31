@@ -10,7 +10,7 @@ Updated: 2026-10-31, Asia/Calcutta. Owner: Tanishq Arya.
 | 6. Evaluation and calibration | Final frozen evaluation completed and reviewed October 30; calibration unvalidated; candidate-only policy retained | Keep confidence null; report measured limitations; no test-based tuning |
 | 7. Rules and corpus adapters | Deferred beyond this release | Reviewed rule tests, verified judgment provenance and licenses |
 | 8. Retrieval | Deferred beyond this release | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
-| 11. ML artifact release | Portable package and isolated CPU check completed/reviewed October 31; release handoff pending | Preserve package/evidence hashes and measured support limits; hand off by November 7 |
+| 11. ML artifact release | Portable package and isolated CPU check completed/reviewed; release handoff prepared October 31; transfer/recipient verification pending | Preserve package/evidence hashes and measured support limits; hand off by November 7 |
 | 12. Joint integration | Trained local DOCX/parser/API/CPU check completed and reviewed October 31; frontend/PDF/network/deployment unverified | Real local demo, honest partial states, exact highlighting and runtime; formal workload study deferred |
 
 Keep the numbering aligned with ClauseAnchor_Plan.md. Phases 3, 4, 9 and 10 are primarily Aryan's app work. Update observed results after running each gate; do not mark future work complete because files have been named.
@@ -23,18 +23,19 @@ not completion of rules, retrieval, India validation or the original programme.
 
 | Deadline | Deliverable and exit condition |
 |---|---|
-| October 30 | Real candidate-only AnalyzerProtocol adapter around checkpoint-000022, verified local export and non-fixture smoke. Exact missing artifacts/checks remain blockers; never substitute the stub. See [RealAnalyzer.md](RealAnalyzer.md). |
-| October 31 | At most one saved-candidate decoder variant under section 6.3; freeze the existing disjoint reference if the gate fails or time runs out. |
-| November 2 | One predeclared simple calibration assessment on dev_cal with held-out/out-of-fold reliability and support; otherwise keep confidence null and scope unvalidated. |
+| October 30 | Completed/reviewed October 28: real candidate-only AnalyzerProtocol adapter, checkpoint-000022 export and non-fixture smoke. See [RealAnalyzer.md](RealAnalyzer.md). |
+| October 31 | Closed October 29: the one decoder variant failed its fixed gate; retain and freeze `disjoint_full`. No second experiment. |
+| November 2 | Completed October 29: the one predeclared calibration assessment failed its bin-gap criterion; confidence stays null and scope unvalidated. |
 | November 4 | Completed October 29: fixed dev_policy measurement reviewed; retain candidate-only output with documented limitations. Unsupported decisions stay abstained/unavailable; absence remains disabled. |
 | November 5 | Completed and reviewed October 30: final frozen actual-analyzer evaluation and separate official reference comparison on full test and required sensitivity. No test-based tuning. |
 | November 6 | Package CPU checks and trained local ASGI DOCX/parser/API integration completed/reviewed October 31. Frontend highlighting, PDF integration, network-server and deployment checks remain unverified; record their actual outcome. |
-| November 7 | Versioned package, manifest, loading instructions, measured limitations and release handoff; fixes only, no further experiment. Candidate-only is an acceptable fallback. |
+| November 7 | Versioned candidate-only package and reviewed limits are ready; [release handoff](ReleaseHandoff.md) prepared October 31. Artifact transfer and recipient acknowledgement remain unconfirmed. Fixes/handoff only, no further experiment. |
 
 ## Current handoff
 
-- Remote main rechecked October 31: `b6f22bfd9052770231da7ce7cd90cf6c0e267cca`.
-  Tanishq's packaging commit `4e137e9` is merged; his seven-file final-evaluation
+- Remote main rechecked October 31: `06d615cc39104b547130cf6b79a57413ac624373`.
+  Tanishq's four-file API verification commit `06d615c` is present. His packaging
+  commit `4e137e9` is merged; his seven-file final-evaluation
   commit is `93d2942`. Aryan added catalogue
   loading (`829ac16`), document upload/parse jobs (`53f2ed1`) and analyzer-backed
   jobs (`49c2c17`). The real CPU analyzer path now exists, including parser
@@ -160,6 +161,14 @@ not completion of rules, retrieval, India validation or the original programme.
   subprocess/model, not a network server. Frontend highlighting, PDF integration
   and deployment remain unverified. No model/evaluation rerun, frozen artifact,
   backend or manual-review change is required; release handoff remains pending.
+- [ReleaseHandoff.md](ReleaseHandoff.md) now prepares the final extraction-release
+  handoff: exact local ZIP/companion paths, independent artifact hashes, recipient
+  loading instructions, frozen quality limits and named app gaps. The tested ZIP
+  and packaged pre-build documents remain unchanged. This is documentation only;
+  no new experiment, inference collection, test suite or rebuild is needed.
+  Artifact transfer and recipient verification have not been confirmed, so the
+  release is not labelled delivered or deployed. Keep November 6/7 and record
+  remaining app checks honestly; deferred ML scope stays deferred.
 
 ## Ordered Phase 6 gates
 
