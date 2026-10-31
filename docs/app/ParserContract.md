@@ -366,7 +366,7 @@ Each outermost DOCX table is one `table` node, one level below its container. A 
 
 ## 8. Party nodes and `name_span`
 
-**Status: required, not built.** Part 2-0C of `Phases.md` builds it, after Tanishq confirms the shape below, and ships it as `parser_version` 1.2.0 (2.1).
+**Status: required, not built.** Part 2-0C of `Phases.md` builds it, after Tanishq confirms the shape below, and ships it as `parser_version` 1.3.0 (2.1). Part 2-0D ships first as 1.2.0.
 
 The frontend lists the parties of a contract and must never cut a name at a comma, so the parser decides where a name ends (`FrontendDesign.md` 17.7, BR). The requirement:
 
@@ -378,6 +378,19 @@ The frontend lists the parties of a contract and must never cut a name at a comm
 Today `StructureNode` has no `party` kind and no `name_span` field, and the JSON Schema has neither. API.md defines the field on the document node and tags it `[CONTRACT]` (`Phases.md`, 2-E). Part 2-0C gives the parser the field before 2-E starts. Send back any change to the shape before 2-0C starts.
 
 Not specified yet, and needed before 2-0C starts: which text makes a party node (a `BETWEEN` and `AND` list, a `by and between` sentence, or a `hereinafter referred to as` anchor, which none of the definition forms in 7.7 match), the node's own range, its level and parent when no node is open, and what a file with no recognisable party gives.
+
+Observed on contracts 001 to 025 (part 2-0A, 31 October 2026). This is data for that design, and no rule. 24 of the 25 files parse (002 is a web page saved with a PDF extension), and 21 of the 24 introduce parties. A file can use more than one form.
+
+| Form | Files |
+|---|---|
+| `BETWEEN` and `AND` list | 11 |
+| `by and between` sentence | 10 |
+| `hereinafter referred to as` anchor (`called` in 8 files, `referred to as` in 12, both in 3) | 18 |
+| Parties table | 0 |
+| Another form (a sentence that places each party on one side of the deal in formal wording, in three files, two of them templates with blanks; a letter with sender and recipient address blocks; a one-signatory form with fill-in fields; a sentence that names both parties and defines no short name) | 6 |
+| No recognisable party (platform terms that name roles only, a cover note, a how-to sheet) | 3 |
+
+The party block sits before the first numbered clause in all 21 files, and the first anchor starts within 650 characters in 17 of the 18 files that have one. Short names come in quotes inside brackets, in quotes alone, in brackets alone, bare, and in mixed styles. A party can be a blank to fill in (two templates), and one template defines a short name with `hereinafter` and no verb. `Phases.md` 2-0C holds the file numbers per form and the cases a detector must survive.
 
 ## 9. Errors
 
@@ -446,6 +459,7 @@ The first message listed no ceilings, so this whole section is new. The last col
 | DOCX symbol characters (`w:sym`) and footnote reference marks add nothing, so a note's text carries no marker back to its place in the body | No |
 | A text box is read at its anchor paragraph, not by where it sits on the page | No |
 | Rotated PDF pages are not supported. Reading order and block boundaries there are not reliable | No |
+| An image that holds words and covers under half a page (a process diagram, a screenshot of a web page). The page is not image-dominant, so it is not scanned, `partial` stays false, and the words are not in `source_text`. Seen in 2-0A on two pages of one how-to sheet | No |
 
 ### 12.2 Text effects
 
@@ -462,13 +476,13 @@ The first message listed no ceilings, so this whole section is new. The last col
 
 | Case | Marked |
 |---|---|
-| **Fused unspaced paragraphs.** Paragraphs with no spacing, no numbering and no indent fuse into one block per page. Nothing in the geometry separates them. Offsets stay exact, so only the block and the node that starts in it are coarser | No |
+| **Fused unspaced paragraphs.** Paragraphs with no spacing, no numbering and no indent fuse into one block per page. Nothing in the geometry separates them. Offsets stay exact, so only the block and the node that starts in it are coarser. Measured on contracts 001 to 025 (part 2-0A): no page has its whole body in one block, and 10 of the 20 PDFs that parse have a block that holds two or more paragraphs, on 16 pages in all (a lower bound). In five files the block holds list items, because the block rule cuts at `1.`, `1.1` and `(a)` and not at `a)`, `1)`, `i)`, `i.` or `A.`. In two the items carry a bullet glyph, which no label rule reads. In the others the text sits beside a separate label column, has no numbering and no spacing (once beside a table that is read row by row), or lost its label to a scan. This reaches the fix threshold, and `Phases.md` plans the fix as part 2-0D | No |
 | First-line indents with no paragraph spacing and no numbering put block boundaries one line late | No |
 | A page that fills its margins breaks one paragraph into several blocks | No |
-| A two-column table is read as two columns, because its geometry matches a two-column page. Tables with three or more columns read row by row | The second only: `MORE_THAN_TWO_COLUMNS` |
+| A two-column table is read as two columns, because its geometry matches a two-column page. Tables with three or more columns read row by row. A list with a hanging label column reads the same way: the labels form one block and the item text another (seen on 4 pages of 2 files in 2-0A) | The second only: `MORE_THAN_TWO_COLUMNS` |
 | Three or more columns of running text read across | `MORE_THAN_TWO_COLUMNS` |
 | A bare number that is the first or last row of a page is decoration, even when it is a table cell or a list marker on its own line | No |
-| A page number on a line with other text (`Agreement 12`) is decoration only when the line repeats on enough pages | No |
+| A page number on a line with other text (`Agreement 12`) is decoration only when the line repeats on enough pages. Seen in 2-0A in a 33-page file whose footer is the page number, a vertical bar and the word Page: the footer is decoration on pages 10 to 33 and body text on pages 1 to 9, where it opens nine false level 1 nodes | No |
 | Overlapping images count twice toward the image share | No |
 | A file with a broken page tree and no pages reports `NO_TEXT_FOUND` | Yes, by the error |
 
@@ -498,15 +512,17 @@ These are the cases where the tree is wrong or coarse and offsets are still exac
 
 | Case | Effect |
 |---|---|
-| **Athens-style lists.** A numbered list inside a section that shares numbers with the section sequence takes them. In one agency agreement a definitions list `1.` to `6.` inside Section 4 took 5 and 6, so Sections 5 and 6 are missed and two false nodes `5` and `6` appear. A Part A and a Part B pair that restarts after a long run reads as a list inside the clause. Separate sequences for heading words and bare numbers would split these, and would then open the list items as level 1 nodes, which cuts Section 4 short. Not built, and open for measurement on the Indian contracts (`Phases.md`, 2-0A) | Missed and false sections |
+| **Athens-style lists.** A numbered list inside a section that shares numbers with the section sequence takes them. In one agency agreement a definitions list `1.` to `6.` inside Section 4 took 5 and 6, so Sections 5 and 6 are missed and two false nodes `5` and `6` appear. A Part A and a Part B pair that restarts after a long run reads as a list inside the clause. Separate sequences for heading words and bare numbers would split these, and would then open the list items as level 1 nodes, which cuts Section 4 short. Not built. Measured on contracts 001 to 025 (part 2-0A): 0 of the 24 files that parse, so no fix part is planned | Missed and false sections |
 | A short all-capitals line is a heading and closes open nodes. Seen: signature block names, formula words (`MULTIPLIED BY`), and a page header that was not marked as furniture | Nodes end early |
-| A party list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay | Two false nodes |
+| A party list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay. The same happens with a recital list of three items before the clauses (two files in 2-0A, three false nodes each), and with the first item of a numbered list under an unnumbered heading (one scanned file, four false nodes with its party list) | Two or more false nodes |
 | A Word list whose first item is an empty numbered paragraph is not read when it is a nested decimal (`1.1` empty, `1.2` first), a letter list or a numeral list. A top-level decimal list is read. A gap in the middle of any list is read (7.5) | A list is missed |
-| In a PDF, and in a DOCX whose list is typed, a numeral list that opens right after `(h)` reads `(i)` as the ninth letter, because there is no Word level to tell the two apart. Its other numerals stay inside that node. A Word list is read right (7.4), unless letters and numerals share one level in different lists, which the parser cannot tell apart because the number format is not passed on. Seen in a state government services template (`(h) a reference to:` then `(i)` to `(iv)`), which now gives `(h)` four numeral children | One coarse node, wrong level |
+| In a PDF, and in a DOCX whose list is typed, a numeral list that opens right after `(h)` reads `(i)` as the ninth letter, because there is no Word level to tell the two apart. Its other numerals stay inside that node. A Word list is read right (7.4), unless letters and numerals share one level in different lists, which the parser cannot tell apart because the number format is not passed on. Seen in a state government services template (`(h) a reference to:` then `(i)` to `(iv)`), which now gives `(h)` four numeral children. Measured on contracts 001 to 025 (part 2-0A): 0 of 24 files for the PDF and typed-list case, and 0 of 4 Word files for the shared level. File 005 puts letters and numerals on one Word level, and the tree is right, because its numeral label `i)` is not read (next row). No fix part is planned | One coarse node, wrong level |
 | Numbers inside a table cell are not read, so a contract laid out as one large table has a `table` node and no clauses | No clauses |
 | A contents page with neither a dot leader nor a trailing page number is read as clauses | False nodes |
 | A definition in a form that is not listed (`X shall be construed as`) is not found, and a quoted term at the end of one block with its verb at the start of the next is missed | Missed definition |
 | A typed list that opens above 1 is body text | A list is missed |
+| A typed label that follows white space at the start of a Word paragraph (a tab or spaces before `(a)`) is body text, because a label is read only at the first character of the block. The white space stays in `source_text`. Seen in 2-0A in one Word file (001), where six items of a lettered list give no nodes | A list is missed |
+| A list label with only a closing bracket (`a)`, `i)`, `1)`) or only a full stop (`a.`, `i.`, `A.`) is body text, because 7.3 needs both brackets for a letter or a numeral. A Word list that numbers this way gives a label, and the tree still skips it. Seen in 2-0A in two Word files (`i)` to `v)` and `a)` to `d)`) and in the PDF lists behind the fused blocks in 12.3 | A list is missed |
 
 ## 13. A worked example
 

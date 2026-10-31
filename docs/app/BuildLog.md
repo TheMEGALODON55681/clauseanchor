@@ -2505,3 +2505,204 @@ Blockers: none.
 Held `[CONTRACT]` items for Tanishq: none new. The three questions above are for his reply and block nothing. The 2-A list stands.
 
 Suggested commit message: `feat(jobs): run analysis jobs through the core analyzer`. Next part: 2-E (OpenAPI export and API.md), once 2-0C lands. 2-0A, 2-0B and 2-0C still wait on Tanishq, as before.
+
+
+## 2026-10-31: Part 2-0A close, ceiling counts and party forms on contracts 001 to 025
+
+Part: 2-0A, the counting half and the close. Docs only: no product code, no dependency, no browser, no server. `ml/` and `docs/ml/` were not changed (two files in `ml/configs/` were read), and `git status` lists no path under either. No parser output moved, so `parser_version` stays 1.1.0 and no `[CONTRACT]` item changed. 2-0A is ticked: the guidelines are draft 0.2, the counts are done, and 2-0D tracks the fused paragraph fix as its own part.
+
+This entry covers two runs on the same day. The first run counted 21 files, because four of the 25 contracts were over the parser limits. Aryan replaced those four (001, 002, 003, 010) with shorter agreements, and the second run counted the replacements and applied his further decisions. The tables cover the final 25 files.
+
+Start checks of the second run:
+- `git status --short` listed the four docs and nothing else. `git log --oneline -8` gave HEAD `06d615c`. `git check-ignore -v` on 001, 002, 003 and 010 showed `.gitignore` line 16 (`data/*`) for each.
+- Baseline in `backend/.venv`: `ruff format --check` 56 files already formatted, `ruff check` all checks passed, `pytest` 1309 passed, 1 warning, in 79.7 s.
+- `data/indian/` holds `001` to `025`, each with its own extension: 21 `.pdf` and 4 `.docx` (001, 005, 015, 018).
+
+Files changed:
+- `docs/app/AnnotationGuidelines.md`: version 0.2 with a list of changes, section 2 (all ten ids confirmed, the five CUAD questions copied from `ml/configs/category_questions.json`), section 4 (later 1.x parses keep the offsets), 6.4 (a picture that holds words), section 8 (input, step 4, script paragraph, results) and open item 3.
+- `docs/app/Phases.md`: the open-ceilings table (counts, the limits row now owned by 2-R, 2-0C at 1.3.0), the Phase 2 intro, 2-0A (ticked, status, the nine decisions), 2-0B (files 002 and 003), 2-0D moved ahead of 2-0C and rewritten (1.2.0, ten files, scope), 2-0C (1.3.0, party forms for 24 files), and the limits finding under 2-R.
+- `docs/app/ParserContract.md`: section 8 (version 1.3.0, the observed party forms), 12.1 (a new row for pictures that hold words), 12.3 (fused count), 12.6 (counts, and a new row for a label behind white space).
+- `docs/app/BuildLog.md`: this entry.
+
+Read: `Rules.md` (sections 1 and 5), `AnnotationGuidelines.md` in full, `Phases.md` (2-0A to 2-0D, 2-R, the ceiling table), `ParserContract.md` (2.1, 6, 7, 8, 12), the first run's version of this entry, and read-only `ml/configs/catalogue.json` and `ml/configs/category_questions.json`. In `backend/app/parsing`: `model.py`, `assemble.py`, `pdf.py` (`_blocks`, `_NUMBERING`, the scan rules), `structure.py` (label patterns) and `docx.py` (locators).
+
+Method:
+1. First run, 21 files. One throwaway script, kept in the session scratchpad outside the repo, parsed each file with `parse_document` in one process, one file at a time, and printed per file: the outcome or error code, counts of blocks, nodes and warning codes, `coverage.partial`, the level 1 labels with gaps, repeats and breaks marked, restarts at 1 that reach the next section number, the nodes of step 3 with their locators and offsets, the PDF pages of step 4 (one-block pages, blocks over half the page height, blocks with a short line that ends a paragraph, blocks whose later line starts like a list label), per-page stamp keyword counts, per-page character, image and annotation counts, Word list labels with level and number format, and flags for the party forms with their offsets. It printed no contract text. Candidates were read as pages and blocks written under `data/indian/_view/`, which Git ignores.
+2. The four originals were measured once more, apart from the count, with the two limits lifted in memory only (`MAX_PDF_PAGES` to 2,000 and `MAX_TEXT_CHARS` to 1,500,000, set in the script, with no product file touched), in a `CappedProcess` at 5 GiB. Results are under "Limits finding" below. No ceiling count uses them.
+3. Second run, the four replacements. A new throwaway script of the same kind (the first was deleted) parsed 001, 002, 003 and 010 and printed the same items. 001, 003 and 010 are 2,353 to 4,943 characters, so each was read in full from block text under `data/indian/_view/`, and pages 2 and 3 of 003 and pages 3 and 4 of 010 were rendered and viewed there. A bullet list was added to step 4 and run over every PDF: blocks with two or more lines that start with the same bullet glyph. A further check listed Word blocks whose text starts with white space and would read as a label without it.
+4. The five CUAD questions and the ten ids were read from `ml/configs/`, and a script copied the questions into the guidelines and checked each one against the file byte for byte (five of five found, and the five India questions match the table). Its first print of the characters showed question marks in the console, which looked like replacement characters. The code points are a curly apostrophe (U+2019) in two questions and a no-break space (U+00A0) at the end of one, and the guidelines say so.
+5. All scripts and the viewing folder were deleted at the end. The viewing aids wrote under `data/` only, which departs from section 8's "writes nothing" for the counting script, and not from the rule on contract text.
+
+Parse results (parser 1.1.0, 24 of 25 parse):
+
+| File | Type | Pages | Chars | Blocks | Nodes | Partial | Warnings |
+|---|---|---|---|---|---|---|---|
+| 001 | DOCX | | 3,814 | 30 | 7 | no | none |
+| 002 | fails | `UNSUPPORTED_TYPE` (247 bytes) | | | | | |
+| 003 | PDF | 3 | 2,353 | 11 | 6 | no | none |
+| 004 | PDF | 1 | 3,093 | 18 | 13 | no | none |
+| 005 | DOCX | | 17,480 | 59 | 37 | no | none |
+| 006 | PDF | 2 | 4,956 | 29 | 14 | no | none |
+| 007 | PDF | 4 | 5,782 | 34 | 4 | no | none |
+| 008 | PDF | 33 | 74,821 | 348 | 38 | no | `COLUMN_ORDER_UNCERTAIN` 5 |
+| 009 | PDF | 1 | 1,860 | 8 | 0 | no | none |
+| 010 | PDF | 4 | 4,943 | 21 | 16 | no | `MORE_THAN_TWO_COLUMNS` 1, `BLANK_PAGE` 1 |
+| 011 | PDF | 2 | 7,399 | 34 | 25 | no | none |
+| 012 | PDF | 3 | 7,225 | 35 | 14 | no | none |
+| 013 | PDF | 4 | 12,132 | 53 | 23 | no | `COLUMN_ORDER_UNCERTAIN` 2 |
+| 014 | PDF | 4 | 7,659 | 37 | 13 | no | none |
+| 015 | DOCX | | 4,346 | 38 | 8 | no | none |
+| 016 | PDF | 4 | 5,481 | 32 | 4 | no | none |
+| 017 | PDF | 3 | 5,322 | 64 | 15 | no | none |
+| 018 | DOCX | | 1,740 | 18 | 8 | no | `TEXT_BOX_CONTENT` 1 |
+| 019 | PDF | 2 | 4,071 | 24 | 0 | no | none |
+| 020 | PDF | 8 | 9,557 | 81 | 28 | no | none |
+| 021 | PDF | 5 | 8,410 | 52 | 16 | no | none |
+| 022 | PDF | 5 | 8,091 | 47 | 26 | no | none |
+| 023 | PDF | 5 | 6,682 | 43 | 15 | no | none |
+| 024 | PDF | 10 | 11,927 | 92 | 20 | **yes** | `MORE_THAN_TWO_COLUMNS` 1 |
+| 025 | PDF | 10 | 16,211 | 111 | 11 | **yes** | `MORE_THAN_TWO_COLUMNS` 2, `COLUMN_ORDER_UNCERTAIN` 1 |
+
+- File that fails: 002, with `UNSUPPORTED_TYPE`. The file is 247 bytes and starts with a web page tag, so it is a web page saved with a PDF extension (flags only: it has a title, a body and a link, and no error words). This is not a parser limit, so the "stop on a limit" clause did not apply, and the counts for the other 24 went ahead. One more file adds at most one to a zero count, and the fused count is already over the threshold, so 002 moves no outcome. Its rows wait for a real file.
+- Files with `coverage.partial` true: 024 and 025. Neither has `PARTIALLY_SCANNED_PDF`. Each has one searchable-scan page (024 page 3 with 195 characters, 025 page 4 with 77), the case that sets `partial` with no warning (`ParserContract.md` section 6). Every label with no span in these two files is `unassessable` (`AnnotationGuidelines.md` 6.4).
+- 003 has two pages with pictures that hold words: page 2 (a process diagram, image share 0.42) and page 3 (a screenshot, image share 0.30, no text). Both are under the 0.5 cut, so the parser marks nothing and `partial` is false. New row in 12.1, and a sign in 6.4. 010 page 4 is blank.
+- Replacement files in kind: 001 and 010 are blank contract forms with placeholders. 003 is a how-to sheet about an application procedure, and not an agreement. 002 is not a document at all.
+
+Limits finding, for 2-R (the four originals):
+
+| File | Error | Size |
+|---|---|---|
+| 001 | `TOO_MANY_PAGES` | 208 pages |
+| 002 | `TOO_MANY_PAGES` | 112 pages |
+| 003 | `FILE_TOO_LARGE` | 25,393,798 bytes |
+| 010 | `TOO_MANY_PAGES` | 287 pages |
+
+With the limits lifted in memory (not part of the count), 002 parsed with the page limit lifted alone (295k characters, 22 s). 001, 003 and 010 stopped with `TOO_MUCH_TEXT` at the 500,000 character limit, and parsed with both lifted: 001 has 932k characters and 208 pages (31 s), 003 has 886k and 224 (36 s), 010 has 510k and 287 (45 s). One process that parsed the three in turn peaked at 2,062 MiB, over the 1,536 MiB parse cap. The limits stay as they are for now, and `Phases.md` records the finding under 2-R, which reviews whether they fit real Indian tenders.
+
+Ceiling counts (24 files that parse; 20 PDFs and 4 Word files; threshold 3, set before any count):
+
+| Ceiling | Files | File numbers | Reaches 3 |
+|---|---|---|---|
+| Athens-style list | 0 of 24 | none | No |
+| Level, a numeral list after a letter list | 0 of 24 | none | No |
+| Number format, Word | 0 of 4 | none | No |
+| Fused paragraphs, PDF | 10 of 20 | 003, 007, 008, 010, 011, 012, 016, 020, 023, 025 | Yes |
+
+Athens-style lists, 0 files. The level 1 labels of every file were read for gaps, repeats and breaks, and every restart at 1 that reaches the next section number was listed. Four files break the sequence (008, 021, 022, 025), and none is an Athens case, because no list took a section's number and cost a section:
+- 008: the footer, a page number with a vertical bar and the word Page, stayed body text on pages 1 to 9 and became decoration on pages 10 to 33. It opens nine false level 1 nodes, and no level 1 node exists on pages 10 to 20. 12.3 row on page numbers with other text.
+- 021 and 022: a three-item list in the recitals, before the clauses, opens three false level 1 nodes in each file. The real clauses 1 to 11 and 1 to 21 are all read. 12.6 row on a party list at the top.
+- 025: the numbered party list (two nodes) and the first item of two lists under unnumbered headings (pages 5 and 7) open four false nodes. 12.6 row on a party list at the top.
+- Replacements: 001 reads clauses 1 to 4, 003 reads 1 to 6 and 010 reads 1 to 10, each with no gap, repeat or break.
+- No contents page was read as clauses, and no file numbers its clauses with a heading word before the number.
+
+Level, 0 files. The siblings that continue a letter run and can be a numeral (`(i)`, `(v)`, `(x)`, `(c)`, `(d)`, `(l)`, `(m)`) were listed with their neighbours and children. Two `(i)` after `(h)` were read: 005 (a typed list, paragraph 67) and 008 (page 32). Both are the ninth letter of a list that ends at `(i)`, and the tree is right. No `(v)` or `(x)` appears in the 24. 010 has `(c)` and `(d)` inside a letter run `(a)` to `(e)`, with no numeral list.
+
+Number format, 0 files. The numbering part of the four Word files was read with every list's level and format. File 005 puts two lettered lists (numIds 10 and 12) and one roman list (numId 11) on Word level 0. The tree is right, because the roman label has no opening bracket (`i)`), so it is not read as a label at all. File 015 has a decimal and a lettered list on level 0 and no roman list. File 018 has one decimal list. File 001 has a decimal list and a bullet list, and no block carries a Word label, because its numbers are typed. The shared level without a wrong tree in 005 is the nearest miss in the set.
+
+Fused paragraphs, 10 files, 16 pages (a lower bound). The first pass found 7 of 18 PDFs on 12 pages. Step 4's own lists gave one-block pages in no file and three blocks over half the page height, all in 008. A second list, blocks whose later line starts like a list label, found the rest. Every candidate block was read, and only blocks that hold two or more paragraphs count. Pages: 003 pages 1 and 2; 007 pages 2 and 3; 008 pages 16, 27 and 31; 010 page 3; 011 page 1; 012 pages 1 and 2; 016 pages 1 and 2; 020 page 1; 023 page 3; 025 page 8. The causes:
+- List labels the block rule does not cut at (`a)`, `1)`, `i.`, `A.`; the rule's pattern is `1.`, `1.1` and `(a)`): 007 page 3, 011 page 1, 012 pages 1 and 2, 016 pages 1 and 2, 025 page 8. Five files.
+- Bullet items: 003 (page 1 holds a block of 8 items and one of 3, page 2 a block of 3) and 023 page 3 (a block of 2). The glyph is not a label to the block rule. Two files.
+- Item text beside a label column that the reader puts in blocks of its own: 008 pages 16, 27 and 31, where each tall block holds 9 to 12 items. The same split shows on 013 page 3, where the labels form a block alone and the block holds no paragraph text, so 013 is not counted.
+- Unnumbered paragraphs with no spacing: 020 page 1, where both parties, the line of `And` and the recitals sit in one block, and 010 page 3, where a note, the witness paragraph and the signature lines share one block, and a lead-in, a table read row by row and a note share another.
+- A label the scan mangled: 007 page 2, where the number of clause 2.3 lost its full stop.
+- Not counted: a heading line with one paragraph or one list item under it in one block (020 pages 3 and 8, 023 page 4, 003 page 1 block 5, 010 page 1), and cover or signature blocks that a detector flagged by their short lines (016, 020, 021 to 023).
+- The lists missed the new cases. On 003 and 010 the first three lists flagged one block (003 page 1, a heading with one item, not counted) and none of the confirmed ones. Reading found 003's bullet items and 010's blocks. The bullet list, run over all 20 PDFs, found 003 and one old file, 023, where reading confirmed two bullet items in one block. The first pass's seven files stay.
+- 2-0D as scoped (the label cut) covers five of the ten files. 003, 007 (page 2), 008, 010, 020 and 023 would stay fused. The bullet glyph is a list item shape outside the scope as written, and `Phases.md` 2-0D leaves it to Aryan.
+
+Stamp and certificate pages. Files with an e-stamp certificate page: 0 of 24. Files with a stamp-paper page: 1 (025). The page is a scan with the stamp banner printed above the first page of the instrument. The text layer holds noise from the banner (a garbled serial line and three one-character or two-character blocks). The parser kept it as body text: those blocks have kind `text`, and 025 has no decoration at all. The keyword search (stamp, certificate and franking words, page by page) found no stamp page in any file, 025 included, because the banner's text layer is noise. Page 3 of 025 was found by viewing it. Pages viewed as images: 007 page 1, 017 page 1, 021 page 1, 024 pages 3 and 4, 025 pages 3 and 4, 003 pages 2 and 3, 010 pages 3 and 4. Of the replacements, 001 has no keyword hit. 003 has one line that asks for a document on stamp paper, inside a list of requirements, and four lines about a no-dues certificate. 010 has a note under the title that refers to stamp duty, and one hit in a clause about certified compensation. Neither is a stamp page. 002 holds no text to search.
+
+Party forms, for 2-0C (24 files that parse; 21 introduce parties; forms overlap). Labels: list is a `BETWEEN` and `AND` list, sentence is a `by and between` sentence, anchor is a `hereinafter referred to as` anchor (the wording `called` counts), table is a parties table.
+
+| Form | Files | File numbers |
+|---|---|---|
+| list | 11 | 005, 007, 011, 012, 015, 016, 020, 021, 022, 023, 024 |
+| sentence | 10 | 004, 011, 014, 017, 019, 020, 021, 022, 023, 025 |
+| anchor | 18 | 001, 004, 005, 006, 007, 010, 011 (pair and roles only), 012, 014, 015, 016, 017, 019, 020, 021, 022, 023, 025 |
+| table | 0 | none (015 has a cover table that names both parties, and its body uses a list and an anchor) |
+| other | 6 | 001, 006, 010, 013, 018, 024 |
+| none | 3 | 003, 008, 009 |
+
+Combinations: list and anchor 5 (005, 007, 012, 015, 016); sentence and anchor 5 (004, 014, 017, 019, 025); list, sentence and anchor 4 (020, 021, 022, 023); list and sentence with the anchor on the pair 1 (011); other and anchor 3 (001, 006, 010); list and other 1 (024); other alone 2 (013, 018); none 3.
+
+The other forms, in my own words: 001, 006 and 010 are one sentence that places each party on one side of the deal in formal wording. 001 and 010 are templates with blanks: 010 leaves both parties blank, and 001 names the purchaser and leaves the supplier blank. 013 is a letter with sender and recipient address blocks. 018 is a one-signatory form with fill-in fields for name and designation, with the organisation named only in the letterhead. 024 is one sentence that names both parties and defines no short name. 003 is a how-to sheet that names two roles in passing, 008 is platform terms that name two roles, and 009 is a cover note.
+
+Anchor wordings: `referred to as` names a party in 12 files (004, 005, 007, 012, 014, 017, 019, 020, 021, 022, 023, 025), `called` in 8 (001, 005, 006, 010, 015, 016, 017, 019), both in 3 (005, 017, 019). 010 defines its first party with `hereinafter` and no verb, and its second with `called`.
+
+Short name, by the main style in the file: quotes inside brackets 8 (001, 004, 005, 010, 011, 013, 014, 015); quotes alone 2 (007, 012); brackets alone 2 (016, 025); neither 4 (020, 021, 022, 023); mixed 3 (006, 017, 019); not defined 2 (018, 024); no parties 3 (003, 008, 009). The party block sits before the first numbered clause in all 21 files. The first anchor starts within 650 characters in 17 of the 18 files that have one (014 at 591 and 015 at 600 are the latest of the first 15, and 001 at 208 and 010 at 227 the new ones), and at 1,267 in 025, which opens with two transmittal pages. File 024 opens the same way.
+
+Other things the party read showed: file 020's parties and recitals share one block, 017 lists its parties as `A.` and `B.`, 025's numbered party list is also its first two false nodes, 025's text layer spaces "by and between" into single letters so a text match would miss it, files 020 to 024 repeat the parties on a cover page before the body, the cover table in 015 is a leaf for labels (7.8), 001 and 010 leave a party blank, and 001's quote marks round the short name mix directions.
+
+Findings outside the four ceilings, logged with their rows:
+- Closing-bracket and full-stop labels (`a)`, `i)`, `1)`, `a.`, `i.`) are body text, since 7.3 needs both brackets. A Word list that numbers this way (005 `i)` to `v)`, 015 `a)` to `d)`) gives a label, and the tree still skips it. 12.6 row.
+- The label column split on 008 and 013: added to the 12.3 two-column row.
+- The 008 footer case: added to the 12.3 page-number row.
+- New in the second run: a typed label behind white space in a Word paragraph. In 001 the paragraphs of the lettered list start with a tab or spaces, so the six labels `(a)` to `(f)` are not read and the tree has no nodes for them. The other three Word files have none. New 12.6 row. A fix would change nodes and no character of `source_text`.
+- New in the second run: pictures that hold words (003). New 12.1 row and a sign in 6.4.
+
+Decisions (Aryan, 31 October 2026). Recorded under 2-0A in `Phases.md`:
+1. The fused count keeps its written definition, two or more paragraphs in one block, so the ceiling reaches the threshold.
+2. 2-0D cuts blocks at list labels only (`a)`, `1)`, `i.`, `A.`). Unspaced paragraphs without labels are not part of it. After it lands the fused count runs again, and a file still fused stays a recorded ceiling, because block cuts move no character of `source_text` and so never shift an annotation offset. Aryan revisits those files after the annotation pilot.
+3. Order and versions: 2-0D first as 1.2.0, then 2-0C as 1.3.0, then 2-E.
+4. Form labels: `called` counts as an anchor, and the cover table in 015 is not a parties table.
+5. Stamp item 3 stays open until more stamp pages turn up.
+6. The BuildLog edits that were rejected once and that the first run applied again stay applied.
+7. 2-0D before 2-0C. The earlier run had left 2-0D after 2-0C and 2-0C at 1.2.0. 2-0D now comes first in `Phases.md` with 1.2.0, and 2-0C is 1.3.0 in the ceiling table, its entry, the Phase 2 intro and `ParserContract.md` section 8. Older BuildLog entries keep the 1.2.0 they recorded at the time.
+8. Tanishq's `ml/configs/catalogue.json` holds all ten ids and `ml/configs/category_questions.json` the questions. The guidelines confirm `cuad.uncapped_liability` and `cuad.governing_law`, copy the five CUAD questions with the file named as the source, go to draft 0.2 with a list of changes, and 2-0A ticks.
+9. The 2-0D scope is the label cut only.
+
+Open for Aryan after this part:
+- 002 is a web page saved as a PDF. It needs a real file before 2-0B loads it. Its counts, party form and stamp page are a one-file addition.
+- 003 is a how-to sheet and not an agreement. Whether it stays in the annotation set is Aryan's call.
+- Whether the bullet glyphs join the 2-0D label list (003 and 023, two of the ten fused files).
+
+Reviews, in this session, with no outside tool.
+- Jury review of the doc changes and the method. Six perspectives read them on their own terms, then one verdict.
+  - Method integrity: the threshold was set before the count and did not move. The bullet list was added after the replacement files showed the gap, and it only raises a count that is already over the threshold. The zero counts rest on detectors for the 21 old files and on a full reading for 001, 003 and 010, so the old zeros are as strong as the detectors. The fused count is a lower bound and the entry says so. File 002 cannot move an outcome, and the entry gives the arithmetic.
+  - Rules and privacy: the docs hold file numbers, labels, counts, page numbers and offsets. Roles and form names are in my words, with no party name, place or quoted phrase. The CUAD questions are from a public benchmark and not contract text, and the guidelines credit the source file and the dataset licence. The viewing folder stayed under `data/` and was deleted.
+  - Claims against code and data: the label read at the first character of the block is in `structure.py` and was confirmed by listing the six hidden labels; the image cuts were read from the parser's own image share (0.42 and 0.30 against 0.5); the anchor wordings were counted with a pattern search; the question text was checked byte for byte. One wrong claim was caught and fixed on the way, the replacement characters that were really a curly apostrophe and a no-break space.
+  - Annotation impact: 002 cannot load, 003 is not an agreement, 001 and 010 are blank forms (the guidelines already treat a blank placeholder as present), and 024 and 025 stay `partial`. The fused blocks move no offset.
+  - Reader: Aryan, Tanishq and the 2-0C builder read the docs. The party data sits in one place per doc, the open choices are listed above, and the 2-0D bullet question sits in the 2-0D entry where its builder will see it.
+  - Consistency: every count was grepped across the three docs for the old numbers (21, 18, 7, 3, 1.2.0), and the remaining mentions are history or the first pass's own figures.
+  - Verdict: ship, with the corrections above applied.
+- ponytail review of the diff: one finding, decisions 7 and 9 repeated 3 and 2 in `Phases.md`, so they became one line. The 2-R finding stays in the 2-R entry with a short row in the ceiling table, because the table lists the part that owns each ceiling. Net: 2 lines cut.
+
+Checks:
+- No code changed, so `ruff` and `pytest` ran at the start and again at the end after the last edit: `ruff format --check` 56 files already formatted, `ruff check` all checks passed, `pytest` 1309 passed, 1 warning (79.7 s at the start, 63.0 s at the end), the same count as the baseline. `tests/test_docs.py` reads `API.md` only, so no test guards the four changed files.
+- Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`, with the exact command in Rules: no output.
+- Tool-name grep, both forms in Rules (code, config and README; the lines added to the docs outside this file and `Rules.md`): no output.
+- Dash scan for em and en dashes (U+2014 and U+2013) over the four changed files: 0 in each. A control file with one of each gave a hit, so the scan works.
+- Contract word scan. A throwaway script took capitalised words of five letters or more from the first page of each of the 24 contracts that parse (the first three pages when the first held under 1,500 characters, or the first 3,000 characters of a Word file), kept those that appear in 8 files or fewer and in no other doc, took up to 20 per contract (315 words), and searched the lines this part added to the four docs. It printed counts and line positions only. The first run had 9 hit lines. Four were the words that name the document type of 003, in four descriptions of that file, and neutral wording replaced them before the scan reran. The 5 left are three lines of the CUAD question table (generic legal words that a contract's first page also holds, from the benchmark's public question text) and the stamp item in the guidelines (two generic terms that already stood in draft 0.1). File 002 has no text. Weak spots: files 010, 011, 018, 021 and 022 have 2 to 4 distinctive words each, and scans (007, 025) have noisy text layers.
+- Git: `status`, `diff`, `log` and `check-ignore` only. Nothing staged, committed, branched or pushed. `git status --short` lists the four docs and nothing else, and no path under `ml/` or `docs/ml/`.
+- Cleanup: the scratchpad scripts and outputs and `data/indian/_view/` are deleted. `data/indian/` still holds the 25 files.
+- Prose passes: copywriting, then copy-editing, then stop-slop, over every added passage. Edits: "exactly" became "word for word", two passive lines became active ("Aryan revisits those files", "2-0C builds on the cut blocks"), a vague line about the reapplied edits was made specific, and "four shapes" became "bracket and full-stop labels".
+
+Docs checked for staleness:
+- Changed: `AnnotationGuidelines.md`, `Phases.md`, `ParserContract.md` and this entry.
+- Checked and left alone: `Rules.md`, `Architecture.md`, `API.md`, `FrontendDesign.md`, `DesignSystem.md`, `README.md`, `parser_output.schema.json` (no output moved) and `docs/ml/` (Tanishq's).
+
+Not verified:
+- Fused blocks that no list flags. A fused block with no short last line, no list label and no bullet glyph, or in a file with no hit, is missed, so 10 is a lower bound.
+- The zero counts for the 21 files from the first run are as strong as the detectors. A numbered list that took a section's number in a form the detectors do not read would be missed.
+- File 002 for every ceiling, the party form and the stamp page.
+- The party classification of the Word files and of the scans rests on one reading by one reader. 025 and 007 are scans with noisy text.
+
+Processes: started 26, closed 26 (this run, kept in a hand ledger: `ruff` twice and `pytest` at the start and again at the end, `pip list`, and 19 small throwaway Python scripts and checks). Two calls to `python3` hit the Windows Store alias, printed nothing and started no Python. The suite's own tests start capped child processes inside `pytest`, and those are not counted. A process-list check at the end (names `python`, `pythonw`, `python3`, `ruff`, `pytest`, `py`) found none left. No browser, no server, and nothing killed by name.
+
+Blockers: none. 2-0B needs a real 002 and Aryan's call on 003.
+
+Held `[CONTRACT]` items for Tanishq: none new. 2-0C gains the party-form counts as input and now ships as 1.3.0, and the section 8 questions stand.
+
+Suggested commit message:
+
+```text
+docs: record ceiling counts and party forms for contracts 001 to 025
+
+Count the four parser ceilings on the 24 contracts that parse (002 is a
+web page saved as a PDF). Fused paragraphs reach the threshold in 10 of
+20 PDFs and the other three ceilings count 0. Record the party forms and
+stamp pages, move 2-0D ahead of 2-0C (1.2.0 and 1.3.0), note the parser
+limits for 2-R, confirm the two CUAD ids, copy the five CUAD questions
+into the guidelines (draft 0.2) and tick 2-0A.
+```
+
+Next action: Aryan replaces 002 and decides on 003 and on the 2-0D bullet glyphs. Then 2-0D, 2-0C, 2-E.

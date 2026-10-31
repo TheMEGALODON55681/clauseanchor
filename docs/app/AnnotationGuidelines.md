@@ -2,9 +2,16 @@
 
 Rules for annotating the Indian contract set (plan v1.1 section 4.3). Aryan annotates contracts 001 to 025 and Tanishq 026 to 050. Both annotate the same 10 documents. Every annotation records the `guideline_version` it was made under.
 
-**Version 0.1, draft.** The version stays below 1.0 until the pilot on the 10 development documents has tested the rules and Tanishq has answered the open items.
+**Version 0.2, draft.** The version stays below 1.0 until the pilot on the 10 development documents has tested the rules and Tanishq has answered the open items.
 
-Open in this draft: two unconfirmed ids, the CUAD fixed questions and the record keys marked "proposed" (section 9). Tanishq supplies the fixed questions, and section 2 gives a working definition for each until they arrive. The ceiling counts (section 8) are not run.
+Changes from 0.1:
+
+- Section 2 confirms the two ids that were open, `cuad.uncapped_liability` and `cuad.governing_law`, and gives the fixed question of each CUAD label. Tanishq's files in `ml/configs/` supply both. The working definitions were checked against the questions, and none changed.
+- Section 4 says which later parser releases keep the offsets.
+- Section 6.4 adds a sign of unreadable text: a picture that holds words.
+- Section 8 holds the ceiling counts (24 of 25 files read), and section 9 holds the stamp page note from the counts.
+
+Open in this draft: the record keys marked "proposed" and the stamp certificate item (section 9).
 
 Every example in this file is made up. No text comes from a real contract, and none may be added (`Rules.md` section 5).
 
@@ -32,20 +39,20 @@ Ground rules for every label:
 
 Ten labels. Five are the India extensions of plan v1.1 section 4.3. Five are CUAD categories, annotated for a limited domain-shift check.
 
-| Id | Source | Id status | Fixed question |
-|---|---|---|---|
-| `in.arbitration` | India | Confirmed | Which text provides for arbitration of disputes? |
-| `in.seat_venue` | India | Confirmed | Which text states the seat or venue of arbitration? |
-| `in.stamping_registration` | India | Confirmed | Which text addresses stamp duty, stamping or registration? |
-| `in.forum_selection` | India | Confirmed | Which text selects courts or a judicial forum for disputes? |
-| `in.dispute_escalation` | India | Confirmed | Which text requires negotiation, mediation or another step before formal dispute resolution? |
-| `cuad.non_compete` | CUAD | Confirmed | Pending from Tanishq |
-| `cuad.liquidated_damages` | CUAD | Confirmed | Pending from Tanishq |
-| `cuad.cap_on_liability` | CUAD | Confirmed | Pending from Tanishq |
-| `cuad.uncapped_liability` | CUAD | **Unconfirmed** | Pending from Tanishq |
-| `cuad.governing_law` | CUAD | **Unconfirmed** | Pending from Tanishq |
+| Id | Source | Fixed question |
+|---|---|---|
+| `in.arbitration` | India | Which text provides for arbitration of disputes? |
+| `in.seat_venue` | India | Which text states the seat or venue of arbitration? |
+| `in.stamping_registration` | India | Which text addresses stamp duty, stamping or registration? |
+| `in.forum_selection` | India | Which text selects courts or a judicial forum for disputes? |
+| `in.dispute_escalation` | India | Which text requires negotiation, mediation or another step before formal dispute resolution? |
+| `cuad.non_compete` | CUAD | Highlight the parts (if any) of this contract related to "Non-Compete" that should be reviewed by a lawyer. Details: Is there a restriction on the ability of a party to compete with the counterparty or operate in a certain geography or business or technology sector?  |
+| `cuad.liquidated_damages` | CUAD | Highlight the parts (if any) of this contract related to "Liquidated Damages" that should be reviewed by a lawyer. Details: Does the contract contain a clause that would award either party liquidated damages for breach or a fee upon the termination of a contract (termination fee)? |
+| `cuad.cap_on_liability` | CUAD | Highlight the parts (if any) of this contract related to "Cap On Liability" that should be reviewed by a lawyer. Details: Does the contract include a cap on liability upon the breach of a party’s obligation? This includes time limitation for the counterparty to bring claims or maximum amount for recovery. |
+| `cuad.uncapped_liability` | CUAD | Highlight the parts (if any) of this contract related to "Uncapped Liability" that should be reviewed by a lawyer. Details: Is a party’s liability uncapped upon the breach of its obligation in the contract? This also includes uncap liability for a particular type of breach such as IP infringement or breach of confidentiality obligation. |
+| `cuad.governing_law` | CUAD | Highlight the parts (if any) of this contract related to "Governing Law" that should be reviewed by a lawyer. Details: Which state/country's law governs the interpretation of the contract? |
 
-Confirmed means the id appears in plan v1.1 or in `ml/fixtures`. The two unconfirmed ids appear in neither. Tanishq confirms them with the fixed questions, and the ids are final when he answers.
+All ten ids are final. They are in `ml/configs/catalogue.json` (catalogue 1.0.0), which settles the two that draft 0.1 left open, `cuad.uncapped_liability` and `cuad.governing_law`. The questions come from `ml/configs/category_questions.json` (question set 1.0.0). The five India questions are the ones draft 0.1 used. The five CUAD questions are copied word for word from that file, which keeps the CUAD wording (CUAD is by The Atticus Project, CC BY 4.0). Two details are the source's own and stay as they are, because the file's usage note asks for the source wording: the two liability questions use a curly apostrophe (U+2019) in "party's", and the non-compete question ends with a no-break space (U+00A0).
 
 Each label has a one-line definition and a test. Apply the test to one sentence or sub-clause at a time.
 
@@ -98,12 +105,12 @@ Each label has a one-line definition and a test. Apply the test to one sentence 
 - In: a maximum amount, a multiple or share of fees, a link to insurance cover, or a deadline for claims, applied to a party's liability.
 - Out: a waiver of indirect or consequential loss with no amount or time limit, a limit on a price or fee, and a duty to carry insurance.
 
-**`cuad.uncapped_liability`** (id unconfirmed)
+**`cuad.uncapped_liability`**
 - Definition: text that says a party's liability has no limit, or that a cap does not apply to a named breach or loss.
 - In: wording such as "unlimited", or "this limit does not apply to" a stated breach or loss.
 - Out: silence. A contract with no cap does not say that liability is uncapped.
 
-**`cuad.governing_law`** (id unconfirmed)
+**`cuad.governing_law`**
 - Definition: text that names the law governing the agreement.
 - In: the sentence names the country, state or legal system whose law governs the agreement, its interpretation or its performance.
 - Out: a court or a seat, a statute that applies to one topic only (the Act under which an arbitration runs), and a general duty to follow "applicable law".
@@ -240,7 +247,7 @@ Example 7:
 - Offsets are Unicode code points into `source_text` as parsed at `parser_version` 1.1.0. They are zero-based, and `end` is exclusive: `source_text[start:end]` is the span text.
 - They are not bytes and not UTF-16 units. A browser counts UTF-16 units, so a character outside the Basic Multilingual Plane, such as an emoji, is one code point and two units there. The annotation tool converts. Do not convert by hand.
 - Never find a span by searching the text. Read the offsets from the selection. Never normalise the text.
-- Record the `text_sha256` of the parse you annotated. The same hash is the same text. A minor or patch release never moves `source_text` (`ParserContract.md` 2.1), so a 1.1.x or 1.2.0 parse of the file has the same hash and offsets. A major release may move it, and the hash tells you.
+- Record the `text_sha256` of the parse you annotated. The same hash is the same text. A minor or patch release never moves `source_text` (`ParserContract.md` 2.1), so a later 1.x parse of the file has the same hash and offsets. The two planned parser parts are minor releases: 2-0D ships as 1.2.0 and 2-0C as 1.3.0. A major release may move the text, and the hash tells you.
 - Offsets belong to one file in one format. A PDF and a DOCX of the same contract give different offsets.
 
 Worked calculation. The text has two blocks, and the second holds the rupee sign U+20B9, one code point (3 UTF-8 bytes, 1 UTF-16 unit):
@@ -344,6 +351,7 @@ The parser cannot read some content, and the annotator may meet more. Signs:
 
 - From the parser: `coverage.partial` is true, or a warning is `PARTIALLY_SCANNED_PDF`, `UNMAPPED_GLYPHS`, `EMBEDDED_OBJECT` or `UNSUPPORTED_DOCX_FEATURE`. A damaged glyph shows in the text as `(cid:` and a number.
 - From the reading: text that reads as nonsense (a wrong font map gives plausible wrong letters and no warning, `ParserContract.md` 12.2), blacked-out text, and a gap in page or clause numbers (page 4 of 9, then page 6).
+- From the page: a picture that holds words, such as a diagram or a screenshot. The parser marks a page only when images cover most of it (`ParserContract.md` 6), so a picture on a text page raises no flag, and its words are not in `source_text` (12.1).
 
 For each sign, open the original file at the place and look:
 
@@ -374,9 +382,9 @@ Ten documents are annotated by both annotators, independently. Neither sees the 
 
 ## 8. Ceiling counts (part 2-0A)
 
-Part 2-0A also measures four parser ceilings on contracts 001 to 025 (`Phases.md`, open ceilings; `ParserContract.md` 12.3 and 12.6). The counts need the contract files, and none is in `data/` yet. **Nothing is counted.**
+Part 2-0A measured four parser ceilings on contracts 001 to 025 (`Phases.md`, open ceilings; `ParserContract.md` 12.3 and 12.6). The counts ran on 31 October 2026 in two passes. The first pass read 21 files. Four of the 25 were over the parser limits, Aryan replaced them, and the second pass counted the replacements. The results follow the procedure.
 
-**Input.** Contracts 001 to 025 as files in one folder under `data/`, which Git ignores, parsed at 1.1.0. If fewer than 25 arrive, count those and report how many.
+**Input.** Contracts 001 to 025 as files in `data/indian/`, which Git ignores, parsed at 1.1.0. If fewer than 25 parse, count those and report how many. 24 parse: 20 PDFs and 4 Word files (001, 005, 015, 018). File 002 stops with `UNSUPPORTED_TYPE`, because it is a web page saved with a PDF extension. The counts below are out of those 24 files, and out of the 20 PDFs for the fused paragraph ceiling. One more file adds at most one to a zero count, so file 002 cannot lift a ceiling to the threshold.
 
 **The four counts.** Each is a number of files. A file counts once per ceiling, however many places it has.
 
@@ -392,11 +400,11 @@ Part 2-0A also measures four parser ceilings on contracts 001 to 025 (`Phases.md
 1. Parse it with the existing command in its default form, which prints no contract text: `python -m app.scripts.parse_file FILE`. The output has node labels, kinds, levels, offsets, block locators, boxes and warnings.
 2. List the level 1 section labels in order. A gap, a repeat or a label out of order is a candidate for the Athens count.
 3. List each node that is the next sibling in a letter run and whose label can be a letter or a numeral: `(i)`, `(v)`, `(x)`, `(c)`, `(d)`, `(l)`, `(m)`. With no `list_level` in its locator it is a candidate for the level count. With one it is a candidate for the number format count.
-4. For a PDF, list each page whose body is one block, and each block whose box covers more than half the page height. These are candidates for the fused paragraph count.
+4. For a PDF, list each page whose body is one block, and each block whose box covers more than half the page height. Add each block whose second or later line starts like a list label (`a)`, `1)`, `i.`, `A.`), and each block with two or more lines that start with the same bullet glyph. These are candidates for the fused paragraph count. The first two lists found only one file, so the third and fourth lists are part of the procedure now. Read a file of a few pages in full: the lists missed bullet items in one replacement file and fused paragraphs in another.
 5. Open each candidate in the original file, at the page or paragraph its locator names, and read it. Only a confirmed candidate counts. The lists narrow the reading, and a defect seen while reading counts too.
 6. Name the cause. A wrong tree from another cause in 12.6 (a contents page read as clauses, a short all-capitals line that closes nodes, a list that opens above 1) counts for none of the four. Log it with its 12.6 row.
 
-**Script.** Steps 1 to 4 are mechanical, and doing them by eye over 25 files invites mistakes. One throwaway script would run them over the folder and print, per file: the file name, the warning codes, the level 1 labels with gaps and repeats marked, the nodes of step 3 with their locators and offsets, and the pages of step 4. It reads files and prints labels, numbers and offsets. It prints no contract text and writes nothing. It stays outside the repository because it serves this one count. **It is not written.** Aryan approves it first.
+**Script.** Steps 1 to 4 are mechanical, and doing them by eye over 25 files invites mistakes. One throwaway script ran them over the folder and printed, per file: the file name, the warning codes, the level 1 labels with gaps and repeats marked, the nodes of step 3 with their locators and offsets, and the pages of step 4. It read files and printed labels, numbers and offsets, and no contract text. It stayed outside the repository because it served this one count, and it was deleted after the run. The second pass used a new throwaway script of the same kind, with the bullet list added and run over every PDF, and it was deleted too.
 
 **Threshold.** A ceiling gets a fix part when it counts in 3 or more files, which is one file in eight of the set. With 0 to 2 files it stays a documented ceiling with its count recorded. The threshold is set before any count and does not move afterwards.
 
@@ -404,13 +412,24 @@ Part 2-0A also measures four parser ceilings on contracts 001 to 025 (`Phases.md
 
 **Where the results go.** The counts go in the BuildLog (file ids and labels only, no text), in the open-ceilings table of `Phases.md`, and in the matching rows of `ParserContract.md` 12.3 and 12.6.
 
+**Results (31 October 2026).**
+
+| Ceiling | Files | File numbers | Reaches 3 |
+|---|---|---|---|
+| Athens-style list | 0 of 24 | none | No |
+| Level (a numeral list after a letter list) | 0 of 24 | none | No |
+| Number format (DOCX) | 0 of 4 | none | No |
+| Fused paragraphs (PDF) | 10 of 20 | 003, 007, 008, 010, 011, 012, 016, 020, 023, 025 (16 pages) | Yes |
+
+The first pass found 7 of 18 PDFs. The replacements added 003 and 010, and the bullet list added 023. Five of the ten files (007 page 3, 011, 012, 016, 025) fuse runs of list items, because the block rule cuts at `1.` and `(a)` and not at `a)`, `1)`, `i.` or `A.`. Two more (003, 023) fuse bullet items, which the rule does not read as labels either. The other cases have other causes: item text beside a separate label column (008), unnumbered paragraphs with no spacing (020 page 1, 010 page 3), and a label the scan mangled (007 page 2). The count is a lower bound, because four lists and a reading found the cases and a fused block that none of them flags is not counted. `Phases.md` plans the fix as part 2-0D, with the label cut only. After it, 003, 007 (page 2), 008, 010, 020 and 023 stay fused, and the count runs again. It moves no character of `source_text`, so annotation does not wait for it. The wrong trees the counts found have other causes, and `ParserContract.md` 12.3 and 12.6 list them.
+
 ## 9. Open items
 
 For Tanishq, with the 2-0B record questions:
 
-1. The fixed question for each CUAD label, and confirmation of `cuad.uncapped_liability` and `cuad.governing_law`.
+1. Closed in 0.2. Tanishq's `ml/configs/` files give the ids and the questions (section 2).
 2. The record keys this file proposes: `designation` with the values `seat`, `venue` and `ambiguous`, and `negated`. Also the state names, the adjudication status values, and whether the record groups the spans of one finding. A core v2.0 `ClauseFinding` holds one span, so the evaluation must say how it scores a finding with several.
 
 For the pilot:
 
-3. Stamp certificate pages. The text of a stamp certificate or franking endorsement at the front of a contract addresses stamp duty. The proposal is to annotate it as `in.stamping_registration`, with the span recording that the text exists and nothing about payment or sufficiency. The pilot checks whether it floods the label.
+3. Stamp certificate pages. The text of a stamp certificate or franking endorsement at the front of a contract addresses stamp duty. The proposal is to annotate it as `in.stamping_registration`, with the span recording that the text exists and nothing about payment or sufficiency. The pilot checks whether it floods the label. The 2-0A counts found no certificate page in the 24 files that parse. One file (025) has a scanned stamp-paper page, and its text layer holds only noise from the printed banner, so it holds no sentence to annotate. That page follows 6.4: it holds no provision and changes nothing. Two other files mention stamping in passing, one in a title note and one in a list of requirements, and neither has a stamp page. The proposal stays open until a certificate page turns up.
