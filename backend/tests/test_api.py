@@ -83,13 +83,10 @@ def test_real_analyzer_without_its_artifacts_is_not_ready(
     make_client: MakeClient, tmp_path: Path, missing: str
 ) -> None:
     artifacts = tmp_path / "absent" if missing == "no directory" else None
-    response = make_client(analyzer="real", artifacts_dir=artifacts).get(READY)
+    client = make_client(analyzer="real", artifacts_dir=artifacts, artifacts_sha256="ab" * 32)
+    response = client.get(READY)
     error = _error(response, 503, "NOT_READY")
-    assert error["details"]["checks"] == {
-        "analyzer": "artifacts_missing",
-        "catalogue": "ok",
-        **OK_STORE,
-    }
+    assert error["details"]["checks"] == {"analyzer": "failed", "catalogue": "ok", **OK_STORE}
     assert str(tmp_path) not in response.text
 
 
@@ -115,9 +112,13 @@ def test_health_stays_dependency_free_with_a_dead_store(client: TestClient) -> N
     assert client.get(HEALTH).status_code == 200
 
 
-def test_real_analyzer_with_its_artifacts_is_ready(make_client: MakeClient, tmp_path: Path) -> None:
-    response = make_client(analyzer="real", artifacts_dir=tmp_path).get(READY)
+def test_real_analyzer_that_loaded_is_ready(
+    make_client: MakeClient, tmp_path: Path, fake_core: object
+) -> None:
+    client = make_client(analyzer="real", artifacts_dir=tmp_path, artifacts_sha256="ab" * 32)
+    response = client.get(READY)
     assert response.status_code == 200
+    assert response.json()["checks"]["analyzer"] == "ok"
 
 
 def test_capabilities_lists_the_scope_mode_version_and_categories(client: TestClient) -> None:

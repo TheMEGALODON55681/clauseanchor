@@ -7,6 +7,10 @@ by document id.
 One lock guards the single SQLite connection and the RAM dict together. Every public method takes
 it, and every private helper assumes it is held. A session and everything it owns leave RAM and
 SQLite in one critical section, so no reader sees one without the other.
+
+`on_drop` hears the ids of every document that leaves, before it goes, and runs under the lock.
+The parse queue uses it to kill the child of a document that is gone. A hook must not call back
+into the store.
 """
 
 from __future__ import annotations
@@ -19,6 +23,8 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
+
+from clauseanchor_core import AnalysisResult
 
 from app.config import MAX_DOCUMENTS_PER_SESSION, MAX_SESSIONS
 from app.parsing.model import ParsedDocument
@@ -48,9 +54,16 @@ CREATE TABLE jobs (
     id TEXT PRIMARY KEY,
     document_id TEXT NOT NULL REFERENCES documents (id) ON DELETE CASCADE,
     kind TEXT NOT NULL CHECK (kind IN ('parse', 'analysis')),
-    status TEXT NOT NULL
-        CHECK (status IN ('queued', 'running', 'succeeded', 'partial', 'failed', 'cancelled')),
-    created_at REAL NOT NULL
+    status TEXT NOT NULL CHECK (
+        status IN ('queued', 'running', 'succeeded', 'partial', 'failed', 'cancelled', 'timed_out')
+    ),
+    error TEXT,  -- a fixed code from errors.py, never text from the file
+    analysis_id TEXT UNIQUE,  -- an analysis job only
+    stage TEXT,  -- the core's own word for the stage, from its progress events
+    completed_units INTEGER NOT NULL DEFAULT 0,
+    total_units INTEGER,
+    created_at REAL NOT NULL,
+    finished_at REAL
 );
 CREATE INDEX jobs_document ON jobs (document_id);
 """
@@ -64,10 +77,25 @@ class DocumentLimitError(Exception):
     """The session already holds MAX_DOCUMENTS_PER_SESSION documents."""
 
 
+class AnalysisActiveError(Exception):
+    """The session already has an analysis waiting or running (plan 9.3: one per session)."""
+
+
 @dataclass(frozen=True, slots=True)
 class Session:
     id: str
     expires_at: float  # seconds since the epoch, as the clock reports them
+
+
+@dataclass(slots=True)
+class AnalysisRecord:
+    """What RAM holds for a document's latest analysis. A new analysis replaces it."""
+
+    analysis_id: str
+    job_id: str
+    category_ids: tuple[str, ...]
+    jurisdiction_scope: str
+    result: AnalysisResult | None = None  # set only when the job succeeded or ended partial
 
 
 @dataclass(slots=True)
@@ -78,7 +106,33 @@ class DocumentRecord:
     session_id: str
     expires_at: float  # the session's, copied at creation (D5)
     filename: str
-    parsed: ParsedDocument | None = None  # 2-C stores the parse result here
+    media_type: str
+    byte_count: int
+    status: str = "parsing"  # parsing, parsed or failed: the parse job's outcome, mirrored here
+    parsed: ParsedDocument | None = None
+    analysis: AnalysisRecord | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class JobRecord:
+    id: str
+    document_id: str
+    kind: str
+    status: str
+    error: str | None
+    analysis_id: str | None
+    stage: str | None
+    completed_units: int
+    total_units: int | None
+    created_at: float
+    finished_at: float | None
+
+
+_JOB_COLUMNS = (
+    "id, document_id, kind, status, error, analysis_id, stage, completed_units, total_units,"
+    " created_at, finished_at"
+)
+_ENDED = ("succeeded", "partial", "failed", "cancelled", "timed_out")
 
 
 def _digest(token: str) -> str:
@@ -97,6 +151,7 @@ class Store:
         self._clock = clock
         self._lock = threading.Lock()
         self._documents: dict[str, DocumentRecord] = {}
+        self.on_drop: Callable[[list[str]], None] = lambda ids: None
         # One connection for the life of the app, because every :memory: connection is its own
         # database. It is shared across threads, so the lock above serialises its use.
         self._db = sqlite3.connect(db_path, check_same_thread=False)
@@ -172,7 +227,9 @@ class Store:
             ).fetchone()
             if held >= MAX_DOCUMENTS_PER_SESSION:
                 raise DocumentLimitError
-            doc = DocumentRecord(str(uuid.uuid4()), session_id, row[0], filename)
+            doc = DocumentRecord(
+                str(uuid.uuid4()), session_id, row[0], filename, media_type, byte_count
+            )
             with self._db:
                 self._db.execute(
                     "INSERT INTO documents"
@@ -189,6 +246,19 @@ class Store:
             doc = self._live_document(document_id, self._clock())
             return doc if doc is not None and doc.session_id == session_id else None
 
+    def delete_document(self, session_id: str, document_id: str) -> bool:
+        """False when this session has no such document. Its job rows go with it."""
+        with self._lock:
+            doc = self._live_document(document_id, self._clock())
+            if doc is None or doc.session_id != session_id:
+                return False
+            self.on_drop([document_id])
+            del self._documents[document_id]
+            with self._db:
+                # ON DELETE CASCADE takes the jobs
+                self._db.execute("DELETE FROM documents WHERE id = ?", (document_id,))
+            return True
+
     def add_job(self, document_id: str, kind: str) -> str | None:
         """A queued job row. None when the document is gone."""
         with self._lock:
@@ -203,6 +273,160 @@ class Store:
                     (job_id, document_id, kind, now),
                 )
             return job_id
+
+    def get_job(self, session_id: str, job_id: str) -> JobRecord | None:
+        """The job if this session owns its document and the document has not expired."""
+        with self._lock:
+            row = self._db.execute(
+                f"SELECT {_JOB_COLUMNS} FROM jobs WHERE id = ?", (job_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            doc = self._live_document(row[1], self._clock())
+            return JobRecord(*row) if doc is not None and doc.session_id == session_id else None
+
+    def start_job(self, job_id: str) -> bool:
+        """Queued to running. False when the job is gone with its document, or is not queued."""
+        with self._lock, self._db:
+            changed = self._db.execute(
+                "UPDATE jobs SET status = 'running' WHERE id = ? AND status = 'queued'", (job_id,)
+            )
+            return changed.rowcount == 1
+
+    def finish_job(
+        self, job_id: str, *, parsed: ParsedDocument | None = None, error: str | None = None
+    ) -> None:
+        """Records a parse result or a failure code. Nothing happens when the document is gone,
+        so a parse that finishes after its document was deleted leaves no trace."""
+        if (parsed is None) == (error is None):
+            raise ValueError("a job finishes with a result or an error code")
+        with self._lock:
+            row = self._db.execute(
+                "SELECT document_id FROM jobs WHERE id = ?", (job_id,)
+            ).fetchone()
+            doc = None if row is None else self._documents.get(row[0])
+            if doc is None:
+                return
+            with self._db:
+                self._db.execute(
+                    "UPDATE jobs SET status = ?, error = ? WHERE id = ?",
+                    ("failed" if error else "succeeded", error, job_id),
+                )
+            doc.parsed, doc.status = parsed, "failed" if error else "parsed"
+
+    def add_analysis_job(
+        self,
+        session_id: str,
+        document_id: str,
+        category_ids: tuple[str, ...],
+        jurisdiction_scope: str,
+    ) -> tuple[str, str] | None:
+        """A queued analysis job: its id and its analysis id. None when the session has no such
+        document. Raises AnalysisActiveError when the session already has an analysis waiting or
+        running. The check and the insert share one critical section."""
+        with self._lock:
+            now = self._clock()
+            doc = self._live_document(document_id, now)
+            if doc is None or doc.session_id != session_id:
+                return None
+            (active,) = self._db.execute(
+                "SELECT count(*) FROM jobs JOIN documents ON documents.id = jobs.document_id"
+                " WHERE documents.session_id = ? AND jobs.kind = 'analysis'"
+                " AND jobs.status IN ('queued', 'running')",
+                (session_id,),
+            ).fetchone()
+            if active:
+                raise AnalysisActiveError
+            job_id, analysis_id = str(uuid.uuid4()), str(uuid.uuid4())
+            with self._db:
+                self._db.execute(
+                    "INSERT INTO jobs (id, document_id, kind, status, analysis_id, created_at)"
+                    " VALUES (?, ?, 'analysis', 'queued', ?, ?)",
+                    (job_id, document_id, analysis_id, now),
+                )
+            doc.analysis = AnalysisRecord(
+                analysis_id, job_id, tuple(category_ids), jurisdiction_scope
+            )
+            return job_id, analysis_id
+
+    def get_analysis(
+        self, session_id: str, analysis_id: str
+    ) -> tuple[JobRecord, DocumentRecord] | None:
+        """The analysis job and its document, if this session owns the document and the analysis
+        is the document's latest."""
+        with self._lock:
+            row = self._db.execute(
+                f"SELECT {_JOB_COLUMNS} FROM jobs WHERE analysis_id = ?", (analysis_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            job = JobRecord(*row)
+            doc = self._live_document(job.document_id, self._clock())
+            if (
+                doc is None
+                or doc.session_id != session_id
+                or doc.analysis is None
+                or doc.analysis.analysis_id != analysis_id
+            ):
+                return None
+            return job, doc
+
+    def set_progress(self, job_id: str, stage: str, completed: int, total: int) -> None:
+        """Counts from the core's progress events. Only a running job takes them."""
+        with self._lock, self._db:
+            self._db.execute(
+                "UPDATE jobs SET stage = ?, completed_units = ?, total_units = ?"
+                " WHERE id = ? AND status = 'running'",
+                (stage, completed, total, job_id),
+            )
+
+    def finish_analysis(
+        self,
+        job_id: str,
+        *,
+        status: str,
+        result: AnalysisResult | None = None,
+        error: str | None = None,
+    ) -> bool:
+        """Ends a waiting or running analysis. `succeeded` and `partial` carry the result,
+        `failed` carries a code, and `cancelled` and `timed_out` carry neither. False when the
+        document is gone or the job has ended already, and then nothing changes."""
+        if (
+            status not in _ENDED
+            or (status in ("succeeded", "partial")) != (result is not None)
+            or (status == "failed") != (error is not None)
+        ):
+            raise ValueError("an analysis ends with a result, a failure code or neither, by status")
+        with self._lock:
+            row = self._db.execute(
+                "SELECT document_id FROM jobs WHERE id = ?", (job_id,)
+            ).fetchone()
+            doc = None if row is None else self._documents.get(row[0])
+            if doc is None:
+                return False
+            with self._db:
+                changed = self._db.execute(
+                    "UPDATE jobs SET status = ?, error = ?, finished_at = ?"
+                    " WHERE id = ? AND status IN ('queued', 'running')",
+                    (status, error, self._clock(), job_id),
+                )
+            if changed.rowcount != 1:
+                return False
+            if doc.analysis is not None and doc.analysis.job_id == job_id:
+                doc.analysis.result = result
+            return True
+
+    def delete_job(self, job_id: str) -> None:
+        """Removes a job that was never taken on, for a start that the queue turned away."""
+        with self._lock:
+            row = self._db.execute(
+                "SELECT document_id FROM jobs WHERE id = ?", (job_id,)
+            ).fetchone()
+            with self._db:
+                self._db.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+            doc = None if row is None else self._documents.get(row[0])
+            if doc is not None and doc.analysis is not None and doc.analysis.job_id == job_id:
+                doc.analysis = None
 
     def sweep(self) -> int:
         """Deletes every expired session and what it owns. Returns how many sessions went."""
@@ -225,10 +449,16 @@ class Store:
         return doc
 
     def _drop_session(self, session_id: str) -> None:
+        ids = [
+            row[0]
+            for row in self._db.execute(
+                "SELECT id FROM documents WHERE session_id = ?", (session_id,)
+            )
+        ]
+        if ids:
+            self.on_drop(ids)
         # RAM first, so the content is gone even if the SQLite delete fails
-        for (document_id,) in self._db.execute(
-            "SELECT id FROM documents WHERE session_id = ?", (session_id,)
-        ).fetchall():
+        for document_id in ids:
             self._documents.pop(document_id, None)
         with self._db:
             # ON DELETE CASCADE takes the documents and, through them, the jobs

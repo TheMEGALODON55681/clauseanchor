@@ -7,6 +7,7 @@ An invalid value fails at startup with a message that names the variable and nev
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,8 +17,9 @@ PREFIX = "CLAUSEANCHOR_"
 
 # API-owned limits, each with an environment variable of the same name under PREFIX.
 SESSION_TTL_MINUTES = 60  # also the ceiling: the privacy promise is deletion within 60 minutes
-PARSE_KILL_SECONDS = 120  # provisional, 2-C re-measures it (Phases.md, 2-C)
-PARSE_QUEUE_LENGTH = 2  # queue capacity of plan 9.3
+PARSE_KILL_SECONDS = 120  # the slowest parse measured in 2-C took 23 s (Phases.md, 2-C)
+PARSE_QUEUE_LENGTH = 2  # queue capacity of plan 9.3: parses that can wait while one runs
+PARSE_MEMORY_MIB = 1536  # 1.2 GiB for a 500,000-character PDF, 2.5 GiB for a 100 MiB DOCX bomb
 
 # Store limits and the sweep interval, not environment variables. Plan 9.2 names a 429 for the
 # session limit and gives no number, and neither plan section gives a document limit, so these are
@@ -26,7 +28,17 @@ MAX_SESSIONS = 25
 MAX_DOCUMENTS_PER_SESSION = 5
 SWEEP_INTERVAL_SECONDS = 30  # after expiry a session is unreachable at once and gone within this
 
-DEFAULT_CATALOGUE_PATH = Path(__file__).parent / "catalogue.json"
+# Analysis limits, constants and not variables (D8 names none). Plan 9.3 gives the queue and the
+# 30 minutes. Nothing here measured the real model, so the time is a proposal (Phases.md, 2-D).
+ANALYSIS_QUEUE_LENGTH = 2  # analyses that can wait while one runs
+ANALYSIS_TIMEOUT_SECONDS = 1800  # one analysis, from the moment it starts running
+
+# Tanishq's files, read in place. Found from this file and not from the working directory.
+_ML = Path(__file__).resolve().parents[2] / "ml"
+DEFAULT_CATALOGUE_PATH = _ML / "configs" / "catalogue.json"
+STUB_FIXTURE_DIR = _ML / "fixtures"
+
+_DIGEST = re.compile(r"[0-9a-f]{64}")
 
 
 class ConfigError(ValueError):
@@ -59,12 +71,17 @@ def _int(env: Mapping[str, str], key: str, default: int, maximum: int | None = N
 class Settings:
     analyzer: Literal["stub", "real"] = "stub"
     artifacts_dir: Path | None = None
+    artifacts_sha256: str | None = None  # the canonical manifest digest, the trust anchor (D8)
     db_path: str = ":memory:"  # D8: D4 clears the tables at start, so a file only leaves traces
     session_ttl_minutes: int = SESSION_TTL_MINUTES
     parse_kill_seconds: int = PARSE_KILL_SECONDS
     parse_queue_length: int = PARSE_QUEUE_LENGTH
-    # Not an environment variable: the catalogue is a file that ships with the code (D8)
+    parse_memory_mib: int = PARSE_MEMORY_MIB
+    # Not environment variables: the catalogue is a file in the repository (D8), and the two
+    # analysis limits are constants that a test moves through here
     catalogue_path: Path = DEFAULT_CATALOGUE_PATH
+    analysis_queue_length: int = ANALYSIS_QUEUE_LENGTH
+    analysis_timeout_seconds: float = ANALYSIS_TIMEOUT_SECONDS
 
     @property
     def mode(self) -> Literal["sample", "real"]:
@@ -79,13 +96,20 @@ class Settings:
         artifacts = _text(env, "ARTIFACTS_DIR", None)
         if analyzer == "real" and artifacts is None:
             raise ConfigError(f"{PREFIX}ARTIFACTS_DIR is required when {PREFIX}ANALYZER is real")
+        digest = _text(env, "ARTIFACTS_SHA256", None)
+        if analyzer == "real" and digest is None:
+            raise ConfigError(f"{PREFIX}ARTIFACTS_SHA256 is required when {PREFIX}ANALYZER is real")
+        if digest is not None and not _DIGEST.fullmatch(digest):
+            raise ConfigError(f"{PREFIX}ARTIFACTS_SHA256 must be 64 lowercase hexadecimal digits")
         return cls(
             analyzer=analyzer,
             artifacts_dir=Path(artifacts) if artifacts else None,
+            artifacts_sha256=digest,
             db_path=_text(env, "DB_PATH", ":memory:") or ":memory:",
             session_ttl_minutes=_int(
                 env, "SESSION_TTL_MINUTES", SESSION_TTL_MINUTES, SESSION_TTL_MINUTES
             ),
             parse_kill_seconds=_int(env, "PARSE_KILL_SECONDS", PARSE_KILL_SECONDS),
             parse_queue_length=_int(env, "PARSE_QUEUE_LENGTH", PARSE_QUEUE_LENGTH),
+            parse_memory_mib=_int(env, "PARSE_MEMORY_MIB", PARSE_MEMORY_MIB),
         )

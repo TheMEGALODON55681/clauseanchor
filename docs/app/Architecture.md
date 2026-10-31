@@ -11,8 +11,9 @@ This file describes the target design. Sections marked **(planned)** do not exis
 ```mermaid
 flowchart TD
     U[Browser: upload + role] --> S[Session check]
-    S --> V[Upload validation: type, size, zip safety]
-    V --> P[Parser: canonical text + offsets + structure]
+    S --> V[Upload checks: size, empty, type]
+    V --> Q[Parse queue: one child process per parse]
+    Q --> P[Parser: canonical text + offsets + structure]
     P --> M[(RAM store: text, nodes, results)]
     P --> A[Analysis job: core Analyzer]
     A --> K[Party binding + polarity]
@@ -25,9 +26,9 @@ flowchart TD
 
 1. The browser creates an anonymous session and gets a bearer token, shown once (2-B).
 2. It uploads one PDF or DOCX and nothing else. The role goes with the party binding, and the scope and `category_ids` go with the analysis request (`Phases.md`, D1).
-3. The upload is validated by magic bytes, size and archive safety, then parsed in a child process with a wall-clock kill and a memory cap (planned, Phase 2).
-4. The parser returns a `ParsedDocument`: canonical `source_text`, its SHA-256, text blocks with source locators, a structure tree and warnings. The uploaded bytes are dropped.
-5. The analysis job passes `source_text` and an `AnalysisContext` to the core analyzer (`AnalyzerProtocol`) from `ml/clauseanchor_core` and gets back category decisions with spans.
+3. The API checks the upload for size, emptiness and type (magic bytes) and answers 202 at once. A queue hands the bytes to one worker thread, which parses them in a child process with a wall-clock kill and a memory cap (2-C). Archive safety is the parser's work, and a file it rejects fails the parse job.
+4. The parser returns a `ParsedDocument`: canonical `source_text`, its SHA-256, text blocks with source locators, a structure tree and warnings. The child writes the full JSON form to stdout, and the API rebuilds the document with `from_json`. The uploaded bytes are dropped.
+5. An analysis start checks the document, the analyzer and the request, and answers 202 at once (2-D). One worker thread then passes `source_text` and an `AnalysisContext` to the core analyzer (`AnalyzerProtocol`) from `ml/clauseanchor_core`, copies its progress into the job, and gets back category decisions with spans. The API checks the result before it stores it (API.md section 10).
 6. The backend applies polarity from the user's role and party binding. The core never sees the user's side.
 7. Everything text-bearing lives in RAM with a 60-minute TTL. SQLite holds only metadata (ids, token hashes, timestamps, sizes, job state).
 8. Every capabilities response, analysis response and report carries the fixed scope notice (Phases.md, "Review scope"). After a complete analysis, the manual-review endpoint (planned, Phase 3) labels each display unit by its overlap with accepted findings, so text without findings is easy to reach.
@@ -56,14 +57,19 @@ flowchart TD
 | Structure: numbered labels | A label is read at the start of a block, or from the block's `list_label`. It becomes a node only when it continues the sequence at its depth, or starts one at 1, `(a)` or `(i)`. A restart at 1 replaces a run of 3 or fewer and is body text after a longer run. A Word list may open a top-level number above 1, and a Word number above the last one in its sequence continues it. A schedule label clears every sequence. A level is the number of parts of a decimal, plus 1 inside a schedule, and a letter or numeral sits below its parent. A label that is both a letter and a numeral, such as `(i)`, is settled by the Word level in the locator (`list_level`) when there is one | A number inside running text, a cross reference or a party list must not become a clause. Word counts empty numbered paragraphs that the blocks drop, so a gap in a Word list is not a break. One pass with a stack, with no model, so every node can be explained |
 | Structure: headings and contents | A short block of capitals (80 characters, every line 60 percent capitals) is an unnumbered level 1 heading that closes open nodes, unless it directly follows a block that is only a label, where it is that label's title. A block with a dot leader, or a one-line block that ends in a page number, is a contents entry and is ignored. A bare number with no full stop is a page number | The contents page repeats every heading, and 1-C does not mark a page number printed mid-page. A title must not close the node it names. A line of redaction marks must not turn a notice into a heading |
 | Structure: tables and definitions | An outermost table is one `table` node, and nothing inside it is read as a label or heading. A quoted term followed by `means`, `shall mean`, `has the meaning`, `refers to`, or in brackets as `(the "T")`, is a `definition` node that spans the term with its quotes, one level below the innermost open node or the table | A table has no clause order to read. A definition node lets the core point at the term itself, and the container gives its scope |
-| Database | SQLite through the standard library: three tables, `sessions`, `documents` and `jobs`, created in code at start and emptied at every start (D4). In memory by default (`CLAUSEANCHOR_DB_PATH`, D8) | Metadata only: ids, token hashes, timestamps, sizes, media type and job state. Nothing durable is stored, so there is no migrations tool, and SQLAlchemy was not needed. A file would keep session rows on disk until the next start, or after a crash |
+| Database | SQLite through the standard library: three tables, `sessions`, `documents` and `jobs`, created in code at start and emptied at every start (D4). In memory by default (`CLAUSEANCHOR_DB_PATH`, D8) | Metadata only: ids, token hashes, timestamps, sizes, media type, job state and the error code of a failed job. Nothing durable is stored, so there is no migrations tool, and SQLAlchemy was not needed. A file would keep session rows on disk until the next start, or after a crash |
 | API config | `Settings.from_env` in `config.py` reads `CLAUSEANCHOR_` variables once at start. A bad value stops the start with a message that names the variable and not the value. The session TTL cannot pass 60 minutes. The parser's limits are not settings | One object, no `pydantic-settings`. The promise to users is deletion within 60 minutes, so no setting may break it |
 | API errors | One envelope for every error (`api/errors.py`, API.md section 2). A fixed message per code, so request input and exception text never reach a reply. A middleware, not an `Exception` handler, catches a crash and logs only its class name. The same middleware sets `Cache-Control: no-store` on every reply | Starlette's server-error layer sends its reply and then raises again, so the server would log a traceback that holds the exception text (Rules section 5). FastAPI's own 422 body repeats the submitted input |
-| Catalogue source | `backend/app/catalogue.json`, loaded once at start by `load_catalogue`, with no ids in the code. A missing or broken file is a reported state: `/ready` says which, and `/capabilities` answers 503 | Tanishq owns the 46 ids. The loader is the one place to change if they later come from the core |
-| Worker model | One API process, one bounded analysis worker, one executor thread. Each parse job runs in its own child process with a wall-clock kill and a memory cap (planned, part 2-C) | Fits a laptop and a free host; no Redis or Celery. The kill stops a parse that the content budget cannot bound in time, and the cap stops one it cannot bound in memory. One parse per child, because the DOCX reader changes the process-wide warnings filter |
-| User content storage | RAM only, 60-minute absolute TTL. A document's text, nodes, results and file name live in a dict keyed by document id (`Store`), and the file name is never written to SQLite | Matches the synopsis promise; nothing on disk |
+| Catalogue source | `ml/configs/catalogue.json`, Tanishq's file, read in place and loaded once at start by `load_catalogue`, with no ids in the code. `DEFAULT_CATALOGUE_PATH` finds it from `config.py`, never from the working directory. A missing or broken file is a reported state: `/ready` says which, and `/capabilities` answers 503 | Tanishq owns the 46 ids, so the backend keeps no copy that could drift from his file. The loader is the one place to change if they later come from the core |
+| Worker model | One API process. Parsing has one worker thread and a bounded queue (`services/parse_jobs.py`, 2-C): one parse runs and `PARSE_QUEUE_LENGTH` wait. Each parse runs in its own child process with a wall-clock kill and a memory cap. Analysis has its own worker thread (`services/analysis_jobs.py`, 2-D): it loads the analyzer first, then runs one analysis at a time, and `ANALYSIS_QUEUE_LENGTH` wait | Fits a laptop and a free host; no Redis or Celery. The kill stops a parse that the content budget cannot bound in time, and the cap stops one it cannot bound in memory. One parse per child, because the DOCX reader changes the process-wide warnings filter. The core raises a busy error on concurrent calls, so one analysis worker is the rule |
+| Analyzer and analysis jobs | `build_analyzer` (`services/analysis.py`) makes the one analyzer: `StubAnalyzer` from `ml/fixtures`, or `CandidateOnlyAnalyzer` from the artifacts directory, checked against `CLAUSEANCHOR_ARTIFACTS_SHA256`, on CPU with a batch size of 1. The analysis worker thread builds it before it takes a job, so the app answers meanwhile and `/ready` reports `loading`, then `ok`, or `failed`. A failed load stays failed and never falls back to the stub. Each job has a stop flag, set by a cancel, the time limit, a delete or a shutdown, which the core reads through its `cancelled` callback. Every result passes `validate_result` and the checks of API.md section 10 before the store takes it | Torch loads inside the `CandidateOnlyAnalyzer` constructor, so stub mode imports none of torch, transformers or numpy, and a test checks that in a fresh interpreter. The core cannot interrupt a unit under way and returns no partial result, so a stop stores nothing. The digest comes from outside the bundle, because a digest kept inside it would trust the bundle itself |
+| Upload body | The raw file bytes, not multipart. The API reads `request.stream()` against a running count and stops at 10 MiB plus one byte. A `Content-Length` over 10 MiB is refused before the first read. The name comes from `Content-Disposition` `filename*` and stays in RAM | A multipart parser spools a file part to a temporary file past 1 MiB, and Rules section 5 forbids a file on disk (D3). A raw body has no part to spool. Counting the stream bounds a body with no length or a false one |
+| Parse child | `python -m app.parse_worker` (`parse_worker.py`). It reads all of stdin, calls `parse_document`, and writes one ASCII JSON object to stdout: `{"document": ...}` in the full form of `to_json`, or `{"error": CODE}`. The parent rebuilds the document with `from_json`. stderr goes to the null device and is never logged | No temp file and no contract text in a log (Rules section 5): library messages can hold document text. ASCII output needs no encoding agreement between the two processes. `from_json` checks `text_sha256`, so a text that arrives changed is refused |
+| Memory cap and kill | `services/memcap.py` is the only platform-specific module. Windows: a job object with `JOB_OBJECT_LIMIT_PROCESS_MEMORY` and `KILL_ON_JOB_CLOSE`, through `ctypes`. The child starts suspended, joins the job, and is resumed with `NtResumeProcess`. If either step fails, the child never runs. Linux: `RLIMIT_AS` in `preexec_fn`. The wall-clock kill is a `threading.Timer` that ends the job | The virtualenv's `python.exe` is a launcher that starts the real interpreter at once, so a child that joined the job after starting would leave its child outside the cap. The job covers both. Closing the job handle kills whatever is left in it. Popen's `communicate` writes stdin with no timeout on Windows, so the job kill is what ends a child that never reads |
+| Memory kill rule | A child whose peak reached 95 percent of its cap fails the job as `PARSE_MEMORY_LIMIT`, whatever it reported. Then a nonzero exit is `PARSE_FAILED`, then the child's JSON decides. Anything unreadable is `PARSE_FAILED` | lxml turns a refused allocation into a read error, so a child at its cap exits 0 with `MALFORMED_FILE`, and its job peak equals the cap. The price is a false kill for a parse within 5 percent of the cap. Linux has no peak, so there only the child's own `MemoryError` gives the code |
+| User content storage | RAM only, 60-minute absolute TTL. A document's text, nodes, results and file name live in a dict keyed by document id (`Store`), and the file name is never written to SQLite. The uploaded bytes wait in the parse queue, also in RAM, and leave it when the parse ends or the document is deleted. A stored document takes about 12 bytes for each character of text: 1.9 MiB for the largest in the smoke set, about 6.5 MiB at 500,000 characters | Matches the synopsis promise; nothing on disk. 25 sessions of 5 documents take about 241 MiB at the smoke-set size and 0.8 GiB at the limit |
 | Sessions and expiry | `POST /api/v1/sessions` makes `secrets.token_urlsafe(32)` and returns it once. SQLite keeps its SHA-256, and a lookup goes by that hash. `expires_at` is fixed at creation (creation plus the TTL setting, 60 minutes at most), and a document copies its session's (D5). Expiry is lazy: every access checks the time, deletes an expired session with everything it owns and treats it as gone. A sweep started in the app lifespan repeats that every `SWEEP_INTERVAL_SECONDS` for sessions nobody asks for. `DELETE /api/v1/sessions/current` does it at once. All of it reads one injected clock | The promise is deletion within 60 minutes, so nothing renews a session. The lazy check makes a session unreachable the moment it expires. The sweep sets how long its data lingers. `/ready` fails when the sweep stops, because then expired data would stay until a request found it |
-| Store lock | One `threading.Lock` inside `Store` guards the single SQLite connection and the RAM dict together. Every public method takes it, and a session leaves RAM and SQLite inside one critical section. A caller holds it for one store call and never across a parse | Each `:memory:` connection is its own database, so the app opens one connection (`check_same_thread=False`) and shares it. The parse and analysis workers of 2-C and 2-D reach the store from other threads. One lock is enough for one process |
+| Store lock | One `threading.Lock` inside `Store` guards the single SQLite connection and the RAM dict together. Every public method takes it, and a session leaves RAM and SQLite inside one critical section. A caller holds it for one store call and never across a parse. `Store.on_drop` runs under the lock with the ids of every document that leaves, whether by delete, session delete, lazy expiry or the sweep. `ParseQueue` sets it to `kill_documents`, which takes the queue's lock and nothing else, and `AnalysisQueue` chains `cancel_documents` after it in the same way. The order is the store's lock, then one queue's, and a worker never holds its queue's lock while it calls the store | Each `:memory:` connection is its own database, so the app opens one connection (`check_same_thread=False`) and shares it. The parse worker (2-C) and the analysis worker (2-D) reach the store from other threads. One lock is enough for one process. The hook makes every way out of the store end the child, with no route to remember |
 | Bearer check | One dependency, `require_session` in `api/auth.py`, which every session route uses. A missing, malformed, unknown or expired token gives 401 `SESSION_INVALID` with `WWW-Authenticate: Bearer` | The mock treats an unknown token as expired and the Reader sends `not_found` and `expired` to the same page. A server that told them apart could not stay accurate, because the store deletes an expired session when it meets it and the token then looks unknown |
 | Review scope | Fixed category catalogue, a fixed scope notice on every result, no safety score or overall verdict anywhere | The system checks listed categories only. A highlight-free passage is not a safe passage, and the output must never imply it is |
 | Completeness | Processing completion, decision coverage and highlight extent are separate fields | Each answers a different question; merging them would read as "share of risk found", which nothing measures |
@@ -74,9 +80,9 @@ flowchart TD
 ```text
 backend/
   pyproject.toml            # package metadata, ruff and pytest config
-  requirements.txt          # pinned runtime dependencies
+  requirements.txt          # pinned runtime dependencies, and the editable install of ../ml (run pip from backend/)
   requirements-dev.txt      # pinned test and lint dependencies
-  constraints.txt           # exact versions of all installed packages, transitive ones too (pip -c)
+  constraints.txt           # exact versions of all installed packages, transitive ones too (pip -c), without the editable core
   .env.example              # config names only, no secrets
   .gitignore                # .venv, caches, local db, graphify-out
   app/
@@ -90,23 +96,24 @@ backend/
       pdf.py                # pdfplumber extraction: error mapping, words to rows to blocks, columns (1-B); decoration, scanned checks, content budget (1-C)
       docx.py               # python-docx extraction: archive checks, tracked-change check, body order, tables, text boxes (1-D); headers, footers, footnotes, numbering (1-D2)
       structure.py          # clause tree from block text and list labels: numbered labels, headings, schedules, tables, definitions (1-E)
-      schema.py             # JSON Schema of the output (docs/app/parser_output.schema.json) and to_json, which turns a document into the data the schema describes (with text=False it also drops list_label and sets a definition's label to null)
+      schema.py             # JSON Schema of the output (docs/app/parser_output.schema.json), to_json, which turns a document into the data the schema describes (with text=False it also drops list_label and sets a definition's label to null), and from_json, which rebuilds a document from the full form and refuses a text that does not match its hash (2-C)
     scripts/
       parse_file.py         # CLI: parse a local file and print JSON or a summary (dev only); refuses a file over 10 MiB before reading it
-    main.py                 # create_app(settings, clock): the app factory. Loads the catalogue, opens the store, installs error handling, adds the router, and starts the expiry sweep in the lifespan (2-A, 2-B)
-    config.py               # Settings.from_env: CLAUSEANCHOR_ variables and the API-owned limits (2-A); MAX_SESSIONS, MAX_DOCUMENTS_PER_SESSION and SWEEP_INTERVAL_SECONDS (2-B)
-    catalogue.json          # (not committed yet) the 46 categories from Tanishq, shape in API.md section 5
-    schemas.py              # Pydantic response models (2-A); each later endpoint adds its models
+    main.py                 # create_app(settings, clock): the app factory. Loads the catalogue, opens the store, makes the parse and analysis queues, installs error handling, adds the router, and starts the expiry sweep and both workers in the lifespan. On shutdown it stops the parse queue, which ends a running child, then the analysis queue, which stops a running analysis, before it closes the store (2-A, 2-B, 2-C, 2-D)
+    parse_worker.py         # the parse child, python -m app.parse_worker: stdin bytes in, one ASCII JSON object out, a MemoryError mapped to PARSE_MEMORY_LIMIT (2-C)
+    config.py               # Settings.from_env: CLAUSEANCHOR_ variables and the API-owned limits, PARSE_MEMORY_MIB among them (2-A, 2-C); MAX_SESSIONS, MAX_DOCUMENTS_PER_SESSION and SWEEP_INTERVAL_SECONDS (2-B); the catalogue path, ml/configs/catalogue.json (2-A); ARTIFACTS_SHA256, ANALYSIS_QUEUE_LENGTH, ANALYSIS_TIMEOUT_SECONDS and the stub fixture directory, ml/fixtures (2-D)
+    schemas.py              # Pydantic response models (2-A); Upload, DocumentView, Job and JobError (2-C); AnalysisRequest, NewAnalysis, Analysis and the category and clause views, which mirror the core's fields (2-D); each later endpoint adds its models
     api/
-      errors.py             # ERRORS table, error_response, handlers for 422, 404 and 405, crash containment (2-A)
-      routes.py             # health, ready, capabilities (2-A); sessions (2-B); later parts add their routes
+      errors.py             # ERRORS table, JOB_ERRORS table, error_response, handlers for 422, 404 and 405, crash containment (2-A, 2-C)
+      routes.py             # health, ready, capabilities (2-A); sessions (2-B); upload, document read and delete, job read (2-C); analysis start, analysis read and job cancel (2-D); later parts add their routes
       auth.py               # require_session: the bearer check (2-B)
     services/
       scope.py              # SCOPE_NOTICE, Category, Catalogue and load_catalogue (2-A)
-      store.py              # Store: sessions, documents and jobs as SQLite metadata, document content in RAM, the lock, expiry and the sweep body (2-B)
-      jobs.py               # (planned) bounded queue, progress, cancel
-      documents.py          # (planned) upload validation, parse jobs (child process, wall-clock kill, memory cap)
-      analysis.py           # (planned) core adapter and result validation
+      store.py              # Store: sessions, documents and jobs as SQLite metadata, document content in RAM, the lock, expiry and the sweep body (2-B); job state, document status and the on_drop hook (2-C); analysis jobs with progress, the analysis record and its result in RAM, one active analysis per session (2-D)
+      parse_jobs.py         # ParseQueue: the bounded queue, the worker thread, one capped child per parse, the wall-clock timer and the result rule (2-C)
+      memcap.py             # CappedProcess: the memory cap for one child, a Windows job object or RLIMIT_AS. The only platform-specific code (2-C)
+      analysis_jobs.py      # AnalysisQueue: the worker thread that loads the analyzer, the FIFO with its limit, progress into the job, the stop flag, the time limit and the result rule (2-D)
+      analysis.py           # the boundary with the core: build_analyzer, sample_refusal, check_result, processing_complete and decisions_resolved (2-D)
       polarity.py           # (planned, Phase 3) party binding and polarity
       report.py             # (planned, Phase 3) ReportLab report
       review_units.py       # (planned, Phase 3) manual-review display units and overlap labels
@@ -114,8 +121,8 @@ backend/
   tools/
     annotator/              # (planned, 2-0B) offline annotation tool: runs locally, no network
   tests/
-    conftest.py             # session-scoped fixture generation into a temp dir; the API client fixtures on a synthetic catalogue and a fake clock, with the app lifespan running
-    synthetic.py            # the made-up catalogue the API tests use (no real id), and FakeClock
+    conftest.py             # session-scoped fixture generation into a temp dir; the API client fixtures on a synthetic catalogue and a fake clock, with the app lifespan running, where `make_client` waits for the analyzer to leave `loading`; fixtures that record the children a test spawns and a stand-in child that hangs (2-C); the `fake_core` fixture (2-D)
+    synthetic.py            # the made-up catalogue the API tests use (no real id), FakeClock, and helpers for polling, process checks and directory snapshots
     fixtures/build.py       # generates PDF and DOCX fixtures with reportlab and python-docx
     test_assemble.py
     test_pdf.py
@@ -126,11 +133,24 @@ backend/
     test_invariants.py      # offset invariant over every fixture
     test_config.py          # Settings.from_env: defaults, every variable, bad values
     test_catalogue.py       # load_catalogue, and the scope notice against Phases.md
+    test_real_catalogue.py  # Tanishq's ml/configs/catalogue.json: the default path, 46 ids (41 and 5), the ten annotated ids, /ready and /capabilities on default settings
     test_errors.py          # the envelope: 404, 405, 422 with no echo, 500 with no exception text
     test_api.py             # health, ready, capabilities and the base path
     test_store.py           # Store: token hashing, fixed expiry, the boundary, the sweep, delete, limits, the file path, the lock
     test_sessions.py        # the two session routes, every 401 case, no-store, the lifespan sweep, nothing written to disk
-    test_docs.py            # API.md names every error code and every variable
+    test_store_jobs.py      # Store (2-C): job state, document status, delete_document, ownership, the on_drop hook
+    test_from_json.py       # from_json: the round trip over every fixture and the smoke set, a changed text or hash refused, the text-free form refused
+    test_memcap.py          # CappedProcess with real children: inside and over the cap, the peak, closing the job, a child that cannot join
+    test_parse_worker.py    # the child's run and main: the full form, the error code, the memory code, one ASCII object from a real child
+    test_parse_jobs.py      # ParseQueue with real children: the job path, timeout, memory cap, a full queue, delete mid-parse, session delete and expiry, shutdown, stderr
+    test_documents_api.py   # the upload, document and job routes: 413 by length and by stream, 400, 415, file name rules, 429, 404 across sessions, a 10 MiB upload that writes nothing
+    test_docs.py            # API.md names every error code, every job error code, every variable and every limit
+    fake_core.py            # stand-ins for the core (2-D): FakeCore replaces CandidateOnlyAnalyzer through the factory, so no test loads weights or imports torch
+    test_store_analysis.py  # Store (2-D): analysis job rows with progress, the result in RAM, one active analysis per session, refused end states
+    test_analysis_factory.py # build_analyzer for both modes, and a fresh interpreter that must not import torch, transformers or numpy in stub mode
+    test_analysis_adapter.py # processing_complete, decisions_resolved and the result checks of API.md section 10
+    test_analysis_jobs.py   # AnalysisQueue with a fake core: load states, every way a job ends, FIFO and the limit, delete mid-analysis, shutdown, log contents
+    test_analyses_api.py    # start, read and cancel through the app: stub mode on the core's own sample, real mode on a fake core, every error and check order, cross-session 404
 ```
 
 Fixtures are generated at test time, so no binary files are committed.
@@ -164,9 +184,17 @@ Headers and footers use `{"part": "header" or "footer", "section": s, "variant":
 
 Nodes. `StructureNode` holds `id` (`n0001`, `n0002` and on, in order of start and then level), `parent_id`, `kind` (`heading`, `section`, `clause`, `subclause`, `schedule`, `definition` or `table`), `label`, `level`, `start`, `end` and `text`, which is `source_text[start:end]`. A parent holds its children's range and sits at a lower level. A numbered node's kind follows its level, and a heading word, an all-caps line, a schedule, a table or a definition has its own kind. `ParserContract.md` carries the field list and every rule.
 
-## 5. Interface to the core (planned, Phase 2)
+## 5. Interface to the core
 
-The backend imports only public names from `clauseanchor_core`: `CONTRACT_VERSION`, the result dataclasses, `AnalyzerProtocol` and `StubAnalyzer`. It never imports training, extraction or retrieval internals. Contract version **2.0** (multi-span findings) is on `main` (`ml/clauseanchor_core`, Tanishq's commit `d9e4c6a`). Its stub accepts only the fixture text, a parse with no warnings and four category ids, and `AnalysisContext` has no field for `decorations` (`Phases.md`, D6 and D7). The switch is `CLAUSEANCHOR_ANALYZER=stub|real` (built in 2-A). A real run whose artifacts directory is missing fails `/ready` instead of falling back to the stub. Manifest checks come with 4-A. The API `mode` comes from the switch: `stub` gives `sample`.
+The backend imports only public names from `clauseanchor_core`: `CONTRACT_VERSION`, the result dataclasses, `AnalyzerProtocol`, `StubAnalyzer`, `CandidateOnlyAnalyzer`, `AnalysisCancelled`, `ProgressEvent`, `validate_result`, `text_digest` and `context_from_parsed_document`. It never imports training, extraction or retrieval internals. The core is an editable install of `ml/` (`-e ../ml` in `requirements.txt`). It has no runtime dependency, and `CandidateOnlyAnalyzer` loads torch inside its constructor, so importing it in stub mode costs nothing.
+
+Contract version **2.0** is on `main` (`ml/clauseanchor_core`, Tanishq's commit `d9e4c6a`). A finding holds one span, and the disjoint decoder can return several findings for one category. The stub accepts only the fixture text, a parse with no warnings and four category ids. `AnalysisContext` has no field for `decorations`, so `context_from_parsed_document` adds one `StructureNode(kind="decoration")` for each decoration range, with no change to the contract (`Phases.md`, D6 and D7). The real analyzer is `CandidateOnlyAnalyzer` v0 (`docs/ml/RealAnalyzer.md`): review candidates only, every category `not_validated`.
+
+The switch is `CLAUSEANCHOR_ANALYZER=stub|real`, and the API `mode` comes from it: `stub` gives `sample`. Real mode also needs `CLAUSEANCHOR_ARTIFACTS_DIR` and `CLAUSEANCHOR_ARTIFACTS_SHA256`. The core checks the manifest and every file hash while it loads, which covers part of 4-A. A real run whose load fails reports `failed` in `/ready` and never falls back to the stub.
+
+`/ready` reports the analyzer as `loading` while the worker thread builds it, `ok` once it has loaded, and `failed` if the load raised. An analysis start answers 503 `NOT_READY` until the state is `ok`, and every other route answers meanwhile.
+
+Findings pass through unchanged. The adapter in `routes.py` and `schemas.py` adds the analysis id, the job status, the timestamps, the jurisdiction, the scope notice, the catalogue version, `processing_complete` and `decision_coverage`, and writes `stub` as `sample`. It never upgrades a status, fills in a confidence or marks a category validated (API.md section 10).
 
 ## 6. Backend tech stack
 

@@ -80,6 +80,8 @@ Pin exact versions in `requirements.txt` / `requirements-dev.txt` as resolved at
 
 `backend/constraints.txt` pins every installed package, the ones those files pull in included. Install with `pip install -r requirements-dev.txt -c constraints.txt`, or with `requirements.txt` in place of the dev file for the runtime packages alone. A dependency change regenerates `constraints.txt` from a freeze of a clean venv in the same commit.
 
+The one local package is the analysis core. `requirements.txt` ends with `-e ../ml`, an editable install of Tanishq's `ml/` (`clauseanchor-core`, no runtime dependencies, so nothing else comes with it). Run `pip` from `backend/`, where `../ml` resolves. On a normal machine pip fetches `setuptools` for an isolated build. pip refuses an editable entry in a constraints file ("Editable requirements are not allowed as constraints"), so `constraints.txt` leaves the core out, and a refresh drops the `-e` line from the freeze before it saves the pins. Stub mode imports none of torch, transformers or numpy, and a test checks that in a fresh interpreter.
+
 | Purpose | Allowed | Notes |
 |---|---|---|
 | PDF text | `pdfplumber` | MIT. Accepts a file-like object, so bytes stay in RAM |

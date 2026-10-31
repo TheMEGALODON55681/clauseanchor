@@ -1,6 +1,6 @@
 ## Backend
 
-The backend reads a PDF or DOCX contract and builds one canonical text with exact character offsets. Its code lives in `backend/`. Today it holds the PDF and DOCX parsers, the clause structure builder, a command-line tool and the first API endpoints: health, readiness, capabilities and sessions. The parser output format is in `docs/app/ParserContract.md`, and the API contract is in `docs/app/API.md`.
+The backend reads a PDF or DOCX contract and builds one canonical text with exact character offsets. Its code lives in `backend/`. Today it holds the PDF and DOCX parsers, the clause structure builder, a command-line tool and the API: health, readiness, capabilities, sessions, uploads, parse jobs and analyses. The parser output format is in `docs/app/ParserContract.md`, and the API contract is in `docs/app/API.md`.
 
 ### Prerequisites
 
@@ -20,6 +20,8 @@ pip install -r requirements-dev.txt -c constraints.txt
 
 On macOS or Linux, activate with `source .venv/bin/activate`. `requirements.txt` pins the runtime packages, and `requirements-dev.txt` adds the pinned test and lint tools. `constraints.txt` pins everything those two pull in. For a runtime-only install, use `requirements.txt` in place of `requirements-dev.txt`.
 
+`requirements.txt` also installs Tanishq's analysis core from `../ml` in editable mode, so run `pip` from `backend/`. The core needs no other package. It pulls in no torch, transformers or numpy, and neither does the API in its default mode.
+
 ### Run the API
 
 From `backend/` with the virtual environment active:
@@ -28,20 +30,40 @@ From `backend/` with the virtual environment active:
 uvicorn app.main:create_app --factory
 ```
 
-The API listens on `http://127.0.0.1:8000`, and `GET /api/v1/health` should answer `{"status":"ok"}`. `GET /api/v1/ready` and `GET /api/v1/capabilities` answer 503 until `backend/app/catalogue.json` exists. The category catalogue comes from Tanishq and is not committed yet. API.md section 5 gives its shape.
+The API listens on `http://127.0.0.1:8000`, and `GET /api/v1/health` should answer `{"status":"ok"}`. `GET /api/v1/capabilities` lists the 46 categories from `ml/configs/catalogue.json`, which Tanishq maintains and the API reads in place at start. If that file is missing or broken, `GET /api/v1/ready` names the problem and `GET /api/v1/capabilities` answers 503. API.md section 5 gives the file's shape.
 
-`POST /api/v1/sessions` starts a session and returns a bearer token once. A session lasts 60 minutes, or less if `CLAUSEANCHOR_SESSION_TTL_MINUTES` says so, and `DELETE /api/v1/sessions/current` ends it sooner. Sessions and the documents they will hold live in memory only, so stopping the API deletes them all. `GET /api/v1/ready` also checks the session store and the database.
+`POST /api/v1/sessions` starts a session and returns a bearer token once. A session lasts 60 minutes, or less if `CLAUSEANCHOR_SESSION_TTL_MINUTES` says so, and `DELETE /api/v1/sessions/current` ends it sooner. Sessions and the documents they hold live in memory only, so stopping the API deletes them all. `GET /api/v1/ready` also checks the session store and the database.
+
+`POST /api/v1/documents` takes one PDF or DOCX of up to 10 MiB as the raw request body, not as multipart. It answers 202 with a document id and a parse job id. The file name travels in `Content-Disposition` as `filename*`.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/documents -H "Authorization: Bearer $TOKEN" -H "Content-Disposition: attachment; filename*=UTF-8''contract.pdf" --data-binary @contract.pdf
+```
+
+Poll `GET /api/v1/jobs/{job_id}` until the job has succeeded or failed. Then `GET /api/v1/documents/{document_id}` returns the parsed text, and `DELETE /api/v1/documents/{document_id}` removes the document at once. The API parses each file in a child process with a time limit and a memory cap, so a bad file cannot take the server down. The file and its text stay in memory and are never written to disk. `docs/app/API.md` has the request and reply shapes, and section 9 describes the child process.
+
+Once a document has parsed, `POST /api/v1/documents/{document_id}/analyses` queues an analysis. The body names the categories and the jurisdiction scope, and the reply is 202 with an analysis id and a job id.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/documents/$DOCUMENT_ID/analyses -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"category_ids": ["cuad.governing_law"], "jurisdiction_scope": "unspecified"}'
+```
+
+Poll the job, which now reports progress. Then `GET /api/v1/analyses/{analysis_id}` returns the result, and `POST /api/v1/jobs/{job_id}/cancel` stops an analysis that is waiting or running. The result carries the scope notice, and it holds no verdict and no risk score. `processing_complete` says whether the run left anything out, and `decision_coverage` says how many categories reached a decision. API.md section 10 defines both.
+
+The default analyzer is the stub, which serves sample mode. It reads only the core's own sample contract, so it answers 409 for an uploaded file, and the route that opens the sample document comes with part 3-C. Real mode runs the candidate-only analyzer on CPU. It needs the artifacts bundle from Tanishq, the digest of its manifest, and the CPU torch install that `docs/ml/RealAnalyzer.md` describes. Set `CLAUSEANCHOR_ANALYZER=real` with `CLAUSEANCHOR_ARTIFACTS_DIR` and `CLAUSEANCHOR_ARTIFACTS_SHA256`, then start the API. `GET /api/v1/ready` reports the analyzer as `loading` for about 25 seconds, then `ok`. If the bundle does not match the digest, it reports `failed`, and the API does not fall back to the stub. Real mode has not run on this laptop yet.
 
 The API reads these environment variables once, at start, and does not read a `.env` file. Every one is optional.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `CLAUSEANCHOR_ANALYZER` | `stub` | `stub` serves sample mode. `real` loads the trained analyzer |
+| `CLAUSEANCHOR_ANALYZER` | `stub` | `stub` serves sample mode. `real` loads the candidate-only analyzer |
 | `CLAUSEANCHOR_ARTIFACTS_DIR` | none | The analyzer's artifacts directory. Required when the analyzer is `real` |
+| `CLAUSEANCHOR_ARTIFACTS_SHA256` | none | The digest of the artifact manifest, 64 lowercase hexadecimal digits. Required when the analyzer is `real` |
 | `CLAUSEANCHOR_DB_PATH` | `:memory:` | The SQLite path for session metadata. The default writes nothing to disk. A file path is emptied at every start |
 | `CLAUSEANCHOR_SESSION_TTL_MINUTES` | `60` | Session lifetime, from 1 to 60 |
-| `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse. Provisional |
-| `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait |
+| `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse |
+| `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait while one runs |
+| `CLAUSEANCHOR_PARSE_MEMORY_MIB` | `1536` | Memory cap for the process that parses one file, in MiB |
 
 A bad value stops the start and the message names the variable. `docs/app/API.md` section 4 has the details.
 

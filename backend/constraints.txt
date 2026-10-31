@@ -1,7 +1,8 @@
 # Every package a clean install resolves, the transitive ones too (Python 3.12, Windows).
 # Install: pip install -r requirements-dev.txt -c constraints.txt. colorama is Windows only.
 # To refresh: install requirements-dev.txt into a new venv without this file, run ruff and
-# pytest, then replace the pins below with the output of pip freeze.
+# pytest, then replace the pins below with the output of pip freeze. Leave out the freeze's
+# "-e" line for clauseanchor-core: pip refuses an editable entry in a constraints file.
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1

@@ -62,6 +62,8 @@ The DOCX media type is `application/vnd.openxmlformats-officedocument.wordproces
 
 JSON form: `to_json` in `app/parsing/schema.py` turns a document into plain data with the same field names. Tuples become arrays and `bbox` is an array of four numbers or `null`. The command line `python -m app.scripts.parse_file FILE [--text] [--summary]` prints it. By default it leaves out `source_text`, `blocks[].text` and `nodes[].text`. It also leaves out every block's `locator.list_label` and sets the `label` of every `definition` node to `null`, because both hold words from the file (a numbering level can say anything, and a defined term is often a party or product name). The other node labels (`1.1`, `(a)`, `ARTICLE I`) follow a fixed grammar and stay. A result can then be shared without the contract. `--text` keeps all of it, and `to_json(doc, text=False)` does the same as the default. A file over 10 MiB is refused with `FILE_TOO_LARGE` before it is read. A rejected file prints its code to stderr and exits with status 2. Every offset is present either way. **new**
 
+`from_json` in the same module is the way back. It rebuilds a `ParsedDocument` from the full form, and `to_json(from_json(x)) == x` holds for every fixture and for every file of the real-file smoke set on a machine that has it. It raises `ValueError` when `text_sha256` is not the hash of `source_text`, and for the text-free form, which has no text to rebuild. The message holds no document text. The API's parse child sends the full form over a pipe, and the API process rebuilds the document with `from_json` (Phase 2, part 2-C). **new**
+
 ### 2.1 Versioning
 
 `parser_version` is `major.minor.patch`. Every `ParsedDocument` carries the version of the code that made it. **new**
@@ -78,6 +80,8 @@ A fix that moves `source_text` or an offset is major, whatever its reason, becau
 - **1.1.0**, part 1-R. New: the warning `UNMAPPED_GLYPHS` (sections 6 and 10) and the locator key `list_level` (4.3). Fixed: a Word numeral list under a letter on a deeper level (7.4), and a PDF with bytes in front of its header, which now parses (section 9). New errors for files that used to parse: a DOCX member with another compression method, a PDF stream with two growing filters, more than 100,000 DOCX paragraphs, a DOCTYPE and a bad note id (sections 9 and 11). The text-free form drops `list_label` and definition labels (section 2). `ParsedDocument` and the full form keep both, so that is not a break.
 
 Output stamped `1.0.0` predates 1-R. Re-parse it.
+
+Part 2-C added `from_json` (section 2) and changed no output, so the version stays 1.1.0.
 
 ## 3. Text and offsets
 
@@ -424,7 +428,7 @@ A warning is `ParseWarning(code, page, detail)`. `page` is a 1-based PDF page or
 | DOCX paragraphs, every part together, empty ones included | 100,000 | `TOO_MUCH_TEXT` | new |
 | DOCX archive, total uncompressed size, counted as the members are read | 100 MiB | `ARCHIVE_TOO_LARGE` | refined |
 
-The budget bounds size, not time. The API runs each parse in a child process with a wall-clock kill and a memory cap (Phase 2, part 2-C).
+The budget bounds size, not time. The API runs each parse in its own child process with a wall-clock kill of 120 s and a memory cap of 1,536 MiB (Phase 2, part 2-C, `API.md` section 9). Section 12.4 has the measurements.
 
 ## 12. Ceilings: what the parser cannot see or fix
 
@@ -472,9 +476,9 @@ The first message listed no ceilings, so this whole section is new. The last col
 
 | Case | Marked |
 |---|---|
-| Only Flate streams are measured, behind any leading ASCII85 or ASCIIHex filter. A stream whose only growing filter is LZW or RunLength counts its stored length. Font programs, ToUnicode maps and object streams are not budgeted: one 64 MiB font program added 64 MiB. The Phase 2 child process memory cap is the bound | No |
-| The budget bounds size and not time. A 16 KB file that decodes to 16 MB took 186 s, and nothing bounds the number of text operations either: 3,000 gaps on one page took 9.3 s, all of it in pdfminer. The Phase 2 child process kill is the real bound | No |
-| A DOCX part is parsed in full before the paragraph limit applies, so a large part costs memory: a 12 MB part of empty paragraphs took 279 MiB, which is about 2.3 GB for a 100 MiB part (computed). The Phase 2 child process memory cap is the bound | No |
+| Only Flate streams are measured, behind any leading ASCII85 or ASCIIHex filter. A stream whose only growing filter is LZW or RunLength counts its stored length. Font programs, ToUnicode maps and object streams are not budgeted: one 64 MiB font program added 64 MiB. The API's child process memory cap is the bound (2-C). Of three 8 MiB PDFs built in 2-C, the mix of operators and text peaked at 1,028 MiB of committed memory and the one of paths at 1,332 MiB | No |
+| The budget bounds size and not time. A 16 KB file that decodes to 16 MB took 186 s, and nothing bounds the number of text operations either: 3,000 gaps on one page took 9.3 s, all of it in pdfminer. The API's child process kill is the real bound, at 120 s. In 2-C the slowest case, an 8 MiB stream of operators and text, took 22.55 to 22.72 s in three runs | No |
+| A DOCX part is parsed in full before the paragraph limit applies, so a large part costs memory. In 2-C, parts of empty paragraphs of 12, 25 and 50 MiB peaked at 334, 664 and 1,298 MiB of committed memory, about 25 MiB for each MiB of part. A 100 MiB part would need about 2.5 GiB (extrapolated, not built). The API's child process memory cap of 1,536 MiB ends it, at about 57 percent of that peak | No |
 | An owner-password PDF parses. The parser does not enforce usage permissions | No |
 | An encrypted DOCX reports `UNSUPPORTED_TYPE`, not `ENCRYPTED_PDF`, because it is not a ZIP | Yes, by the error |
 | A chain of 3,000 nested Form XObjects makes pdfminer fail, and the file is `MALFORMED_FILE` | Yes, by the error |
@@ -576,8 +580,13 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 
 ## 15. To agree
 
-1. The separators and offsets in section 3, which the core reads without change.
-2. How the core treats `decorations` (mask them) and `partial` (report "not checked", never "not found"). Core v2.0's `AnalysisContext` has no field for `decorations`, so either it gains one or the core ignores furniture.
-3. The shape of `name_span` in section 8, before the parser builds it.
-4. Which ceilings in section 12 the core wants a warning for. Each one needs a signal the parser does not have today.
-5. What `AnalysisContext.parser_complete` and `warnings` must hold. The backend sends `not coverage.partial` and the warning codes (`Phases.md`, 2-D).
+State on 30 October 2026, read from Tanishq's code in `ml/clauseanchor_core` and from `docs/ml/RealAnalyzer.md`. The answers change no parser output, so `parser_version` stays 1.1.0.
+
+1. The separators and offsets in section 3, which the core reads without change. **Answered.** The core takes `source_text` as it is and never cleans or reflows it. Every span is a code point slice of that text, with `end` exclusive.
+2. How the core treats `decorations` (mask them) and `partial` (report "not checked", never "not found"). **Answered.** `AnalysisContext` still has no field for `decorations`. `context_from_parsed_document` adds one `StructureNode(kind="decoration")` for each `[start, end]` range instead, so contract 2.0 does not change. For model input the core blanks the non-whitespace characters in those ranges, omits any candidate that crosses one and marks that search incomplete. A partial parse also marks it incomplete. A processed category comes back `abstained` and never `absent`.
+3. The shape of `name_span` in section 8, before the parser builds it. **Open.**
+4. Which ceilings in section 12 the core wants a warning for. Each one needs a signal the parser does not have today. **Open.**
+5. What `AnalysisContext.parser_complete` and `warnings` must hold. **Answered.** The bridge sets `parser_complete` to `not coverage.partial` and `warnings` to the warning codes, which is what the backend planned (`Phases.md`, 2-D). The core keeps the codes. A warning alone does not mean omitted text, and `coverage.partial` decides whether the parse is complete.
+6. Spans, added on 30 October 2026. **Answered.** The core stays single-span per finding (`ClauseFinding.span`). The disjoint decoder can return several findings for one category, each with its own span, and the core does not merge them. How an annotation that joins several spans into one finding is grouped and scored stays open (`AnnotationGuidelines.md`, section 9).
+
+`docs/ml/Interface.md` is corrected on parser nodes. It now says a node adds label, level and text, and that page, bounding box and locator belong to blocks, which matches sections 4 and 7.
