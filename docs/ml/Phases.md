@@ -4,14 +4,14 @@ Updated: 2026-10-31, Asia/Calcutta. Owner: Tanishq Arya.
 
 | Phase | Status | Completion gate |
 |---|---|---|
-| 1. Interface | Core locally verified; backend analyzer path present; live check pending | Preserve the version 2.0 contract and exact offsets; confirm the backend adapter and all four category states |
+| 1. Interface | Core and trained local DOCX/parser/API path verified; frontend check pending | Preserve the version 2.0 contract and exact offsets; retain all four core states with candidate-only runtime decisions |
 | 2. CUAD data and official baseline | Frozen partitions and released-model baseline recorded | Preserve source/family exclusions and split provenance; keep released-model baseline metrics separate from the newly trained model |
 | 5. Clean-split extraction training | Completed training run; selected checkpoint recorded | `clean_training_v1`: three epochs, 3,474 optimizer updates; best `checkpoint-000022`; recovery and completed state verified |
 | 6. Evaluation and calibration | Final frozen evaluation completed and reviewed October 30; calibration unvalidated; candidate-only policy retained | Keep confidence null; report measured limitations; no test-based tuning |
 | 7. Rules and corpus adapters | Deferred beyond this release | Reviewed rule tests, verified judgment provenance and licenses |
 | 8. Retrieval | Deferred beyond this release | Exact passages, BM25/dense/hybrid comparison, labeled evaluation |
 | 11. ML artifact release | Portable package and isolated CPU check completed/reviewed October 31; release handoff pending | Preserve package/evidence hashes and measured support limits; hand off by November 7 |
-| 12. Joint integration | Analyzer-backed app jobs present; trained-bundle live integration unverified | Real local demo, honest partial states, exact highlighting and runtime; formal workload study deferred |
+| 12. Joint integration | Trained local DOCX/parser/API/CPU check completed and reviewed October 31; frontend/PDF/network/deployment unverified | Real local demo, honest partial states, exact highlighting and runtime; formal workload study deferred |
 
 Keep the numbering aligned with ClauseAnchor_Plan.md. Phases 3, 4, 9 and 10 are primarily Aryan's app work. Update observed results after running each gate; do not mark future work complete because files have been named.
 
@@ -28,17 +28,19 @@ not completion of rules, retrieval, India validation or the original programme.
 | November 2 | One predeclared simple calibration assessment on dev_cal with held-out/out-of-fold reliability and support; otherwise keep confidence null and scope unvalidated. |
 | November 4 | Completed October 29: fixed dev_policy measurement reviewed; retain candidate-only output with documented limitations. Unsupported decisions stay abstained/unavailable; absence remains disabled. |
 | November 5 | Completed and reviewed October 30: final frozen actual-analyzer evaluation and separate official reference comparison on full test and required sensitivity. No test-based tuning. |
-| November 6 | ML package CPU loading, source offsets, progress/cancellation and simulated partial-state checks completed October 31. Live parser/API/UI checks remain unverified; record their actual outcome. |
+| November 6 | Package CPU checks and trained local ASGI DOCX/parser/API integration completed/reviewed October 31. Frontend highlighting, PDF integration, network-server and deployment checks remain unverified; record their actual outcome. |
 | November 7 | Versioned package, manifest, loading instructions, measured limitations and release handoff; fixes only, no further experiment. Candidate-only is an acceptable fallback. |
 
 ## Current handoff
 
-- Remote main rechecked October 31: `49c2c17ff67bba942d9bb609cd8a2e7f08371c89`.
-  Tanishq's seven-file final-evaluation commit is `93d2942`. Aryan added catalogue
+- Remote main rechecked October 31: `b6f22bfd9052770231da7ce7cd90cf6c0e267cca`.
+  Tanishq's packaging commit `4e137e9` is merged; his seven-file final-evaluation
+  commit is `93d2942`. Aryan added catalogue
   loading (`829ac16`), document upload/parse jobs (`53f2ed1`) and analyzer-backed
   jobs (`49c2c17`). The real CPU analyzer path now exists, including parser
-  context, progress/cancellation and partial states. This is source inspection,
-  not a trained-bundle live app test. The recent app commits leave ML unchanged.
+  context, progress/cancellation and partial states. Those commits were initially
+  checked by source inspection; the trained local run is recorded below. The
+  recent app commits leave ML unchanged.
   The prior empty phase document was restored at `f4b6500`; no repair is pending.
 - First real adapter batch locally verified October 28: checkpoint-000022
   inference-only export, candidate-only adapter and non-fixture CPU smoke.
@@ -136,8 +138,28 @@ not completion of rules, retrieval, India validation or the original programme.
   [CandidateReleaseVerification.md](CandidateReleaseVerification.md) records the
   hashes, observed results, noisy outputs and review limits separately from the
   immutable package snapshot. No rebuild or model/evaluation rerun is required.
-  Actual parser/API/UI integration and deploy-host loading remain unverified.
-  The app path now exists for the next check; November 6/7 deadlines are unchanged.
+  At that package-check stage, actual parser/API/UI integration and deploy-host
+  loading were unverified. The following local DOCX/API check closes part of
+  that gap; November 6/7 deadlines are unchanged.
+- Trained Windows local DOCX/parser/API/CPU check completed October 31 at
+  14:28:33 IST and supplied evidence review passed. Tanishq's 18 tests passed
+  in 7.208 seconds. Actual app startup to readiness took 17.47 seconds. Complete
+  and genuinely partial DOCX calls finished 4/4 and 5/5 windows, returning five
+  candidates each in 1.86 and 2.01 seconds of API analysis wall time.
+- All 10 returned slices match the parser's exact source coordinates; core/API
+  results, hashes, reasons, progress and header exclusion agree. The complete
+  call is processing-complete but resolves zero decisions. The partial call
+  preserves omitted-content/query-truncation warnings, incomplete searches and
+  unavailable India arbitration. Confidence remains null and scope unvalidated.
+  A newline and unrelated service-report sentence remain noisy governing-law
+  candidates; exact slicing is not evidence of correct clause extraction.
+- Cancellation requested at 1/105 windows stopped at 2/105, returning no completed
+  result. Session deletion returned 204 and old-token access 401. See
+  [CandidateAPIIntegration.md](CandidateAPIIntegration.md) for measured evidence,
+  hashes and review limits. This uses local ASGI requests and the real parser
+  subprocess/model, not a network server. Frontend highlighting, PDF integration
+  and deployment remain unverified. No model/evaluation rerun, frozen artifact,
+  backend or manual-review change is required; release handoff remains pending.
 
 ## Ordered Phase 6 gates
 
@@ -398,9 +420,11 @@ closure. There is no new source audit, inference rerun or post-test tuning step.
 
 Representative arbitrary-upload/India validation remains outside this release;
 CUAD evidence cannot establish that scope. The portable ML package and isolated
-CPU checks were completed/reviewed October 31. Live parser/API/UI checks remain
-unverified and due November 6; confirm them only when actually exercised. Aryan
-owns parser/backend/frontend/deployment. Release handoff remains November 7.
+CPU checks were completed/reviewed October 31, followed by the trained local ASGI
+DOCX/parser/API/CPU smoke that day. Frontend highlighting, PDF integration,
+network-server and deployment checks remain unverified; record actual outcomes
+by November 6. Aryan owns parser/backend/frontend/deployment. Release handoff
+remains November 7; do not imply complete app validation from the local smoke.
 
 ## Deferred scope and retained manual review
 
