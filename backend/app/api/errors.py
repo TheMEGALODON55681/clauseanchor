@@ -32,15 +32,33 @@ ERRORS: dict[str, tuple[int, str, bool]] = {
         False,
     ),
     "QUEUE_FULL": (429, "Too many files are waiting to be read. Try again shortly.", True),
+    "DOCUMENT_NOT_PARSED": (
+        409,
+        "The document has not been parsed, so it cannot be analysed.",
+        False,
+    ),
+    "SAMPLE_MODE_ONLY": (
+        409,
+        "Sample mode analyses only the prepared sample, not an uploaded document.",
+        False,
+    ),
+    "ANALYSIS_IN_PROGRESS": (409, "This session already has an analysis waiting or running.", True),
+    "JOB_NOT_CANCELLABLE": (
+        409,
+        "Only an analysis that is waiting or running can be cancelled.",
+        False,
+    ),
+    "ANALYSIS_QUEUE_FULL": (429, "Too many analyses are waiting. Try again shortly.", True),
     "INTERNAL_ERROR": (500, "Something went wrong on the server.", False),
     "NOT_READY": (503, "The service is not ready.", True),
     "CATALOGUE_UNAVAILABLE": (503, "The category catalogue is not available.", False),
 }
 
 
-# The code a failed parse job carries: code: (message, retryable). These never become an HTTP
-# status. They are the parser's codes that a file can reach after the upload checks, and the three
-# API codes for a child that was killed or failed. API.md lists the same table.
+# The code a failed job carries: code: (message, retryable). These never become an HTTP status.
+# They are the parser's codes that a file can reach after the upload checks, the three API codes
+# for a parse child that was killed or failed, and the two for an analysis. API.md lists the same
+# table.
 JOB_ERRORS: dict[str, tuple[str, bool]] = {
     "MALFORMED_FILE": ("The file could not be read.", False),
     "ENCRYPTED_PDF": ("The PDF needs a password to open.", False),
@@ -57,6 +75,11 @@ JOB_ERRORS: dict[str, tuple[str, bool]] = {
     "PARSE_TIMEOUT": ("Reading the file took too long.", False),
     "PARSE_MEMORY_LIMIT": ("Reading the file needed more memory than is allowed.", False),
     "PARSE_FAILED": ("Reading the file failed.", True),
+    "ANALYSIS_INVALID_RESULT": (
+        "The analysis returned a result that failed its checks, so it was discarded.",
+        False,
+    ),
+    "ANALYSIS_FAILED": ("The analysis failed.", True),
 }
 
 

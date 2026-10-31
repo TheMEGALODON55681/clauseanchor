@@ -380,7 +380,11 @@ def test_a_job_shows_its_state_and_a_fixed_error_when_it_failed(
         "id": good,
         "kind": "parse",
         "document_id": document_id,
+        "analysis_id": None,
         "status": "succeeded",
+        "stage": None,
+        "completed_units": 0,
+        "total_units": None,
         "error": None,
     }
     _, bad = upload(client, token, fixture_bytes["encrypted.pdf"])

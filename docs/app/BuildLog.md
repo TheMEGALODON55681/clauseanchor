@@ -2410,3 +2410,98 @@ Blockers: none. The untracked `main` file at the repository root is Aryan's to r
 Held `[CONTRACT]` items for Tanishq: none new. `from_json` is internal to the backend and changes nothing he consumes. The 2-A list stands.
 
 Next action: commit with `feat(api): add document upload with validation and parse jobs`. Then 2-D (analysis jobs through the core analyzer) when Aryan says so.
+
+## 2026-10-31: Part 2-D, analysis jobs through the core analyzer
+
+Part: 2-D. Ticked `[x]` in `Phases.md`. No parser output moved, so `parser_version` stays 1.1.0. 2-0A, 2-0B and 2-0C were not touched. `ml/` and `docs/ml/` were not touched either: a file listing of `ml/` before and after the part is identical, and `git status` shows no path under `ml/` or `docs/ml/`. The part was built over two working sessions. The first wrote the code and the tests. The second wrote the docs, ran the reviews and the scrubs, and made the final run.
+
+Start checks, before any code:
+- `git status` and `git log`: HEAD is `53f2ed1`, the 2-C commit, and it is the latest commit that touches `backend/` or `docs/app/`.
+- Baseline at `53f2ed1` in `backend/.venv`: 1184 passed, 1 warning, `ruff check` clean.
+
+Step 0, the 2-C decisions (also in `Phases.md` under 2-C):
+1. The plan's 409 for sample mode on upload stays unenforced. Sample mode is enforced when an analysis starts.
+2. The suspended start with `NtResumeProcess` is accepted.
+3. The 95 percent peak rule is accepted, with the cap at 1,536 MiB.
+4. `created_at` stays, and 2-R revisits it. The `jobs` column is read from 2-D on (the analysis's `created_at`), so the question narrows to the `sessions` and `documents` columns.
+5. The other seven decisions of the 2-C entry are accepted as written, and 2-R gives them a second look: 2 (no `include_text` query), 3 (`GET /documents/{id}` returns the output under `parsed`), 4 (a job `error` is `{code, message, retryable}`), 5 (an unreadable ZIP passes the upload and fails its job), 8 (the parse queue holds one running and `PARSE_QUEUE_LENGTH` waiting), 9 (session expiry also ends a running child) and 10 (`/ready` has no worker-alive check).
+
+Read: Rules, Phases (Review scope, all of Phase 2, D1 to D9, the 2-C and 2-D entries), API, Architecture, the 2-C entry and its eleven decisions, `config.py`, `main.py`, `api/`, `schemas.py`, `services/store.py`, `services/parse_jobs.py`, the parser model, the frontend client and mock for the analysis flow, plan sections 2.5, 9, 10.7 and 11.3, and read-only in `ml/`: `clauseanchor_core` (`contract.py`, `stub.py`, `analyzer.py`, `artifacts.py`, `__init__.py`), `pyproject.toml`, `docs/ml/Interface.md`, `RealAnalyzer.md` and `ScopeFixtures.md`.
+
+Files changed:
+- `backend/app/services/analysis.py` (new): the boundary with the core. `build_analyzer`, `sample_refusal`, `check_result`, `processing_complete`, `decisions_resolved`.
+- `backend/app/services/analysis_jobs.py` (new): `AnalysisQueue`. One daemon worker thread that loads the analyzer first (`loading`, `ok`, `failed`), a FIFO whose limit counts the waiting jobs, the stop flag the core's `cancelled` callback reads, the timer, progress into the store, and the result rule. It chains the store's `on_drop` hook after the parse queue's.
+- `backend/app/services/store.py`: `jobs` gains `analysis_id` (unique), `stage`, `completed_units`, `total_units` and `finished_at`, and the status `timed_out`. `AnalysisRecord` in RAM, `add_analysis_job` (one active analysis per session), `get_analysis`, `set_progress`, `finish_analysis`, `delete_job`.
+- `backend/app/api/routes.py`: `POST /documents/{id}/analyses`, `GET /analyses/{id}`, `POST /jobs/{id}/cancel`, the new job fields, and `/ready` from the queue's state. `backend/app/api/errors.py`: five API codes and two job codes. `backend/app/schemas.py`: the analysis models, which mirror the core's fields one for one. `backend/app/main.py`: the queue in `create_app`, started and stopped in the lifespan. `backend/app/config.py`: `CLAUSEANCHOR_ARTIFACTS_SHA256`, `ANALYSIS_QUEUE_LENGTH`, `ANALYSIS_TIMEOUT_SECONDS`, `STUB_FIXTURE_DIR`.
+- `backend/requirements.txt`: `-e ../ml`. `backend/constraints.txt`: a header comment only. `backend/.env.example`: the new variable.
+- `backend/tests/`: new `fake_core.py`, `test_store_analysis.py`, `test_analysis_factory.py`, `test_analysis_adapter.py`, `test_analysis_jobs.py` and `test_analyses_api.py`. Edited `conftest.py` (the `fake_core` fixture, and `make_client` waits for the analyzer to leave `loading`), `test_api.py`, `test_config.py`, `test_docs.py`, `test_documents_api.py` and `test_real_catalogue.py`.
+- Docs: `API.md`, `Phases.md`, `Architecture.md`, `Rules.md`, `README.md` and this entry.
+
+The editable install. `pip install -e ../ml` needs `setuptools`, and the venv has none. The shell had no network, and the brief said to download nothing, so the install was built offline: `PYTHONPATH=<a copy of the global setuptools 81.0.0> python -m pip install --no-build-isolation --no-deps --no-index -e ../ml`. The copy sits in the session scratchpad, outside the repository. The result is `clauseanchor-core 0.1.0`. A normal machine lets pip fetch `setuptools` for an isolated build, and `Rules.md` section 4 says so. `pip install --dry-run -r requirements-dev.txt -c constraints.txt` from `backend/` resolves and reports "Would install clauseanchor-core-0.1.0". pip refuses an editable line in a constraints file ("Editable requirements are not allowed as constraints", verified), so the pins stay as they were and a refresh drops the `-e` line from the freeze.
+
+Decisions for Aryan to confirm or change:
+1. No route makes the sample document. The plan's `POST /samples/{sample_id}/open` is 3-C, so the tests put the sample in the store. In sample mode a start on any other document gets 409 `SAMPLE_MODE_ONLY`, and an id outside the stub's four gets 422. The API tells the sample by its text hash.
+2. `category_ids` is required and non-empty, and the plan's `null` for "all" is refused. `jurisdiction_scope` is required, extra fields are refused, and `Idempotency-Key` is not read.
+3. One active analysis per session, whichever document it reads (plan 9.3). The queue holds 2 waiting analyses, and a cancelled waiting one gives its place back at once.
+4. The time limit is 1,800 s from the start of the run. The only timing of the real model is Tanishq's smoke run (9 windows in 3.97 s, about 0.44 s a window), so the figure is the plan's and not a measured one. At that rate 1,800 s covers about 4,000 windows.
+5. `timed_out` is a job status. The plan's `JobStatus` lacks it, so the 4-C frontend type needs it. The core returns a result whole or not at all, so a cancelled or timed-out analysis stores nothing and its `categories` are empty. The plan says a time-out yields a partial result.
+6. A job that ends with a result is `succeeded` when `processing_complete` is true and `partial` otherwise.
+7. `decision_coverage.resolved` counts `found` and `absent` only. The mock counts `abstained` as resolved, so the 4-C adapter changes (noted in `Phases.md`).
+8. `check_result` adds four checks to the core's `validate_result`: the `doc_id`, the mode (a stub result cannot pass as a real one), the category set, and no `absent` on a partial parse. A result that fails ends the job `ANALYSIS_INVALID_RESULT` and the API rewrites nothing.
+9. `analysis_id` differs from the job id. A document keeps its latest analysis, and an older `analysis_id` answers 404.
+10. `CLAUSEANCHOR_ARTIFACTS_SHA256` deviates from D8 (recorded there). The core's manifest check at load absorbs most of 4-A, and 4-B must install `ml/` and ship `ml/fixtures/` in the image (both noted in `Phases.md`).
+11. `GET /analyses/{id}` answers 200 for any analysis the session owns. `categories` is empty until a result exists.
+
+Questions for Tanishq, none blocking: can the core return a snapshot when it is cancelled or times out? Can a cancel interrupt a window under way? What does one window cost on the deploy host?
+
+Test-driven record. Red-first order, as the first session logged it:
+- The config slice was red as 9 failed assertions, then green.
+- The factory, store, job layer, adapter and HTTP layer were red as a collection `ImportError` (a missing module or name), not as failed assertions. They went green one slice at a time.
+- The no-torch test in `test_analysis_factory.py` stayed red until the queue existed, because the fresh interpreter starts the app.
+- No mutation check was run on 2-D, so nothing here shows that every test can fail. 2-R can run one.
+- Tests: 1184 to 1309, 125 new. 116 are in the five new files (`test_analyses_api.py` 41, `test_analysis_jobs.py` 32, `test_store_analysis.py` 25, `test_analysis_adapter.py` 12, `test_analysis_factory.py` 6) and a net 9 in the edited ones. They cover the brief's list: stub mode end to end on the core's own sample with the scope notice byte for byte, a test double that drives the job layer through success, progress, cancellation, time-out, an invalid result and an exception, a partial parse (`processing_complete` false, no `absent`), a real-mode fake (findings stay `review_candidate` with a null confidence, the India ids come back `unavailable`, `resolved` is 0), 409 in sample mode on an uploaded document, a delete of a document and of a session mid-analysis, 404 across sessions, no exception text in a log or a reply, and no torch, transformers or numpy in `sys.modules` in a fresh interpreter. `test_analyses_api.py` also compares each response model's fields with the core's dataclass fields.
+
+Code review in this session, with no outside tool.
+- Jury review of the diff. Six perspectives each read it on their own terms, one after another, then one verdict.
+  - Concurrency: the lock order is the store's lock, then one queue's lock. `cancel` releases the queue's lock before it calls the store, the worker does the same, and the `on_drop` hook takes the queue's lock and nothing else, so no cycle forms. A result that finishes in the instant the timer fires is discarded, which is intended. Found one ceiling: a delete that lands between `add_analysis_job` and `submit` finds no queue item, so the item is queued afterwards and keeps the parsed text until the worker takes it and finds the job gone. The window is microseconds. Not fixed.
+  - Privacy and security: every log line carries a class name and nothing else, `check_result` raises fixed messages, `validate_result` messages are never logged, and the job errors are fixed sentences. Nothing found.
+  - API contract: the check order in the code matches `API.md`. Found that the `CATALOGUE_UNAVAILABLE` row did not list the analysis start. Fixed. The read route's 503 cannot occur in a running app, because a start needs the catalogue, and it stays as a guard.
+  - Store and data: `finish_analysis` refuses contradictory combinations and ended jobs, a rolled-back start leaves no row, and a replaced analysis answers 404. `jobs.created_at` is now read, which narrows 2-C decision 11 (Step 0, item 4).
+  - Tests: the timing tests are the weak spot (a 0.3 s limit, and a 1.0 s limit against a 0.7 s run). A stall of 0.3 s on a loaded laptop would fail the second. They use `queue._items`, as `test_parse_jobs.py` does. Left, and listed under "Not verified".
+  - Docs: `Architecture.md` lines that said "planned, 2-D" are now true, and `API.md` section 10, which other sections point to, exists. The sentence in `API.md` about the real model's `resolved` was checked against `docs/ml/RealAnalyzer.md`: the candidate-only class cannot emit `found` or `absent`.
+  - Verdict: ship, with the contract row fixed.
+- ponytail review: two findings applied and the rest kept. Applied: `analysis_jobs.py` carried two `# type: ignore` comments, and both are gone (`_finish` takes `result` and `error` by name, and `Scope` types the jurisdiction scope), and `read_analysis` read `record.result` before it checked `record` for None, so the check now comes first. Kept with reasons: `_halt_for_time` (the timer needs a callable that takes the lock), `delete_job` (the 429 rollback needs it), the two analysis limits as `Settings` fields that are not variables (the tests shrink them), and the response models that repeat the core's fields (`API.md` section 1: a field a model does not declare cannot leave the API).
+
+Checks:
+- `ruff format --check`: 56 files already formatted. `ruff check`: all checks passed.
+- `pytest`: 1309 passed, 1 warning, in 259.8 s on the final run, after the last code edit (134.1 s on the run before the review fixes; the laptop was slower, and no test changed). 1184 before, 125 new. The warning is the same Starlette `httpx` deprecation 2-A reported.
+- Frontend: untouched, so its build and tests did not run.
+- No server and no browser. `TestClient` runs the route checks, and the no-torch test runs the app in a fresh interpreter through `TestClient`.
+- Rules section 1 attribution scrub, with the exact command in Rules, over `backend/`, `frontend/` and `docs/app/`: no output. The same pattern over `README.md` and `backend/.env.example`: no output.
+- Tool-name grep, both forms: the first over `backend/app`, `backend/tests`, `backend/pyproject.toml`, both requirements files, `backend/.env.example` and `README.md`, and the second over the lines added to the tracked docs other than `BuildLog.md` and `Rules.md`. No output from either.
+- Dash scan for U+2014 and U+2013 over the 29 changed or new files, this file included: no hit. Control files that hold one dash each matched. The scan ran again after this entry was filled in.
+- Copy passes: `copywriting`, `copy-editing` and `stop-slop` ran in that order over the new prose in `API.md`, `README.md`, `Architecture.md`, `Phases.md` and `Rules.md`. The skills are written for marketing pages, so only their clarity, specificity and active-voice rules applied. The edits: "hands the core the stored text exactly as" became "gives the core the stored text as", "would only fail" lost "only", "the stop can take a moment" became "a stop waits for the window in progress", "exactly the categories" became "the requested categories, no more and no fewer" in two places, and the `resolved` paragraph for the real model was rewritten after a check against `docs/ml/RealAnalyzer.md`.
+
+Docs checked for staleness:
+- Changed: `API.md` (intro, the error table, `/ready`, the job fields and codes, the cancel, start and read endpoints, the new variable, the differences from the plan, the limits and new section 10), `Phases.md` (2-D ticked with status and deviations, the 2-C decisions, the D8 deviation, notes under 4-A, 4-B and 4-C, and the queue-length line in the 2-A deviations), `Architecture.md` (flow step 5, the worker model, store lock and a new analyzer row, the tree and test list, and section 5), `Rules.md` (section 4, the editable install), `README.md` (the backend description, the install note, the analysis endpoints, real mode and the variable table), `backend/.env.example`, and this entry.
+- Checked and left alone: `ParserContract.md` and `parser_output.schema.json` (no parser output moved), `FrontendDesign.md`, `DesignSystem.md`, `AnnotationGuidelines.md`, `requirements-dev.txt` (it includes `requirements.txt`) and `docs/ml/` (Tanishq's).
+
+Pinned versions added: none. The only new line is `-e ../ml` in `requirements.txt`, the local `clauseanchor-core 0.1.0`, which has no runtime dependency. It is the analysis core the plan calls for and not a third-party package, and the over-engineering review did not flag it. `constraints.txt` pins are unchanged.
+
+Not verified:
+- The real model. No test loaded weights or imported torch, as the brief says. Real mode ran against a fake core, so the 25 s load, the `loading` to `ok` change, the progress counts and the stop granularity are untested against `CandidateOnlyAnalyzer`.
+- Linux, a real server and a browser. Everything ran on this Windows laptop through `TestClient` and a fresh interpreter.
+- The 1,800 s limit. Nothing measured the real model beyond Tanishq's one smoke run.
+- Behaviour on a loaded CPU. Two job tests depend on wall time (a 0.3 s limit, and a 1.0 s limit against a 0.7 s run) and could flake.
+- `AnalysisQueue.stop()` waits up to 30 s for the worker, which matters only if a shutdown lands in the middle of a real model load.
+- A delete that lands between the store insert and the queue submit leaves the parsed text on the queue item until the worker takes it.
+- Mutation testing. None ran on 2-D.
+- A normal isolated `pip install -e ../ml`. The install here was built offline, as described above.
+
+Processes. At least 53 counted, 53 closed: 53 Python-family runs from the shell (42 logged by the first session, 11 by the second) and 3 PowerShell calls in the second. Every counted run went to exit. The first session's ledger stops at its entry 42, so its last runs (the final `ruff` and `pytest` and the summary) are not counted, and neither is its PowerShell use. Three of the 42 were strays that exited at once: two empty `python` REPLs and one `python3` attempt. The second session ran 6 `pytest` runs (one of them `--collect-only`), 4 `ruff` runs and 1 one-line read of the sample fixture. The tests start their own children, and the fixtures check that none survive: the parse tests' children, and one fresh interpreter in each run of `test_analysis_factory.py`. The last check, a read-only PowerShell query of the process list after the final run, found no `python`, `pytest`, `ruff`, `uvicorn`, `pnpm`, `msedge` or `chrome` process. It listed one `node.exe` that runs an MCP server for the host app, started at 12:02 by the host. It is not from this part, is in no ledger, and was not touched. No server, no browser. Short read-only shell commands (git, grep, ls, cat, sed, wc, awk) are not counted.
+
+Blockers: none.
+
+Held `[CONTRACT]` items for Tanishq: none new. The three questions above are for his reply and block nothing. The 2-A list stands.
+
+Suggested commit message: `feat(jobs): run analysis jobs through the core analyzer`. Next part: 2-E (OpenAPI export and API.md), once 2-0C lands. 2-0A, 2-0B and 2-0C still wait on Tanishq, as before.

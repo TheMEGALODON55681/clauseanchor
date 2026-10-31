@@ -6,3 +6,5 @@ pydantic==2.14.1
 python-docx==1.2.0
 pyyaml==6.0.3
 uvicorn==0.54.0
+# The analysis core (Tanishq, ml/): no runtime dependencies. Run pip from backend/, where ../ml resolves.
+-e ../ml

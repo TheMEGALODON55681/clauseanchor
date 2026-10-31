@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from app.config import Settings
 from app.main import create_app
 from app.services.scope import load_catalogue
+from tests.synthetic import wait_until
 
 # Tanishq's file, read in place. He changes catalogue_version and support_status as categories get
 # validated, so no test here pins either one.
@@ -60,6 +61,8 @@ def test_the_real_catalogue_loads_with_41_cuad_and_5_india_rows() -> None:
 def test_ready_and_capabilities_serve_the_real_file_unchanged() -> None:
     raw = json.loads(REAL.read_text(encoding="utf-8-sig"))
     with TestClient(create_app(Settings())) as client:
+        # The stub loads in a thread of the app, so ready waits for it
+        wait_until(lambda: client.app.state.analysis_queue.state == "ok")
         ready = client.get("/api/v1/ready")
         capabilities = client.get("/api/v1/capabilities")
     assert ready.status_code == 200

@@ -14,7 +14,8 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
-from app.services import parse_jobs
+from app.services import analysis, parse_jobs
+from tests.fake_core import FakeCore
 from tests.fixtures.build import Fixtures, build_all
 from tests.synthetic import FakeClock, synthetic_catalogue, wait_until
 
@@ -55,13 +56,17 @@ def make_client(
     """Builds an app on the synthetic catalogue and the fake clock, with its lifespan running.
 
     Keyword arguments override Settings fields. Every client closes when the test ends, and then
-    `spawned` checks that no parse child is left.
+    `spawned` checks that no parse child is left. The analyzer loads in a thread of the app, so
+    `make` waits for it to leave `loading`, unless the test passes `loaded=False` to watch it.
     """
     with ExitStack() as stack:
 
-        def make(**overrides: object) -> TestClient:
+        def make(*, loaded: bool = True, **overrides: object) -> TestClient:
             settings = replace(Settings(catalogue_path=catalogue_file), **overrides)
-            return stack.enter_context(TestClient(create_app(settings, clock=clock)))
+            made = stack.enter_context(TestClient(create_app(settings, clock=clock)))
+            if loaded:
+                wait_until(lambda: made.app.state.analysis_queue.state != "loading")
+            return made
 
         yield make
 
@@ -69,6 +74,15 @@ def make_client(
 @pytest.fixture
 def client(make_client: Callable[..., TestClient]) -> TestClient:
     return make_client()
+
+
+@pytest.fixture
+def fake_core(monkeypatch: pytest.MonkeyPatch) -> FakeCore:
+    """Real mode on a fake: `CandidateOnlyAnalyzer` in the factory becomes this object, so no
+    test loads weights. Build the app with analyzer="real" and any directory and digest."""
+    core = FakeCore()
+    monkeypatch.setattr(analysis, "CandidateOnlyAnalyzer", core)
+    return core
 
 
 @pytest.fixture
