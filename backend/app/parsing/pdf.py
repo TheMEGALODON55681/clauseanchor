@@ -50,9 +50,44 @@ MIN_ROWS_AROUND_GUTTER = 2
 EDGE_TOLERANCE = 1.0  # points of float noise at a column edge
 INDENT_CHARS = 2  # a left edge further than this many median characters from the column edge
 
-# A coarse numbering token at the start of a line: 1. or 1.1 or 1.1.1. or (a) or (iv) or (3).
-# Bare numbers are left out, so "30 days" at the start of a wrapped line does not split.
-_NUMBERING = re.compile(r"(?:\d+(?:\.\d+)+\.?|\d+\.|\([A-Za-z0-9]{1,4}\))\s")
+# Amendment A7 and part 2-0D: a line that opens with a list item marker, then a space or a tab
+# and some text, starts a block. This is the one place the markers are listed. The numbering
+# group is what parser 1.1.0 knew (1. 1.1 1.1.1. (a) (iv) (3)). The item group is what 1.2.0
+# adds: the closing-bracket and full-stop forms that typed lists use (a) 1) iv) A. ii.) and a
+# bullet glyph. Bare numbers are no marker, so "30 days" at the start of a wrapped line does not
+# split. U+2022 is the bullet seen in the real files. The rest of the set is the usual bullet
+# shapes and was not measured.
+_BULLETS = (
+    "\N{BULLET}\N{WHITE BULLET}\N{BLACK SMALL SQUARE}\N{BLACK CIRCLE}\N{WHITE CIRCLE}"
+    "\N{BLACK SQUARE}\N{BLACK RIGHT-POINTING POINTER}\N{MIDDLE DOT}"
+    + chr(0xF0B7)  # the bullet of the Symbol font, which has no name
+)
+_MARKER = re.compile(
+    r"(?:(?P<numbering>\d+(?:\.\d+)+\.?|\d+\.|\([A-Za-z0-9]{1,4}\))"
+    r"|(?P<item>\d+\)|[a-z]\)|[ivx]{2,4}\)|[A-Z]\.|[IVX]{2,4}\.|[ivx]{1,4}\.|[" + _BULLETS + r"]))"
+    r"[ \t]+(?P<next>\S+)"
+)
+_INITIAL = re.compile(r"[A-Z]\.")
+_AMOUNT_WORDS = frozenset({"lakh", "lakhs", "crore", "crores", "per", "percent", "%", "times"})
+
+
+def _marker(text: str) -> str | None:
+    """Which group of marker opens the line, "numbering" or "item", or None. A line that only
+    looks like a marker has none: a section reference that wrapped onto a new line (`4.2 of this
+    Agreement`, `S. 138`), an initial in a name (`A. K. Sharma`, `R. S.`) or the number of an
+    amount that wrapped (`1.5 per cent`)."""
+    found = _MARKER.match(text)
+    if found is None:
+        return None
+    token, word = found["numbering"] or found["item"], found["next"]
+    if (
+        word == "of"
+        or (_INITIAL.fullmatch(token) and (_INITIAL.fullmatch(word) or word[0].isdigit()))
+        or (token[0].isdigit() and word in _AMOUNT_WORDS)
+    ):
+        return None
+    return "numbering" if found["numbering"] else "item"
+
 
 # Amendment A9: a line whose middle sits in the top or bottom share of the page height is a
 # header or footer candidate, and so is a page number that is the first or last row of the page.
@@ -376,11 +411,13 @@ def _streams(
 def _blocks(streams: list[list[_Box]], char_width: float) -> list[list[_Box]]:
     """Splits each stream of lines into blocks (A7). A line starts a block when the pitch from
     the line above exceeds PITCH_SPLIT_RATIO times the page's median pitch, when it begins with
-    a numbering token, or when it returns to the stream's left edge from an indent. The return
-    counts only for a block that began at the edge (a hanging indent), because a first-line
-    indent also returns to the edge on its second line and that is no new paragraph. The first
-    block of a stream always counts, since it may open on the tail of a paragraph from the
-    page before."""
+    a list item marker (2-0D), or when it returns to the stream's left edge from an indent. The
+    return counts only for a paragraph that began at the edge (a hanging indent), because a
+    first-line indent also returns to the edge on its second line and that is no new paragraph.
+    The first block of a stream always counts, since it may open on the tail of a paragraph from
+    the page before. The opener is the line that began the paragraph. A numbering token, a gap
+    or a return to the edge renews it, as in 1.1.0. An item marker cuts and leaves it alone, so a
+    paragraph that returns to the edge after indented items still starts a block."""
     pitches = [b.top - a.top for stream in streams for a, b in pairwise(stream)]
     limit = PITCH_SPLIT_RATIO * statistics.median(pitches) if pitches else float("inf")
     indent = INDENT_CHARS * char_width
@@ -388,16 +425,20 @@ def _blocks(streams: list[list[_Box]], char_width: float) -> list[list[_Box]]:
     for stream in streams:
         edge = min(line.x0 for line in stream)
         blocks.append([stream[0]])
+        opener = stream[0]
         for above, line in pairwise(stream):
-            opener = blocks[-1][0]
-            if (
+            marker = _marker(line.text)
+            renews = (
                 line.top - above.top > limit
-                or _NUMBERING.match(line.text)
+                or marker == "numbering"
                 or (
                     line.x0 - edge <= indent < above.x0 - edge
                     and (opener is stream[0] or opener.x0 - edge <= indent)
                 )
-            ):
+            )
+            if renews:
+                opener = line
+            if renews or marker:
                 blocks.append([line])
             else:
                 blocks[-1].append(line)

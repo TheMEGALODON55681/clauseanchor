@@ -2706,3 +2706,163 @@ into the guidelines (draft 0.2) and tick 2-0A.
 ```
 
 Next action: Aryan replaces 002 and decides on 003 and on the 2-0D bullet glyphs. Then 2-0D, 2-0C, 2-E.
+
+## 2026-11-01: Part 2-0D, cut PDF blocks at list item markers (parser 1.2.0)
+
+Part: 2-0D. Parser code, tests and docs. No dependency, no browser, no server. `ml/` and `docs/ml/` were not changed. `parser_version` moves from 1.1.0 to 1.2.0, a minor release under `ParserContract.md` 2.1. The cut changes block boundaries and nothing else: `source_text`, `text_sha256` and every offset are identical at 1.1.0 and 1.2.0. 2-0D is ticked.
+
+Start checks:
+- `git status --short` was clean. `git log --oneline -3 -- backend docs/app` gave `124bb55`, the 2-0A close, as the latest commit that touches either folder.
+- Baseline in `backend/.venv`: `ruff format --check` and `ruff check` clean, `pytest` 1309 passed.
+- `data/indian/` holds `001` to `025`. Aryan replaced 002 and 003 after the 2-0A close.
+
+Files changed:
+- `backend/app/parsing/pdf.py`: the marker set (`_BULLETS`, `_MARKER`), `_marker`, the opener rule in `_blocks`, the docstring.
+- `backend/app/parsing/assemble.py`: `PARSER_VERSION` is "1.2.0".
+- `backend/tests/test_pdf_markers.py` (new, 125 tests).
+- `backend/tests/fixtures/build.py`: `_vera`, `_vera_rows`, `MARKER_LINES`, `GUARD_LINES`, `list_pdf`, `_indented_list`, `_numbered_first_line_indent`, and four registry entries (`list_markers.pdf`, `list_guards.pdf`, `list_indented.pdf`, `numbered_first_line_indent.pdf`).
+- `backend/tests/test_assemble.py` and `backend/tests/fake_core.py`: the version value.
+- `docs/app/ParserContract.md`: the header and field comment, 2.1 (history entry for 1.2.0), new 7.9, section 8 (status and the observed party forms), 12.2 (overprinted text), 12.3 (the fused row, a row for look-alike markers), 12.6 (counts, the witness list, the closing-bracket row, a table header row), sections 14 and 15.
+- `docs/app/Phases.md`: the ceiling table, the 2-0A status, 2-0B (version and files 002 and 003), 2-0D (ticked, status, deviations), 2-0C (input from the final set).
+- `docs/app/AnnotationGuidelines.md`: the change list, section 4, section 8 (input, results, paragraph) and open item 3.
+- `docs/app/Architecture.md`: the block rule and the `parser_version` comment.
+- `docs/app/BuildLog.md`: this entry.
+
+Read: `Rules.md`, the 2-0D brief, `Phases.md` (2-0A decisions, 2-0B to 2-0D, the ceiling table), `ParserContract.md` (2.1, 7, 8, 12), `AnnotationGuidelines.md` section 8, the two 2-0A entries of this file, and in `backend/app/parsing/`: `pdf.py` (`_blocks`, the numbering regex, the label grammar), `structure.py` and the tests for both.
+
+Step 0, the two replacements counted at parser 1.1.0 before any code change. One throwaway script in the session scratchpad, outside the repo, parsed 002 and 003 and printed counts, codes and offsets. It printed no contract text.
+
+| File | Type | Pages | Chars | Blocks | Nodes | Partial | Warnings |
+|---|---|---|---|---|---|---|---|
+| 002 | PDF | 2 | 6,734 | 30 | 5 | no | none |
+| 003 | PDF | 5 | 11,765 | 90 | 9 | no | `COLUMN_ORDER_UNCERTAIN` 2 (pages 1 and 4), `MORE_THAN_TWO_COLUMNS` 1 (page 2) |
+
+- 002 is a bank's format of agreement with blanks, and it counts as an agreement. The Athens, level and number format counts are 0. Fused paragraphs: page 1, where a `1)` clause holds items `a)` to `d)` in one block. The clauses `1)` to `10)` give no nodes (the closing-bracket row, 12.6). The witness lists `1.` and `2.` (two of them) open 4 false level 1 nodes. Party form: other (a sentence that places one party on each side, both left blank) and an anchor with the short name in quotes inside brackets. Stamp page: none.
+- 003 is a lease deed template inside a registration form. I counted it as an agreement. That is borderline, and it has no hit on any ceiling, so it only changes the denominators. Fused paragraphs: 0, because its blocks of form field labels are not paragraphs. A table header row of column letters (`(a) (c) (e)`) opens a false node `(a)`. The text layer prints each character two or three times (543 of 725 long words), and no other file does. Party form: a parties table (two tables of field labels, no values). Stamp page: page 1 holds e-Stamp detail labels with no values, which the parser keeps as body text.
+- Ceilings on the final set, before the fix: Athens 0 of 25, level 0 of 25, number format 0 of 4, fused paragraphs 10 of 21 PDFs (002, 007, 008, 010, 011, 012, 016, 020, 023, 025; 15 pages: 002 p1; 007 pp2, 3; 008 pp16, 27, 31; 010 p3; 011 p1; 012 pp1, 2; 016 pp1, 2; 020 p1; 023 p3; 025 p8).
+
+The fix. A PDF line that opens with a list item marker, then a space or a tab and some text, starts a block (`ParserContract.md` 7.9). `pdf.py` holds the marker set in one place. The numbering group is what 1.1.0 knew (`1.`, `1.1`, `1.1.1.`, `(a)`, `(iv)`, `(3)`). The item group is new: `1)`, `a)`, `iv)`, `A.`, `II.`, `i.`, `ii.` and nine bullet glyphs, written with `\N{}` names and `chr(0xF0B7)` so the source holds no non-ASCII character.
+
+Three guards stop a line that only looks like a marker: the next word is `of` (a section reference that wrapped), the marker is a single capital with a full stop and the next word is another initial or starts with a digit (`A. K. Sharma`, `S. 138`), and the marker starts with a digit and the next word is an amount word (`lakh`, `crore`, `per`, `percent`, `%`, `times`). The guards apply to both groups, so a wrapped `4.2 of ...` no longer cuts, which 1.1.0 did.
+
+`_blocks` tracks the opener of the left-edge rule explicitly. A pitch gap, a numbering marker or a return to the edge renews it, as at 1.1.0. An item marker cuts and leaves it alone. Red run 3 below is the reason.
+
+Red runs (tests written first, run against the code as it stood):
+- Red 1, the seam in place and 1.1.0 behaviour: 24 failed, 78 passed. The failures were the new shapes (`a)`, `1)`, `i.`, `A.`, `iv)`), the bullet tests, two cases of "needs text after the marker", three wrapped-guard cases (decimal, bracket, amount), the still-cuts-after-a-guard test, the marker-fixture test and the version test. The first attempt was a collection error, because `_BULLETS` did not exist yet.
+- Red 2, a naive rule with no guards: 8 failed. The six guard cases (`initial`, `initials_only`, `section_sign`, `wrapped_decimal`, `wrapped_bracket`, `wrapped_amount`), the still-cuts-after-a-guard test and the version test. The first attempt showed 10 failed, because Helvetica extracts a bullet as `(cid:127)`. `list_pdf` now sets its text in Vera, which carries a Unicode map. The initial guard could only go red once the naive rule existed, since 1.1.0 never cut at an initial.
+- Green 1: only the version test was red. `PARSER_VERSION` became "1.2.0".
+- Red 3, the edge-paragraph test against the simple opener (the opener is the first line of the last block): 1 failed, 78 passed. A probe gave blocks of 4 and 1 lines at 1.1.0 and 1, 1 and 3 at that design: a paragraph back at the left edge joined the last indented item. The explicit opener above fixed it.
+- The mutation run (below) added one more test, the bracketed number before an amount word.
+
+Offset proof:
+- Tests: for every PDF fixture and for the five PDFs of the real-file smoke set, `test_pdf_markers.py` parses each file at 1.2.0 and again with `_marker` patched to the 1.1.0 rule, and asserts that `source_text`, `text_sha256` and every field except `blocks` are equal. A second test asserts that no 1.1.0 block start is lost on any fixture (`list_guards.pdf` is the file made of guard lines, and is left out).
+- Contracts: a throwaway script parsed all 25 files at both versions and printed the file number and `same` or `changed`: 25 `same`, 0 `changed`. The same run printed the version (1.2.0 on all 25) and the node counts, equal on all 25.
+
+| File | `text_sha256` | Block starts gained | Block starts lost |
+|---|---|---|---|
+| 002 | same | 4 | 0 |
+| 007 | same | 5 | 0 |
+| 008 | same | 0 | 1 |
+| 011 | same | 2 | 0 |
+| 012 | same | 6 | 0 |
+| 016 | same | 11 | 0 |
+| 020 | same | 1 | 0 |
+| 023 | same | 1 | 0 |
+| 025 | same | 4 | 0 |
+| the other 16 | same | 0 | 0 |
+
+34 starts gained and 1 lost. The lost start is in 008 at offset 27066, an `(viii) of` line that the `of` guard keeps in its block.
+
+Fused paragraphs, before and after. Method: the 2-0A lists (one-block pages, tall blocks, a short line that ends a paragraph, a later line that starts like a list label, a repeated bullet glyph) were run again on every PDF at 1.2.0. I read again only the pages that gained cuts or that were confirmed in 2-0A. A file that did not change keeps its 2-0A judgement, so the count is a lower bound.
+
+| File | Fused pages at 1.1.0 | Fused pages at 1.2.0 |
+|---|---|---|
+| 002 | 1 | none |
+| 007 | 2, 3 | 2, 3 |
+| 008 | 16, 27, 31 | 16, 27, 31 |
+| 010 | 3 | 3 |
+| 011 | 1 | 1 |
+| 012 | 1, 2 | none |
+| 016 | 1, 2 | 1 |
+| 020 | 1 | 1 |
+| 023 | 3 | none |
+| 025 | 8 | none |
+| the other 11 PDFs | none | none |
+| Total | 10 of 21 files, 15 pages | 6 of 21 files, 9 pages |
+
+Still fused, and why: 007 pages 2 and 3 (labels the scan mangled, and an unnumbered line under item 7), 008 (a label column), 010 page 3 (unnumbered paragraphs beside a table read row by row), 011 page 1 (lowercase `a.` to `e.` items, a shape outside the scope; adding `[a-z]\.` to the item group would cut them, and I did not), 016 page 1 (two unnumbered paragraphs in one block, first noticed in this reading, and absent from the 2-0A record) and 020 page 1 (parties and recitals in one block). The count is above the threshold of 3, so it stays a recorded ceiling. The scope was not widened.
+
+The detector lists, before to after (short last line / later line that starts like a label): 007 4 to 6 / 1 to 1; 011 2 to 1 / 2 to 1; 012 3 to 1 / 2 to 0; 016 8 to 6 / 4 to 0; 020 8 to 7 / 2 to 1; 025 13 to 17 / 1 to 0; 002 1 to 0 / 1 to 0; 023 repeated bullets 1 to 0; 008 tall blocks 3 to 3. More blocks means more blocks that end in a short line, so the short-line list can rise while the fused count falls (007, 025).
+
+Mutation check. A copy of `pdf.py` in the scratchpad took 22 mutants of the marker rule and its guards, one at a time. 21 were killed on the first run. One survived: the amount guard widened to bracketed numbers (`(1) per month`). I added `test_a_bracketed_number_is_a_label_even_before_an_amount_word`, which fails against that mutant, and the rerun killed all 22.
+
+Findings outside the fix, logged with their rows:
+- Overprinted text (003): `ParserContract.md` 12.2.
+- A table header row of column letters opens a false node (003): 12.6.
+- The clauses `1)` to `10)` of 002 give no nodes: added to the closing-bracket row, 12.6.
+- A witness list in a signature block opens false nodes (002): added to the party list row, 12.6.
+- Residual false cuts that 7.9 does not guard (an initial before a surname, `v. State`, a flush-wrapped indented item): 12.3.
+
+Decisions and deviations:
+- The opener rule (red run 3).
+- The guards apply to the numbering markers too. This drops one 1.1.0 cut in the 25 files.
+- The bullet glyph set is a judgement. The 2-0A detector's glyph list was never recorded, and only U+2022 is attested (023). The old 003, the other bullet file, is gone. Aryan confirms or trims the set.
+- 011 `a.` is out of scope and stays a ceiling.
+- 003 counts as an agreement (borderline).
+- The stamp section's item 3 has a candidate now (003 page 1). Decision 5 under 2-0A keeps it open, so I recorded it and did not decide.
+- `docs/ml/CandidateAPIIntegration.md` names 1.1.0. It is Tanishq's, so I left it alone and named it in the `[CONTRACT]` note.
+
+Reviews, in this session, with no outside tool.
+- Jury review of the diff. Six perspectives read it on their own terms, then one verdict.
+  - Correctness: the opener regression (fixed, red run 3). 1.1.0 and 1.2.0 agree on every start except where a guard applies. Every marker needs a space or tab and then text, so a bare number and a marker alone start nothing.
+  - Tests: every shape and every guard has a test written red first. The offset proof runs on every fixture and the smoke set. The mutation run found one gap, closed. A monotone test (no 1.1.0 start lost) was added.
+  - Rules and privacy: no contract text in the repo. The fixtures are synthetic lines. The source holds no non-ASCII character.
+  - Downstream: node counts equal on 25 of 25, so the tree and the API are unchanged. Block ids and locators move, and 7.9 and 2.1 say so. Records hold spans and no block ids.
+  - Residuals: three false-cut cases stay (an initial before a surname, a case citation such as `v. State`, a flush-wrapped indented item). They are documented in 12.3 and not fixed, because each guard costs a rule for a case not seen in the 25 files.
+  - Speculative input: the bullet glyph set. Kept and flagged for Aryan.
+  - Verdict: ship, with the monotone test and the extra test added.
+- ponytail review of the uncommitted diff, two findings.
+  - `build.py`: three copies of the draw loop, each registering the Vera font again on every line. One `_vera_rows` helper registers it once per page. Applied; `test_pdf_markers.py`, `test_pdf.py`, `test_assemble.py` and `test_invariants.py` passed afterwards (350 passed).
+  - `pdf.py`: `_BULLETS` holds nine glyphs and only U+2022 is attested. Not applied: the scope names the bullet glyphs, the set costs one constant, and trimming it is Aryan's call.
+  - The named groups in `_MARKER` stay, because the opener rule reads which group matched.
+
+Checks:
+- Final run in `backend/.venv`: `ruff format --check` 57 files already formatted, `ruff check` all checks passed, `pytest` 1458 passed, 1 warning (109.6 s). The baseline was 1309, so the part adds 149 tests: 125 in `test_pdf_markers.py` and the rest from the four new fixtures, which run through the parametrized fixture tests. After the ponytail change, the four focused files (`test_pdf_markers.py`, `test_pdf.py`, `test_assemble.py`, `test_invariants.py`) gave 350 passed.
+- Offset proof on the contracts: 25 `same`, 0 `changed`, version 1.2.0 on all 25, node counts equal on all 25, 34 block starts gained and 1 lost (table above).
+- Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`, with the exact command in Rules: no output.
+- Tool-name grep, both forms in Rules (code, config and README; the lines added to the docs outside this file and `Rules.md`): no output.
+- Dash scan for em and en dashes (U+2014 and U+2013) over the 11 changed files, the new test file included: 0 in each. A control file with one of each gave a hit, so the scan works.
+- Contract word scan. A throwaway script took capitalised words of five letters or more from the first page of each of the 25 contracts (the first three pages when the first held under 1,500 characters, or the first 3,000 characters of a Word file), kept those that appear in 8 files or fewer and in none of the docs at `HEAD`, took up to 20 per contract (246 distinct words), and searched the 539 lines this part added to the docs, the code and the tests. It printed file names, line numbers and columns only. The first run had 15 hits. Eleven were generic words in my synthetic fixture lines (a party role word, two nouns, an adjective); neutral words replaced them and the marker tests passed again. The 4 left are the month name in four date lines. Weak spots: the same as in 2-0A (few distinctive words in short files, noisy text layers in scans), and 003 repeats each character, so its words are mostly unusable.
+- Git: `status`, `diff`, `log`, `ls-files` and `check-ignore` only. Nothing staged, committed, branched or pushed. `git status --short` lists five modified backend files, the five modified docs and `test_pdf_markers.py`, and no path under `ml/` or `docs/ml/`.
+- Cleanup: the scratchpad scripts and outputs of both halves of this part, `/tmp` red and green outputs, and `data/indian/_view/` (10 files) are deleted. `data/indian/` still holds the 25 files.
+- Prose passes: copywriting, then copy-editing, then stop-slop, over every added passage. Edits: "mostly" became "many of them runs of", the look-alike marker row in 12.3 became an active sentence, "is listed in one place" became "lists the marker set in one place", and "newly noticed" became "first noticed".
+
+Docs checked for staleness:
+- Changed: `ParserContract.md`, `Phases.md`, `AnnotationGuidelines.md`, `Architecture.md` and this entry.
+- Checked and left alone: `API.md` and `README.md` (neither names a parser version), `Rules.md`, `FrontendDesign.md`, `DesignSystem.md`, `parser_output.schema.json` (no field moved) and `docs/ml/` (Tanishq's; `CandidateAPIIntegration.md` names 1.1.0).
+
+Not verified:
+- The fused count after the fix reads again only the pages that changed. A fused block that none of the lists flags is not counted.
+- The bullet glyphs other than U+2022 on any real contract.
+- The residual false cuts on real contracts: they were probed on synthetic lines only.
+- 003 as an agreement.
+
+Processes: started 25, closed 25 for this run (kept in a hand ledger after the handoff: 14 throwaway Python scripts and checks, 5 `pytest` runs and 6 `ruff` runs). The earlier half of the part, before the handoff, ran about 45 foreground `python`, `pytest` and `ruff` calls with no exact ledger; all finished. The suite's own tests start capped child processes inside `pytest`, and those are not counted. A process-list check at the end (names `python`, `pythonw`, `python3`, `ruff`, `pytest`, `py`) found none left. No browser, no server, and nothing killed by name. One `node` process (PID 22652, started 20:34) is on the machine and is not mine: this run started no `node` command.
+
+Blockers: none.
+
+Held `[CONTRACT]` item for Tanishq: `parser_version` is now 1.2.0. Blocks and nodes may change; `source_text` and every offset do not. He reads `ParserContract.md` 2.1, 7.9, 12.3 and 12.6. `docs/ml/CandidateAPIIntegration.md` names 1.1.0.
+
+Suggested commit message:
+
+```text
+feat(parser): cut PDF blocks at list item markers
+
+Start a PDF block at a line that opens with a list item marker (a), 1),
+iv), A., i. or a bullet glyph), with guards for initials, wrapped
+section references and wrapped amounts. Bump parser_version to 1.2.0.
+source_text, text_sha256 and every offset are identical at 1.1.0 and
+1.2.0, proved on every fixture, the smoke set and all 25 contracts.
+```
+
+Next action: Aryan decides on the bullet glyph set, 011 `a.` and the 6 files that still fuse. Then 2-0C (1.3.0), then 2-E.

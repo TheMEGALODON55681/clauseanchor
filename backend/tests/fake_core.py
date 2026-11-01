@@ -37,7 +37,7 @@ def parsed_document(
     return ParsedDocument(
         source_text=text,
         text_sha256=text_digest(text),
-        parser_version="1.1.0",
+        parser_version="1.2.0",
         media_type="application/pdf",
         page_count=1,
         blocks=(),

@@ -101,17 +101,22 @@ def _long_lines(c: Canvas) -> None:
         _text(c, 72, 184 + 14 * i, line)
 
 
-def _latin_unicode(c: Canvas) -> None:
-    # Vera ships with reportlab and holds U+FB01, which the standard Helvetica cannot draw.
+def _vera() -> str:
+    """Registers the Vera font that ships with reportlab and returns its name. It embeds a
+    Unicode map, so it carries U+FB01 and the bullet, which the standard Helvetica cannot."""
     path = os.path.join(os.path.dirname(reportlab.__file__), "fonts", "Vera.ttf")
     pdfmetrics.registerFont(TTFont("Vera", path))
+    return "Vera"
+
+
+def _latin_unicode(c: Canvas) -> None:
     lines = [
         "\u201cSmart\u201d quotes and caf\u00e9 na\u00efve",
         "Non\u00a0breaking  double  spaces",
         "\ufb01nal terms",
     ]
     for i, line in enumerate(lines):
-        _text(c, 72, 100 + 14 * i, line, "Vera", 12)
+        _text(c, 72, 100 + 14 * i, line, _vera(), 12)
 
 
 def _tight_clauses(c: Canvas) -> None:
@@ -464,6 +469,77 @@ def _bomb_encrypted_bytes() -> bytes:
     canvas._code.append(" " * (MAX_DECODED_CONTENT_BYTES + 1))
     canvas.save()
     return buffer.getvalue()
+
+
+# Lines for list_pdf (part 2-0D). Every item opens with one marker shape. Each guard line is
+# one that looks like a marker and is not: an initial, a section reference that wrapped, an
+# amount that wrapped. The lines are synthetic.
+MARKER_LINES = (
+    "The Supplier shall do the following:",
+    "a) deliver the items;",
+    "b) provide the documents;",
+    "1) first step",
+    "2) second step",
+    "i. first point",
+    "ii. second point",
+    "A. First heading",
+    "B. Second heading",
+    "\N{BULLET} a bullet item",
+    "\N{BULLET} another bullet item",
+)
+GUARD_LINES = {
+    "initial": ("Signed for the Supplier by", "A. K. Sharma, the named signatory."),
+    "initials_only": ("Witnessed in the presence of Mr.", "R. S."),
+    "section_sign": ("The notice is served under", "S. 138 of the Act."),
+    "wrapped_decimal": ("The duties are set out in clause", "4.2 of this Agreement."),
+    "wrapped_bracket": ("The duties are set out in sub-clause", "(b) of clause 5 above."),
+    "wrapped_amount": ("The penalty shall not exceed Rs. 5,000 or", "1.5 per cent of the value."),
+}
+
+
+def _vera_rows(c: Canvas, rows: Iterable[tuple[int, str]]) -> None:
+    """Draws (left edge, text) rows at one pitch, with no paragraph spacing."""
+    font = _vera()
+    for i, (x, line) in enumerate(rows):
+        _text(c, x, 100 + 12 * i, line, font, 10)
+
+
+def _indented_list(c: Canvas) -> None:
+    # Items at an indent with a hanging second line, then a paragraph back at the left edge. No
+    # spacing anywhere, so only the markers and the return to the edge separate the blocks.
+    _vera_rows(
+        c,
+        [
+            (72, "The Supplier shall do the following:"),
+            (90, "a) deliver the items on time;"),
+            (90, "b) provide the documents and"),
+            (108, "keep the records;"),
+            (72, "The Buyer shall pay the price when due."),
+        ],
+    )
+
+
+def _numbered_first_line_indent(c: Canvas) -> None:
+    # Each numbered paragraph starts indented and wraps back to the left edge. The return to the
+    # edge is the paragraph's own second line, as in first_line_indent.pdf.
+    _vera_rows(
+        c,
+        [
+            (72, "The parties agree as follows."),
+            (90, "1. The Supplier shall perform the Services with"),
+            (72, "reasonable skill and care."),
+            (90, "2. The Customer shall pay the Charges within"),
+            (72, "thirty days of the date of each invoice."),
+            (90, "3. Either party may end this Agreement by"),
+            (72, "written notice."),
+        ],
+    )
+
+
+def list_pdf(*lines: str) -> bytes:
+    """One page of lines at one left edge and one pitch. Nothing in the geometry separates them,
+    so only a list marker can start a block."""
+    return _pdf(lambda c: _vera_rows(c, [(72, line) for line in lines]))
 
 
 def unmapped_pdf(*pages: tuple[int, int]) -> bytes:
@@ -1020,6 +1096,11 @@ _BUILDERS: dict[str, tuple[Callable[[], bytes], ErrorCode | None]] = {
     "blank_page.pdf": (lambda: _pdf(_blank_page), None),
     "hanging_page_break.pdf": (lambda: _pdf(_hanging_page_break), None),
     "first_line_indent.pdf": (lambda: _pdf(_first_line_indent), None),
+    # List item markers and the lines that look like them (2-0D)
+    "list_markers.pdf": (lambda: list_pdf(*MARKER_LINES), None),
+    "list_guards.pdf": (lambda: list_pdf(*(x for v in GUARD_LINES.values() for x in v)), None),
+    "list_indented.pdf": (lambda: _pdf(_indented_list), None),
+    "numbered_first_line_indent.pdf": (lambda: _pdf(_numbered_first_line_indent), None),
     "contents.pdf": (lambda: _pdf(_contents), None),
     "three_column_table.pdf": (lambda: _pdf(_three_column_table), None),
     "column_uncertain.pdf": (lambda: _pdf(_column_uncertain), None),

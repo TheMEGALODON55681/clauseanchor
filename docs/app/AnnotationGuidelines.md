@@ -9,7 +9,7 @@ Changes from 0.1:
 - Section 2 confirms the two ids that were open, `cuad.uncapped_liability` and `cuad.governing_law`, and gives the fixed question of each CUAD label. Tanishq's files in `ml/configs/` supply both. The working definitions were checked against the questions, and none changed.
 - Section 4 says which later parser releases keep the offsets.
 - Section 6.4 adds a sign of unreadable text: a picture that holds words.
-- Section 8 holds the ceiling counts (24 of 25 files read), and section 9 holds the stamp page note from the counts.
+- Section 8 holds the ceiling counts (all 25 files read, after Aryan replaced 002 and 003), and section 9 holds the stamp page note from the counts.
 
 Open in this draft: the record keys marked "proposed" and the stamp certificate item (section 9).
 
@@ -244,10 +244,10 @@ Example 7:
 
 ## 4. Offsets
 
-- Offsets are Unicode code points into `source_text` as parsed at `parser_version` 1.1.0. They are zero-based, and `end` is exclusive: `source_text[start:end]` is the span text.
+- Offsets are Unicode code points into `source_text`, which is the same at `parser_version` 1.1.0 and 1.2.0. They are zero-based, and `end` is exclusive: `source_text[start:end]` is the span text.
 - They are not bytes and not UTF-16 units. A browser counts UTF-16 units, so a character outside the Basic Multilingual Plane, such as an emoji, is one code point and two units there. The annotation tool converts. Do not convert by hand.
 - Never find a span by searching the text. Read the offsets from the selection. Never normalise the text.
-- Record the `text_sha256` of the parse you annotated. The same hash is the same text. A minor or patch release never moves `source_text` (`ParserContract.md` 2.1), so a later 1.x parse of the file has the same hash and offsets. The two planned parser parts are minor releases: 2-0D ships as 1.2.0 and 2-0C as 1.3.0. A major release may move the text, and the hash tells you.
+- Record the `text_sha256` of the parse you annotated. The same hash is the same text. A minor or patch release never moves `source_text` (`ParserContract.md` 2.1), so a later 1.x parse of the file has the same hash and offsets. Parser 1.2.0 (part 2-0D) moves block boundaries and no character of the text, so an annotation made against 1.1.0 and one made against 1.2.0 line up. Part 2-0C will ship as 1.3.0, also a minor release. A major release may move the text, and the hash tells you.
 - Offsets belong to one file in one format. A PDF and a DOCX of the same contract give different offsets.
 
 Worked calculation. The text has two blocks, and the second holds the rupee sign U+20B9, one code point (3 UTF-8 bytes, 1 UTF-16 unit):
@@ -382,9 +382,9 @@ Ten documents are annotated by both annotators, independently. Neither sees the 
 
 ## 8. Ceiling counts (part 2-0A)
 
-Part 2-0A measured four parser ceilings on contracts 001 to 025 (`Phases.md`, open ceilings; `ParserContract.md` 12.3 and 12.6). The counts ran on 31 October 2026 in two passes. The first pass read 21 files. Four of the 25 were over the parser limits, Aryan replaced them, and the second pass counted the replacements. The results follow the procedure.
+Part 2-0A measured four parser ceilings on contracts 001 to 025 (`Phases.md`, open ceilings; `ParserContract.md` 12.3 and 12.6). The counts ran on 31 October 2026 in two passes. The first pass read 21 files. Four of the 25 were over the parser limits, Aryan replaced them, and the second pass counted the replacements. Aryan then replaced 002 and 003 again, and part 2-0D counted those two on 1 November 2026 with the same procedure. The results follow the procedure.
 
-**Input.** Contracts 001 to 025 as files in `data/indian/`, which Git ignores, parsed at 1.1.0. If fewer than 25 parse, count those and report how many. 24 parse: 20 PDFs and 4 Word files (001, 005, 015, 018). File 002 stops with `UNSUPPORTED_TYPE`, because it is a web page saved with a PDF extension. The counts below are out of those 24 files, and out of the 20 PDFs for the fused paragraph ceiling. One more file adds at most one to a zero count, so file 002 cannot lift a ceiling to the threshold.
+**Input.** Contracts 001 to 025 as files in `data/indian/`, which Git ignores, parsed at 1.1.0. If fewer than 25 parse, count those and report how many. All 25 parse: 21 PDFs and 4 Word files (001, 005, 015, 018). In the 2-0A pass, file 002 stopped with `UNSUPPORTED_TYPE`, because it was a web page saved with a PDF extension, and 003 was a how-to sheet. Their replacements are a bank's format of agreement with blanks (002) and a lease deed template inside a registration form (003). File 003 is counted as an agreement, which is borderline. It has no hit on any of the four ceilings, so it changes only the denominators. The counts below are out of the 25 files, and out of the 21 PDFs for the fused paragraph ceiling.
 
 **The four counts.** Each is a number of files. A file counts once per ceiling, however many places it has.
 
@@ -404,24 +404,25 @@ Part 2-0A measured four parser ceilings on contracts 001 to 025 (`Phases.md`, op
 5. Open each candidate in the original file, at the page or paragraph its locator names, and read it. Only a confirmed candidate counts. The lists narrow the reading, and a defect seen while reading counts too.
 6. Name the cause. A wrong tree from another cause in 12.6 (a contents page read as clauses, a short all-capitals line that closes nodes, a list that opens above 1) counts for none of the four. Log it with its 12.6 row.
 
-**Script.** Steps 1 to 4 are mechanical, and doing them by eye over 25 files invites mistakes. One throwaway script ran them over the folder and printed, per file: the file name, the warning codes, the level 1 labels with gaps and repeats marked, the nodes of step 3 with their locators and offsets, and the pages of step 4. It read files and printed labels, numbers and offsets, and no contract text. It stayed outside the repository because it served this one count, and it was deleted after the run. The second pass used a new throwaway script of the same kind, with the bullet list added and run over every PDF, and it was deleted too.
+**Script.** Steps 1 to 4 are mechanical, and doing them by eye over 25 files invites mistakes. One throwaway script ran them over the folder and printed, per file: the file name, the warning codes, the level 1 labels with gaps and repeats marked, the nodes of step 3 with their locators and offsets, and the pages of step 4. It read files and printed labels, numbers and offsets, and no contract text. It stayed outside the repository because it served this one count, and it was deleted after the run. The second pass used a new throwaway script of the same kind, with the bullet list added and run over every PDF, and it was deleted too. Part 2-0D used scripts of the same kind for the two replacements and for the fused rerun at 1.2.0, and deleted them as well.
 
 **Threshold.** A ceiling gets a fix part when it counts in 3 or more files, which is one file in eight of the set. With 0 to 2 files it stays a documented ceiling with its count recorded. The threshold is set before any count and does not move afterwards.
 
-**What a fix part does.** Each fix changes nodes or blocks and no character of `source_text`, so every annotated offset stays valid. It ships as a minor release (`ParserContract.md` 2.1). A fused paragraph fix lands before 3-D, which builds its display units from the blocks.
+**What a fix part does.** Each fix changes nodes or blocks and no character of `source_text`, so every annotated offset stays valid. It ships as a minor release (`ParserContract.md` 2.1). A fused paragraph fix lands before 3-D, which builds its display units from the blocks. Part 2-0D is that fix for list labels and bullets, and it shipped as 1.2.0.
 
 **Where the results go.** The counts go in the BuildLog (file ids and labels only, no text), in the open-ceilings table of `Phases.md`, and in the matching rows of `ParserContract.md` 12.3 and 12.6.
 
-**Results (31 October 2026).**
+**Results (31 October and 1 November 2026).**
 
 | Ceiling | Files | File numbers | Reaches 3 |
 |---|---|---|---|
-| Athens-style list | 0 of 24 | none | No |
-| Level (a numeral list after a letter list) | 0 of 24 | none | No |
+| Athens-style list | 0 of 25 | none | No |
+| Level (a numeral list after a letter list) | 0 of 25 | none | No |
 | Number format (DOCX) | 0 of 4 | none | No |
-| Fused paragraphs (PDF) | 10 of 20 | 003, 007, 008, 010, 011, 012, 016, 020, 023, 025 (16 pages) | Yes |
+| Fused paragraphs (PDF), parser 1.1.0 | 10 of 21 | 002, 007, 008, 010, 011, 012, 016, 020, 023, 025 (15 pages) | Yes |
+| Fused paragraphs (PDF), parser 1.2.0 | 6 of 21 | 007, 008, 010, 011, 016, 020 (9 pages) | Yes |
 
-The first pass found 7 of 18 PDFs. The replacements added 003 and 010, and the bullet list added 023. Five of the ten files (007 page 3, 011, 012, 016, 025) fuse runs of list items, because the block rule cuts at `1.` and `(a)` and not at `a)`, `1)`, `i.` or `A.`. Two more (003, 023) fuse bullet items, which the rule does not read as labels either. The other cases have other causes: item text beside a separate label column (008), unnumbered paragraphs with no spacing (020 page 1, 010 page 3), and a label the scan mangled (007 page 2). The count is a lower bound, because four lists and a reading found the cases and a fused block that none of them flags is not counted. `Phases.md` plans the fix as part 2-0D, with the label cut only. After it, 003, 007 (page 2), 008, 010, 020 and 023 stay fused, and the count runs again. It moves no character of `source_text`, so annotation does not wait for it. The wrong trees the counts found have other causes, and `ParserContract.md` 12.3 and 12.6 list them.
+The two replacements added nothing to the Athens, level and number format counts. At 1.1.0 the fused paragraph count was 10 of 21 PDFs. Part 2-0D then cut blocks at `a)`, `1)`, `i)`, `i.`, `A.` and the bullet glyphs (`ParserContract.md` 7.9) and ran the count again with the same lists. Files 002, 012, 023 and 025 no longer fuse. Six files still do, on 9 pages (007 pages 2 and 3, 008 pages 16, 27 and 31, 010 page 3, 011 page 1, 016 page 1, 020 page 1), so the ceiling still reaches the threshold. The causes: 007 has labels the scan mangled and an unnumbered line under an item, 008 a label column, 010 unnumbered paragraphs beside a table that is read row by row, 011 lowercase `a.` to `e.` items that the cut does not read, 016 two unnumbered paragraphs in one block, and 020 the parties and the recitals in one block. They stay recorded ceilings, because the scope of 2-0D was the marker cut. The count is a lower bound. Four lists and a reading found the cases, a fused block that none of them flags is not counted, and the rerun read again only the pages that gained cuts or that 2-0A had confirmed. Parser 1.2.0 moves no character of `source_text`, so annotations made against 1.1.0 and 1.2.0 line up. The wrong trees the counts found have other causes, and `ParserContract.md` 12.3 and 12.6 list them.
 
 ## 9. Open items
 
@@ -432,4 +433,4 @@ For Tanishq, with the 2-0B record questions:
 
 For the pilot:
 
-3. Stamp certificate pages. The text of a stamp certificate or franking endorsement at the front of a contract addresses stamp duty. The proposal is to annotate it as `in.stamping_registration`, with the span recording that the text exists and nothing about payment or sufficiency. The pilot checks whether it floods the label. The 2-0A counts found no certificate page in the 24 files that parse. One file (025) has a scanned stamp-paper page, and its text layer holds only noise from the printed banner, so it holds no sentence to annotate. That page follows 6.4: it holds no provision and changes nothing. Two other files mention stamping in passing, one in a title note and one in a list of requirements, and neither has a stamp page. The proposal stays open until a certificate page turns up.
+3. Stamp certificate pages. The text of a stamp certificate or franking endorsement at the front of a contract addresses stamp duty. The proposal is to annotate it as `in.stamping_registration`, with the span recording that the text exists and nothing about payment or sufficiency. The pilot checks whether it floods the label. The 2-0A counts found no certificate page in the 24 files that parsed then. One file (025) has a scanned stamp-paper page, and its text layer holds only noise from the printed banner, so it holds no sentence to annotate. That page follows 6.4: it holds no provision and changes nothing. Two other files mention stamping in passing, one in a title note and one in a list of requirements, and neither has a stamp page. Part 2-0D found one candidate among the replacements: page 1 of file 003 (a lease deed template inside a registration form) holds e-Stamp detail labels with no values, and the parser keeps them as body text. Decision 5 under 2-0A in `Phases.md` keeps the proposal open until a certificate page turns up.
