@@ -2,7 +2,7 @@
 
 The exact output of the parser, for the analysis core and the annotation tool. This file replaces every earlier contract message. If it disagrees with one of them, this file is right.
 
-`parser_version` is `1.3.0`, set by the rule in section 2.1. Code: `backend/app/parsing/`. The machine form of the output is `docs/app/parser_output.schema.json`, and a test keeps it equal to `app/parsing/schema.py`.
+`parser_version` is `1.4.0`, set by the rule in section 2.1. Code: `backend/app/parsing/`. The machine form of the output is `docs/app/parser_output.schema.json`, and a test keeps it equal to `app/parsing/schema.py`.
 
 ## 1. How to read this file
 
@@ -39,7 +39,7 @@ Party nodes and `name_span` (section 8) are built, as 1.3.0.
 class ParsedDocument:
     source_text: str
     text_sha256: str          # sha256 of source_text.encode("utf-8"), lowercase hex
-    parser_version: str       # "1.3.0"
+    parser_version: str       # "1.4.0"
     media_type: str           # "application/pdf" or the DOCX type below
     page_count: int | None    # None for DOCX
     blocks: tuple[Block, ...]
@@ -80,8 +80,9 @@ A fix that moves `source_text` or an offset is major, whatever its reason, becau
 - **1.1.0**, part 1-R. New: the warning `UNMAPPED_GLYPHS` (sections 6 and 10) and the locator key `list_level` (4.3). Fixed: a Word numeral list under a letter on a deeper level (7.4), and a PDF with bytes in front of its header, which now parses (section 9). New errors for files that used to parse: a DOCX member with another compression method, a PDF stream with two growing filters, more than 100,000 DOCX paragraphs, a DOCTYPE and a bad note id (sections 9 and 11). The text-free form drops `list_label` and definition labels (section 2). `ParsedDocument` and the full form keep both, so that is not a break.
 - **1.2.0**, part 2-0D. Fixed: a PDF line that opens with a list item marker now starts a block (7.9). The markers are `a)`, `1)`, `iv)`, `i.`, `A.` and the bullet glyphs, on top of the numbering tokens that already cut. A line that only looks like a marker no longer cuts, whichever kind it is: a section reference that wrapped (`4.2 of ...`), an initial (`A. K. Sharma`) and the number of a wrapped amount. No field, code or kind changes, and `source_text` and every offset are identical to 1.1.0: both separators are `\n`, and a test compares the two releases on every fixture and on the real-file smoke set. Block ids, block locators and block boundaries move, so re-parse a file to get the new ones. Node counts did not move on any of the 25 contracts, and the tree still reads only the labels of 7.3.
 - **1.3.0**, part 2-0C. New: the node kind `party` and the field `name_span` on party nodes (section 8). A node of any other kind has no `name_span` key. A numbered party list in the preamble that 1.2.0 read as clause nodes now gives party nodes (8.4), so a document can have fewer clause nodes than at 1.2.0: 1 of the 25 contracts (025), by 1 node. `source_text`, `text_sha256`, the blocks and every offset are identical to 1.2.0, and a test compares the two steps on every fixture and on the real-file smoke set. Node ids can move, because party nodes sit in the order of `start`, so re-parse a file to get the new ones.
+- **1.4.0**, part 2-R. Fixed: the party search reads at most the first 20,000 code points of the preamble (8.1). At 1.3.0 the work grew with the square of the preamble: a made-up file of lone `hereinafter called` anchors in front of the first numbered clause took 7.5 s at 5,000 anchors and 37 s at 10,000, so one of 20,000 would pass the 120 s kill of the API's parse child. Only a document whose preamble is longer than 20,000 code points can give other output: a party after that point is no longer found, and one that starts before it ends there. `source_text`, `text_sha256`, the blocks and every offset are identical to 1.3.0, and on the 25 contracts every node is identical too, the 45 party nodes included. A test compares the capped and the uncapped search on every valid fixture. A run against the real 1.3.0 output compared the 25 contracts and the real-file smoke set (`BuildLog.md`, part 2-R).
 
-Output stamped `1.0.0` predates 1-R. Re-parse it. Output stamped `1.1.0` or `1.2.0` has the same text and offsets as 1.3.0, and no party nodes.
+Output stamped `1.0.0` predates 1-R. Re-parse it. Output stamped `1.1.0` to `1.3.0` has the same text and offsets as 1.4.0, and `1.1.0` and `1.2.0` have no party nodes.
 
 Part 2-C added `from_json` (section 2) and changed no output, so the version stayed 1.1.0 until 2-0D.
 
@@ -404,7 +405,7 @@ The schema requires the key on a party and forbids it on any other node. The tex
 
 ### 8.1 Where the parser looks
 
-Only the preamble: the text before the first numbered node (a section, clause, subclause, schedule, or a heading that has a label), or the first 5,000 code points when there is none. A run of up to three level 1 numbers at the head of the document that a restart at 1 replaces (7.4) is not a numbered node here, so the preamble ends at the restart. A party node lies inside the preamble. Nothing outside it changes. **new**
+Only the preamble: the text before the first numbered node (a section, clause, subclause, schedule, or a heading that has a label), or the first 5,000 code points when there is none. Of either, the parser reads no more than the first 20,000 code points (1.4.0), so a party after that point is not found, and one that starts before it ends there. A run of up to three level 1 numbers at the head of the document that a restart at 1 replaces (7.4) is not a numbered node here, so the preamble ends at the restart. A party node lies inside the preamble. Nothing outside it changes. **new**
 
 ### 8.2 What makes a party
 
@@ -432,7 +433,7 @@ When 1.2.0 read the items of a numbered party list in the preamble as clause nod
 
 It runs from the segment's first character that is not a space to just before the first comma, `(`, ` a company`, ` having`, ` represented`, ` through`, ` incorporated`, ` registered`, ` residing`, ` acting` or ` hereinafter`, with spaces and quotes trimmed from both ends. The last stop keeps the defining phrase out of a name that has no comma or bracket in front of it. It is `null` when the result is empty, longer than 150 code points, or starts with a lowercase letter. **new**
 
-### 8.6 Not in 1.3.0
+### 8.6 Not built
 
 The defined short name (`the "Supplier"`) is not stored, because no field holds it. Part 3-A needs it for polarity and records the question (`Phases.md`). The parties table (2-0A counted none) is not read, because tables are leaves for labels (7.8).
 
@@ -461,6 +462,7 @@ Measured on the same 25 files at 1.3.0 (part 2-0C, 3 November 2026). **The rules
 | Missed parties | 7 that a trigger could reach (004, 006, 010, 017, 022 and two in 025: a lone anchor without a role word, or a party merged into the node before it) and 3 in a form no trigger reads (013 twice, 018). The two parties of 003 sit in tables and are out of scope |
 | Names on the 42 | 14 exact, 6 wrong, 5 null (4 of them hide a name in the text, which starts in lower case or in an OCR error) and 17 blanks, where the span covers fill-in text such as a row of underscores |
 | Text | `source_text`, `text_sha256` and the block count equal 1.2.0 on all 25. The non-party node count equals 1.2.0 on 24 and is 1 lower on 025 (8.4) |
+| The 20,000 code point cap (1.4.0, part 2-R) | On all 25 files the output equals 1.3.0 except for the version stamp: the text, the blocks, every offset and every node, the 45 party nodes among them. The latest party starts at offset 1,534 and the first numbered node starts no later than 6,446 |
 
 ## 9. Errors
 
@@ -587,6 +589,7 @@ These are the cases where the tree is wrong or coarse and offsets are still exac
 | **Athens-style lists.** A numbered list inside a section that shares numbers with the section sequence takes them. In one agency agreement a definitions list `1.` to `6.` inside Section 4 took 5 and 6, so Sections 5 and 6 are missed and two false nodes `5` and `6` appear. A Part A and a Part B pair that restarts after a long run reads as a list inside the clause. Separate sequences for heading words and bare numbers would split these, and would then open the list items as level 1 nodes, which cuts Section 4 short. Not built. Measured on contracts 001 to 025 (parts 2-0A and 2-0D): 0 of the 25 files, so no fix part is planned | Missed and false sections |
 | A short all-capitals line is a heading and closes open nodes. Seen: signature block names, formula words (`MULTIPLIED BY`), and a page header that was not marked as furniture | Nodes end early |
 | A numbered list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay. Since 1.3.0 the items of a party list that overlap a party node become party nodes (8.4), and the other lists stay false nodes. The same happens with a recital list of three items before the clauses (two files in 2-0A, three false nodes each), with the first item of a numbered list under an unnumbered heading (one scanned file, four false nodes with its party list), and with a witness list in a signature block (`1.` and `2.`, twice in one file in 2-0D: four false level 1 nodes) | Two or more false nodes |
+| A preamble longer than 20,000 code points. The party search stops there (8.1). Measured on contracts 001 to 025 (part 2-R): 0 of the 25 files, since the first numbered node starts no later than 6,446 | A party after the cut is missing, and one that starts before it ends at it |
 | A Word list whose first item is an empty numbered paragraph is not read when it is a nested decimal (`1.1` empty, `1.2` first), a letter list or a numeral list. A top-level decimal list is read. A gap in the middle of any list is read (7.5) | A list is missed |
 | In a PDF, and in a DOCX whose list is typed, a numeral list that opens right after `(h)` reads `(i)` as the ninth letter, because there is no Word level to tell the two apart. Its other numerals stay inside that node. A Word list is read right (7.4), unless letters and numerals share one level in different lists, which the parser cannot tell apart because the number format is not passed on. Seen in a state government services template (`(h) a reference to:` then `(i)` to `(iv)`), which now gives `(h)` four numeral children. Measured on contracts 001 to 025 (parts 2-0A and 2-0D): 0 of 25 files for the PDF and typed-list case, and 0 of 4 Word files for the shared level. File 005 puts letters and numerals on one Word level, and the tree is right, because its numeral label `i)` is not read (next row). No fix part is planned | One coarse node, wrong level |
 | Numbers inside a table cell are not read, so a contract laid out as one large table has a `table` node and no clauses | No clauses |
@@ -661,7 +664,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 - Structure: node kinds and label format, the run of 3, the prefix rule, schedules clearing sequences, typed numbers never skipping ahead, Word lists opening above 1, the gap rule of 1-F, capitals headings, titles, contents lines, bare numbers, definitions, tables, and header, footer and footnote blocks never read (section 7).
 - The DOCX paragraph limit (section 11).
 - The `UNMAPPED_GLYPHS` warning (sections 6 and 10).
-- `parser_version` 1.1.0 and the versioning rule (2.1). Version 1.2.0 adds the PDF block cuts at list item markers (7.9). Version 1.3.0 adds the party nodes and `name_span` (section 8).
+- `parser_version` 1.1.0 and the versioning rule (2.1). Version 1.2.0 adds the PDF block cuts at list item markers (7.9). Version 1.3.0 adds the party nodes and `name_span` (section 8). Version 1.4.0 caps the party search at 20,000 code points (8.1).
 - The ceilings (section 12), the command line and the schema (section 2). The text-free form also leaves out `list_label` and sets a definition's label to `null`.
 
 **Refined** (stated before, now exact or changed):

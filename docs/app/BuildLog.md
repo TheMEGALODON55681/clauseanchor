@@ -3491,3 +3491,91 @@ Processes. Python-family processes of my own, counted by hand from my calls, so 
 Suggested commit message for this commit: `fix(api): refuse files that parse to too many blocks and nodes`.
 
 Next action: Aryan commits this step and replies "committed, next". Commit 3 is `fix(parser): bound the party search to the first 20,000 characters` (R4, parser 1.4.0).
+
+
+## 2026-11-03: Part 2-R, step 2, commit 3 of 8 (R4, parser 1.4.0)
+
+Part: 2-R, step 2, commit 3. It closes R4: the party search grew with the square of the preamble, so a 37 KB file could hold the parse worker for the whole kill. This is the one commit of 2-R that moves parser output, so it ships as `parser_version` 1.4.0, a minor release (`ParserContract.md` 2.1). Start: `main` at `e3cb859` (commit 2), tree clean, and that commit is the latest on `backend/` and `docs/app/`. Baseline in `backend/.venv`: 1647 passed, 27 skipped, 1 warning (the Starlette `httpx` one), in 156.5 s. `ruff check` clean, `ruff format --check` 62 files already formatted. Nothing in `ml/`, `docs/ml/` or `frontend/` changed, and no dependency changed.
+
+### Measurements, before the change
+
+Made-up DOCX files, with no contract text: one paragraph of `hereinafter called a. ` repeated, then a paragraph `1. Clause.`. Every anchor is lone and defines no party, so the search rejects it and rescans the text before it. Seconds for one parse, numbers only.
+
+| Anchors | Characters | 1.3.0 | 1.4.0 |
+|---|---|---|---|
+| 1,000 | 22,010 | 0.19 s | 0.16 s |
+| 2,500 | 55,010 | 1.21 s | not run |
+| 5,000 | 110,010 | 7.49 s | 0.15 s |
+| 20,000 | 440,010 | not run (step 1 extrapolated about 170 s) | 0.16 s |
+
+A `BETWEEN` and `AND` list of made-up parties: 500 parties 0.04 s, and 4,000 parties 0.19 s (86,908 characters, 958 party nodes, all inside the first 20,000 code points). Step 1 measured 2.27 s for the 4,000 at 1.3.0.
+
+### Identity proof
+
+A throwaway script parsed every input at 1.3.0, before any code changed, and again at 1.4.0. For each input it kept SHA-256 hashes and counts only: of the whole JSON form without the version stamp, of `source_text`, `text_sha256`, the blocks, the decorations and the node ranges, and of the party nodes. The refused inputs were compared by error code.
+
+| Inputs | Count | Parsed | Identical at 1.4.0 |
+|---|---|---|---|
+| Contracts 001 to 025 | 25 | 25 | 25 |
+| The real-file smoke set | 8 | 8 | 8 |
+| Fixtures | 96 | 69 | 96 (the 27 refused ones give the same code) |
+
+Only the version stamp differs, and only on the parsed inputs. The party nodes of the 25 contracts are the same 45 at 1.3.0 and 1.4.0, and so is every other node. No difference, so nothing stopped the commit. The two capture files hold hashes and counts and stay in the session scratchpad. The fixtures also have a permanent test, `test_the_cap_changes_nothing_in_any_fixture`, which runs the structure step with and without the cap on each of the 69 valid ones. The real files have no permanent test: 33 more cases would add 32 s to every run, and the comparison above is against the real 1.3.0 output, which an uncapped copy of the new code only imitates.
+
+### Red run, before the change
+
+The constant `_CAP` went in first with nothing using it, so the tests fail on behaviour and not on a missing name. Run before the cap and the version bump: 5 failed. The 69 comparison tests passed on purpose, as controls.
+- Failed, `test_a_long_preamble_reads_only_its_first_20000_code_points`: `assert [StructureNode(...)] == []`. A party at offset 21,008 was found.
+- Failed, `test_a_party_that_runs_past_the_cap_ends_at_it`: `assert 22042 <= 20000`. The party ran to 22,042.
+- Failed, `test_the_search_never_reads_more_than_the_cap_whatever_the_preamble`: `assert [110000] == [20000]`. The search read the whole preamble.
+- Failed, `test_the_parser_version_is_1_4_0` and `test_coverage_and_metadata_for_a_pdf`: `assert '1.3.0' == '1.4.0'`.
+
+### What changed
+
+- `parties.py`: `_CAP = 20_000`, and `add_parties` searches `source_text[: min(end, _CAP)]`. The 5,000 code point window of a document with no numbered node stays as it was, and the cap applies to both cases (a window of 5,000 is already under it).
+- `assemble.py`: `PARSER_VERSION` is `1.4.0`. `fake_core.py` carries the new stamp on its made-up document.
+- Tests: three cap tests and one comparison test over the 69 valid fixtures in `test_parties.py`, the version test renamed to `1_4_0`, and the stamp in `test_assemble.py`.
+- Docs: `ParserContract.md` (the header and the document sketch, a 1.4.0 entry in 2.1 and the sentence on older stamps, 8.1, the heading of 8.6, a row in the 8.7 table, a row in 12.6 and the list in section 14), `Architecture.md` (the version comment and the party paragraph), `AnnotationGuidelines.md` (the two lines on offsets) and `Phases.md` (2-R item 3). `parser_output.schema.json` is unchanged, because the version is a plain string there.
+
+### One reading of the step 1 fix
+
+Step 1 wrote "(`_WINDOW` for both cases)". I read that as one cap over both cases and left the 5,000 code point window alone. Raising that window to 20,000 would also have found parties between 5,000 and 20,000 in a document with no numbered node, and the fix would then change output for preambles under 20,000, which the finding and Aryan's decision rule out. The 5,000 window has a test of its own (`test_a_document_without_a_clause_reads_only_the_first_5000_code_points`), and a mutant that widens it is killed.
+
+### Reviews in this session, with no outside tool
+
+- Mutation check on the new code. Nine mutants on copies in the session scratchpad, run against `test_parties.py` and the `test_assemble.py` stamp, one pytest process each. 9 killed and 0 survived. The unmutated copy passed first. Killed: no cap (M1), `max` for `min` (M2), a cap one short (M3) and one long (M4), a slice one long (M5), a cap of 10**9 (M6), the 5,000 window widened to 20,000 (M7), the version left at 1.3.0 (M8) and a cap that applies only to a document with no numbered node (M9).
+- Jury review of the diff. Five readings, then one verdict.
+  - Correctness: the cap is a slice of the text. `_segments` already clamps every block to the text it gets, so a party that runs past the cut ends at it, which a test pins. `_preamble` is unchanged, so the numbered party list that 1.3.0 replaces is found as before. Node ids are renumbered only when a party is found, as before.
+  - Compatibility: a minor bump by the rule of 2.1, since no field, offset or character of `source_text` moves. The JSON Schema and `from_json` do not read the version. Nothing in `ml/` reads `parser_version`. A document with a preamble over 20,000 code points can lose a party that 1.3.0 found, and none of the 25 contracts is near it.
+  - Security: the work on a hostile preamble is bounded by the cap, and 20,000 lone anchors now take 0.16 s against the 120 s kill. Inside the cap the search is still not linear, and 0.16 s is the measured price.
+  - Tests: the mutation check above. One weak spot: the cap is `min` of two numbers, and no test uses a document whose first numbered node sits exactly at 20,000. The spy test pins the length that the search reads.
+  - Docs: the version sits in the header, the sketch, the history, the older-stamp sentence, 8.1, 8.7, 12.6 and 14 of `ParserContract.md`. Heading 8.6 said "Not in 1.3.0" and would have read as stale, so it is now "Not built". Applied from this reading.
+  - Verdict: no defect. One change applied (the heading).
+- Ponytail review of the diff. Kept: the one-line slice in `add_parties`, which covers both preamble cases in one place, and the permanent comparison tests, which cost parses and no new fixtures. Cut or not added: the linear rewrite (Aryan's decision), a permanent comparison on the real files (32 s of every run for a proof that the capture already gives), a `Settings` field for the cap, a soft cap that runs on to the end of the block that holds the 20,000th code point (one block can hold 440,000 characters, which brings the square back), a warning when the cap cuts a preamble (a missing party is no error in 8.2, and no consumer reads such a signal), and a test with non-ASCII text (offsets are code points, as everywhere).
+
+### Held `[CONTRACT]` item for Tanishq
+
+One, printed in the report in chat only. `parser_version` is 1.4.0, the party search reads at most the first 20,000 code points of the preamble, and `source_text` and every offset are unchanged. His bridge needs nothing.
+
+### Checks
+
+- `pytest` in `backend/.venv`, full suite, after the last edit to the docs that tests read: 1719 passed, 27 skipped, 1 warning, in 193.5 s. That is 72 more than the baseline: 69 comparison cases and 3 cap tests. The version test was renamed and `test_assemble.py` changed one value. `ruff check` clean and `ruff format --check` 62 files already formatted. An earlier full run, with 33 more real-file comparison cases, gave 1752 passed in 266 s. Those cases were cut afterwards (see the ponytail review).
+- Rules section 1 attribution scrub, with the command in `Rules.md`, over `backend/`, `frontend/` and `docs/app/`: no output.
+- Tool-name grep, both forms: no output from either.
+- Dash scan for U+2014 and U+2013 over the added lines of the changed files: no hit, with a control string that holds both dashes matching.
+- 2-0A contract-word scan: the first page of each of the 25 contracts (the first three pages when page 1 held under 1,500 characters, or the first 3,000 characters of a Word file), words of five letters or more kept when they appear in 8 files or fewer and in no doc at `HEAD`, up to 20 per contract (245 distinct words), searched over every added line of the 10 changed files. It printed positions only. A control line holding a chosen word was found and a neutral line was not. Hits: 0. The scan ran again after the last edit to this entry.
+- Docs prose: the three writing passes run in commit 8 over all the prose that 2-R added, as decision 7 says. This entry and the doc edits were checked by hand against the plain-language rules: short sentences, active voice, a figure where a word would do.
+- Git: `status`, `diff`, `log` and `show` only. Nothing staged, committed, branched or pushed.
+
+### Not verified
+
+- A real preamble over 20,000 code points. None of the 25 contracts has one, so the cut is tested on made-up text only.
+- The timings are single runs on a laptop. The 20,000 anchor figure at 1.3.0 (about 170 s) is step 1's extrapolation, and was not run again.
+- A cut that lands inside a party or a name. The node ends at the cut and may stop mid-sentence. The 8.2 rules never saw the rest of the text.
+- Tanishq's core on a 1.4.0 document. The existing bridge test builds party nodes by hand, and no `ml/` code reads the version.
+
+Processes. Python-family processes of my own, counted by hand from my calls, so the figure is approximate: about 40 started, and none was left running. They were `pytest` (18: the baseline, two red runs, a run of the parties tests, two timing runs, two full suites and 10 in the mutation check), `ruff` (12 runs), the identity capture (2) and its comparison (1), the timing probes (4), the mutation driver (1) and the combined dash and contract-word scan (2). The tests start their own capped parse children inside `pytest`, and the `spawned` fixture checks that none outlives its test. One PowerShell call read the process list after the last suite and found no `python`, `pytest`, `ruff`, `pip` or `uvicorn` process. It listed 1 `node` process, an MCP server that the desktop app runs for itself, and 9 `msedge.exe` processes, which are Aryan's own Edge. None is mine. No browser and no server ran, and nothing was killed by image name.
+
+Suggested commit message for this commit: `fix(parser): bound the party search to the first 20,000 characters`.
+
+Next action: Aryan commits this step and replies "committed, next". Commit 4 is `fix(api): drop queued text when a document is deleted mid-start` (R7, R24).

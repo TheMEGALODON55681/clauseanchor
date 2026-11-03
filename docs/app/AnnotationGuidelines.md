@@ -244,10 +244,10 @@ Example 7:
 
 ## 4. Offsets
 
-- Offsets are Unicode code points into `source_text`, which is the same at `parser_version` 1.1.0, 1.2.0 and 1.3.0. They are zero-based, and `end` is exclusive: `source_text[start:end]` is the span text.
+- Offsets are Unicode code points into `source_text`, which is the same at `parser_version` 1.1.0, 1.2.0, 1.3.0 and 1.4.0. They are zero-based, and `end` is exclusive: `source_text[start:end]` is the span text.
 - They are not bytes and not UTF-16 units. A browser counts UTF-16 units, so a character outside the Basic Multilingual Plane, such as an emoji, is one code point and two units there. The annotation tool converts. Do not convert by hand.
 - Never find a span by searching the text. Read the offsets from the selection. Never normalise the text.
-- Record the `text_sha256` of the parse you annotated. The same hash is the same text. A minor or patch release never moves `source_text` (`ParserContract.md` 2.1), so a later 1.x parse of the file has the same hash and offsets. Parser 1.2.0 (part 2-0D) moves block boundaries and no character of the text, so an annotation made against 1.1.0 and one made against 1.2.0 line up. Part 2-0C shipped as 1.3.0, also a minor release: it adds party nodes and moves no character of the text. A major release may move the text, and the hash tells you.
+- Record the `text_sha256` of the parse you annotated. The same hash is the same text. A minor or patch release never moves `source_text` (`ParserContract.md` 2.1), so a later 1.x parse of the file has the same hash and offsets. Parser 1.2.0 (part 2-0D) moves block boundaries and no character of the text, so an annotation made against 1.1.0 and one made against 1.2.0 line up. Part 2-0C shipped as 1.3.0, also a minor release: it adds party nodes and moves no character of the text. Part 2-R shipped 1.4.0, which caps the party search and moves no character either. A major release may move the text, and the hash tells you.
 - Offsets belong to one file in one format. A PDF and a DOCX of the same contract give different offsets.
 
 Worked calculation. The text has two blocks, and the second holds the rupee sign U+20B9, one code point (3 UTF-8 bytes, 1 UTF-16 unit):

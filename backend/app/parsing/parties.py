@@ -1,10 +1,11 @@
 """Party nodes and `name_span` (ParserContract.md section 8).
 
 Only the preamble is read: the text before the first numbered node, or the first 5,000 code points
-when there is none. A party is a segment of that text that ends at a `hereinafter referred to as`
-or `hereinafter called` anchor, or at a list boundary (a standalone AND line, a top level `and`
-in a `by and between` sentence, or the end of the block). A preamble with no such segment gives no
-party and no warning. Offsets are code points into the source text, as everywhere else."""
+when there is none, and never more than the first 20,000 code points of either. A party is a
+segment of that text that ends at a `hereinafter referred to as` or `hereinafter called` anchor,
+or at a list boundary (a standalone AND line, a top level `and` in a `by and between` sentence,
+or the end of the block). A preamble with no such segment gives no party and no warning. Offsets
+are code points into the source text, as everywhere else."""
 
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ from dataclasses import replace
 from app.parsing.model import Block, NameSpan, StructureNode
 
 _WINDOW = 5000  # the preamble of a document with no numbered node
+_CAP = 20_000  # the longest stretch searched: the work grows with the square of it (2-R, R4)
 _LOOKBACK = 2000  # how far back a bracket or a quote is looked for
 _REACH = 400  # a standalone AND line starts a party only this close to the party before it
 _NAME_MAX = 150
@@ -57,7 +59,7 @@ def add_parties(
     with fresh ids. The numbered clause nodes that a numbered party list opened are replaced by
     the party nodes."""
     end, listed = _preamble(source_text, nodes)
-    spans = _segments(source_text[:end], blocks)
+    spans = _segments(source_text[: min(end, _CAP)], blocks)
     if not spans:
         return nodes
     parties = [

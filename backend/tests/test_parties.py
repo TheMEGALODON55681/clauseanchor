@@ -13,11 +13,12 @@ import pytest
 from clauseanchor_core.analyzer import context_from_parsed_document
 
 from app.parsing import assemble, parse_document, structure
+from app.parsing import parties as parties_module
 from app.parsing.assemble import TextAssembler
 from app.parsing.model import ParsedDocument, StructureNode
 from app.parsing.schema import SCHEMA, from_json, to_json
 from app.parsing.structure import build_structure
-from tests.fixtures.build import NAMES, Fixtures
+from tests.fixtures.build import NAMES, VALID_NAMES, Fixtures
 from tests.test_contract import as_sent, violations
 from tests.test_from_json import SMOKE
 from tests.test_invariants import assert_valid_nodes
@@ -332,6 +333,39 @@ def test_a_document_without_a_clause_reads_only_the_first_5000_code_points() -> 
     assert far == []
 
 
+def test_a_long_preamble_reads_only_its_first_20000_code_points() -> None:
+    padding = "x " * 10_500  # 21,000 code points with no trigger in them
+    _, near = parse(f'BETWEEN\n{QUILL} (hereinafter called "S")', padding, *CLAUSES)
+    _, far = parse(padding, f'BETWEEN\n{QUILL} (hereinafter called "S")', *CLAUSES)
+    assert len(near) == 1
+    assert far == []
+
+
+def test_a_party_that_runs_past_the_cap_ends_at_it() -> None:
+    padding = "x " * 9_000  # 18,000 code points
+    doc, found = parse(padding, f"BETWEEN\n{QUILL} " + "y " * 2_000, *CLAUSES)
+    assert len(found) == 1
+    assert 19_999 <= found[0].end <= 20_000  # the trailing space of the cut is trimmed
+    assert found[0].text == doc.source_text[found[0].start : found[0].end]
+
+
+def test_the_search_never_reads_more_than_the_cap_whatever_the_preamble(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[int] = []
+    real = parties_module._segments
+
+    def spy(text: str, blocks: object) -> list[tuple[int, int]]:
+        seen.append(len(text))
+        return real(text, blocks)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(parties_module, "_segments", spy)
+    # 110,000 code points in front of the first clause
+    doc = document("hereinafter called a. " * 5_000, *CLAUSES)
+    build_structure(doc.source_text, doc.blocks)
+    assert seen == [20_000]
+
+
 def test_a_long_stretch_of_connectives_inside_one_bracket_is_read_in_linear_time() -> None:
     doc = document(
         "BETWEEN",
@@ -584,12 +618,31 @@ def test_the_party_step_changes_no_character_of_a_smoke_file(
     assert_only_the_nodes_differ(*without_the_party_step(path, monkeypatch))
 
 
+# The cap of 1.4.0 changes nothing for a document with a normal preamble (2-R, R4)
+
+
+def assert_the_cap_changes_no_node(data: bytes, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The cap only reaches the party step, so one parse and one more run of the structure step
+    without the cap (which is what 1.3.0 did) compare the nodes."""
+    doc = parse_document(data)
+    monkeypatch.setattr(parties_module, "_CAP", 10**9)
+    uncapped, _ = build_structure(doc.source_text, doc.blocks)
+    assert doc.nodes == uncapped
+
+
+@pytest.mark.parametrize("name", VALID_NAMES)
+def test_the_cap_changes_nothing_in_any_fixture(
+    name: str, fixture_bytes: dict[str, bytes], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert_the_cap_changes_no_node(fixture_bytes[name], monkeypatch)
+
+
 # The version, and the core bridge
 
 
-def test_the_parser_version_is_1_3_0() -> None:
-    assert assemble.PARSER_VERSION == "1.3.0"
-    assert document("Some text").parser_version == "1.3.0"
+def test_the_parser_version_is_1_4_0() -> None:
+    assert assemble.PARSER_VERSION == "1.4.0"
+    assert document("Some text").parser_version == "1.4.0"
 
 
 def test_the_core_bridge_takes_party_nodes_unchanged() -> None:

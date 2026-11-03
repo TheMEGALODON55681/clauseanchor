@@ -169,7 +169,7 @@ Fixtures are generated at test time, so no binary files are committed.
 class ParsedDocument:
     source_text: str
     text_sha256: str             # sha256 of source_text.encode("utf-8"), lowercase hex
-    parser_version: str          # "1.3.0"
+    parser_version: str          # "1.4.0"
     media_type: str              # "application/pdf" or the DOCX mime type
     page_count: int | None       # None for DOCX
     blocks: tuple[Block, ...]    # every text block, in reading order
@@ -179,7 +179,7 @@ class ParsedDocument:
     coverage: Coverage
 ```
 
-Party nodes (a requirement from the frontend, `FrontendDesign.md` 17.7, BR). The party list is built from nodes of kind `party`, and each carries `name_span`: `{start, end}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`, inside that range, covering the party's name alone (`ABC Technologies, Inc.`, not the defining phrase around it). The consumer never cuts a name at a comma, so the parser decides where the name ends. A party node with no span reads as its whole text. Built in part 2-0C as `parser_version` 1.3.0: `StructureNode.kind` has the value `party` and `StructureNode` has the optional `name_span`, which only a party node carries. `app/parsing/parties.py` finds the parties in the preamble, and `ParserContract.md` section 8 carries every rule. API.md defines the field on the document node, tagged `[CONTRACT]` (section 11 there, `Phases.md` 2-E).
+Party nodes (a requirement from the frontend, `FrontendDesign.md` 17.7, BR). The party list is built from nodes of kind `party`, and each carries `name_span`: `{start, end}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`, inside that range, covering the party's name alone (`ABC Technologies, Inc.`, not the defining phrase around it). The consumer never cuts a name at a comma, so the parser decides where the name ends. A party node with no span reads as its whole text. Built in part 2-0C as `parser_version` 1.3.0: `StructureNode.kind` has the value `party` and `StructureNode` has the optional `name_span`, which only a party node carries. `app/parsing/parties.py` finds the parties in the preamble, reading no more than its first 20,000 code points since 1.4.0 (2-R, because the search grew with the square of the preamble), and `ParserContract.md` section 8 carries every rule. API.md defines the field on the document node, tagged `[CONTRACT]` (section 11 there, `Phases.md` 2-E).
 
 Separators: lines inside a block join with `"\n"`, blocks join with `"\n"`, pages join with `"\n\n"`. Trailing spaces and tabs are stripped from each line before it is appended. CRLF and CR become LF. In PDF text, runs of spaces collapse to one space and U+00A0 becomes U+0020. DOCX text keeps U+00A0.
 
