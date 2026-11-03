@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import logging
@@ -25,7 +26,7 @@ from app.parsing import parse_document
 from app.parsing.schema import to_json
 from app.services import parse_jobs
 from tests.fixtures.build import build_docx
-from tests.synthetic import FakeClock, process_alive, snapshot, wait_until
+from tests.synthetic import Body, FakeClock, asgi_post, process_alive, snapshot, wait_until
 
 DOCS = "/api/v1/documents"
 JOBS = "/api/v1/jobs"
@@ -321,6 +322,46 @@ def test_a_full_queue_gets_429_and_leaves_nothing_behind(
     # assert_error reads the flag from the table it checks, so the value is pinned here
     assert refused.json()["error"]["retryable"] is True
     assert store_counts(client) == (2, 2)
+
+
+def test_a_fifth_upload_while_four_are_in_flight_gets_429_and_none_of_its_body_is_read(
+    client: TestClient,
+) -> None:
+    token = open_session(client)
+
+    async def scenario():
+        hold = asyncio.Event()
+        slow = [Body([b"plain ", b"text"], hold) for _ in range(4)]
+        running = [asyncio.create_task(asgi_post(client.app, DOCS, b, token)) for b in slow]
+        await asyncio.gather(*(b.waiting.wait() for b in slow))  # all four are mid-body
+        fifth = Body([b"plain text"])
+        refused = await asgi_post(client.app, DOCS, fifth, token)
+        hold.set()
+        return refused, fifth.read, await asyncio.gather(*running)
+
+    (status, reply), fifth_read, finished = asyncio.run(asyncio.wait_for(scenario(), 30))
+    assert status == 429
+    assert reply["error"]["code"] == "QUEUE_FULL"
+    assert reply["error"]["retryable"] is True
+    assert fifth_read == 0
+    assert [code for code, _ in finished] == [415] * 4  # the four that were in flight finished
+    assert_error(post(client, token, b"plain text"), 415, "UNSUPPORTED_TYPE")  # the slots are free
+
+
+def test_every_way_an_upload_ends_gives_its_slot_back(
+    client: TestClient, fixture_bytes: dict[str, bytes]
+) -> None:
+    token = open_session(client)
+    # Nine refusals, more than the four slots. A refusal that kept its slot would turn into 429.
+    for _ in range(3):
+        assert_error(post(client, token, b"plain text"), 415, "UNSUPPORTED_TYPE")
+    assert_error(post(client, token, b""), 400, "EMPTY_FILE")
+    for _ in range(3):
+        assert_error(post(client, token, b"plain text"), 415, "UNSUPPORTED_TYPE")
+    declared = post(client, token, b"%PDF-1.4", **{"Content-Length": str(LIMIT + 1)})
+    assert_error(declared, 413, "FILE_TOO_LARGE")
+    assert_error(post(client, token, b"\0" * (LIMIT + 1)), 413, "FILE_TOO_LARGE")
+    upload(client, token, fixture_bytes["simple.pdf"])
 
 
 # Reading a document and a job

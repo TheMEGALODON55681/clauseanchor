@@ -74,6 +74,7 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
     except sqlite3.Error:
         # Name the variable and not the path, as every other bad setting does
         raise ConfigError(f"{PREFIX}DB_PATH cannot be opened") from None
+    app.state.uploads_in_flight = 0  # counted on the event loop, so it needs no lock
     app.state.sweeper = None  # the lifespan starts it
     app.state.parse_queue = ParseQueue(app.state.store, settings)  # and this one
     app.state.analysis_queue = AnalysisQueue(app.state.store, settings)  # and this one

@@ -9,10 +9,13 @@ from urllib.parse import unquote
 
 from clauseanchor_core import CONTRACT_VERSION
 from fastapi import APIRouter, Depends, Request, Response
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from app.api.auth import require_session
 from app.api.errors import JOB_ERRORS, error_response
+from app.config import MAX_JSON_BODY_BYTES, MAX_UPLOADS_IN_FLIGHT
 from app.parsing import ErrorCode, ParseError
 from app.parsing.detect import detect_type
 from app.parsing.errors import MAX_INPUT_BYTES
@@ -96,17 +99,29 @@ def _filename(content_disposition: str | None, extension: Literal["pdf", "docx"]
     return f"document.{extension}"
 
 
-async def _read_body(request: Request) -> bytes | None:
-    """The raw body, or None once it passes 10 MiB. It counts what arrives, so a missing or a
+async def _read_body(request: Request, limit: int) -> bytes | None:
+    """The raw body, or None once it passes `limit`. It counts what arrives, so a missing or a
     false Content-Length changes nothing. The body stays in RAM (D3)."""
     chunks: list[bytes] = []
     size = 0
     async for chunk in request.stream():
         size += len(chunk)
-        if size > MAX_INPUT_BYTES:
+        if size > limit:
             return None
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+async def _analysis_request(
+    request: Request, _session: Annotated[Session, Depends(require_session)]
+) -> AnalysisRequest:
+    """The analysis body, read after the bearer check and cut off at 64 KiB. A body model on the
+    route would make FastAPI read the whole body first, a stranger's included."""
+    data = await _read_body(request, MAX_JSON_BODY_BYTES)
+    try:
+        return AnalysisRequest.model_validate_json(b"" if data is None else data)  # b"" is invalid
+    except ValidationError:
+        raise RequestValidationError([]) from None  # the handler names no field and echoes nothing
 
 
 @router.get("/health", response_model=Health)
@@ -194,7 +209,19 @@ async def upload_document(
     request: Request, session: Annotated[Session, Depends(require_session)]
 ) -> Upload | JSONResponse:
     """Takes the file as the raw body, queues a parse and answers at once. The type comes from
-    the bytes. The session check runs first, so a stranger's body is never read."""
+    the bytes. The session check and the count of uploads in flight run first, so the body of a
+    stranger or of a refused upload is never read."""
+    state = request.app.state
+    if state.uploads_in_flight >= MAX_UPLOADS_IN_FLIGHT:
+        return error_response("QUEUE_FULL")
+    state.uploads_in_flight += 1
+    try:
+        return await _take_upload(request, session)
+    finally:
+        state.uploads_in_flight -= 1
+
+
+async def _take_upload(request: Request, session: Session) -> Upload | JSONResponse:
     declared = request.headers.get("content-length", "")
     if (
         declared.isascii()
@@ -203,7 +230,7 @@ async def upload_document(
         and int(declared) > MAX_INPUT_BYTES
     ):
         return error_response("FILE_TOO_LARGE")
-    data = await _read_body(request)
+    data = await _read_body(request, MAX_INPUT_BYTES)
     if data is None:
         return error_response("FILE_TOO_LARGE")
     try:
@@ -333,10 +360,17 @@ def cancel_job(
         429: {"model": ErrorResponse},
         503: {"model": ErrorResponse},
     },
+    # The body is read by `_analysis_request` and not declared, so the schema gets it here
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": AnalysisRequest.model_json_schema()}},
+        }
+    },
 )
 def start_analysis(
     document_id: str,
-    body: AnalysisRequest,
+    body: Annotated[AnalysisRequest, Depends(_analysis_request)],
     request: Request,
     session: Annotated[Session, Depends(require_session)],
 ) -> NewAnalysis | JSONResponse:

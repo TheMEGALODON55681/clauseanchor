@@ -6,7 +6,7 @@ A response model also filters: a field that is not declared here cannot leave th
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -102,11 +102,13 @@ class Job(BaseModel):
 
 
 class AnalysisRequest(BaseModel):
-    """Unknown fields are refused (plan 9.1). The ids and the scope are both required (D1)."""
+    """Unknown fields are refused (plan 9.1). The ids and the scope are both required (D1). The
+    bounds sit above the catalogue's 46 ids of at most 38 characters. An id the catalogue lacks
+    is refused later."""
 
     model_config = ConfigDict(extra="forbid")
 
-    category_ids: list[str] = Field(min_length=1)
+    category_ids: list[Annotated[str, Field(max_length=64)]] = Field(min_length=1, max_length=100)
     jurisdiction_scope: Literal["india_review", "unspecified"]
 
 

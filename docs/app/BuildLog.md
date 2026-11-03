@@ -3349,3 +3349,70 @@ Proposed step 2, one commit each, in order (the same list stands in `Phases.md` 
 8. `docs: close phase 2 and correct the sizing claims` (R13, R21, R22)
 
 Suggested commit message for this step: `docs: record the phase 2 review findings`. Next action: Aryan replies with the set of fixes for step 2.
+
+
+## 2026-11-03: Part 2-R, step 2, commit 1 of 8 (R1 and R2)
+
+Part: 2-R, step 2, commit 1. It closes R1 (the analysis start read its body before it checked the bearer token) and R2 (a refused upload cost its whole body, and nothing capped uploads in flight). Start: `main` at `242b2a4` (the step 1 findings), tree clean, and that commit is the latest on `backend/` and `docs/app/`. Baseline in `backend/.venv`: 1636 passed, 27 skipped, 1 warning (the Starlette `httpx` one), in 114.5 s. `ruff check` clean, `ruff format --check` 62 files already formatted. Nothing in `ml/`, `docs/ml/` or `frontend/` changed, and no dependency changed.
+
+Aryan's decisions of 3 November 2026 are in the 2-R entry of `Phases.md`: R4 (a cap of 20,000 characters, parser 1.4.0, with the identity proof), R2 (4 uploads in flight), R3 (20,000 blocks plus nodes), R25 (the warning stays), the owners (R5, R14, R15, R16, R18, R19 and R22 to 4-B, R6 and R17 to 4-C, none fixed now), R21 (all four limits stay) and the copy passes for commit 8.
+
+### Red run, before any code
+
+Nine new tests, in `test_analyses_api.py` and `test_documents_api.py`. Run before the change: 4 failed and 5 passed.
+- Failed, `test_a_start_with_no_token_reads_none_of_its_body`: `assert 422 == 401`. A caller with no token and a junk body got a 422, so the body check ran before the token check.
+- Failed, `test_a_body_over_the_cap_is_a_422_before_the_document_is_looked_up`: the app read 3,145,728 bytes against a limit of 131,072.
+- Failed, `test_the_schema_states_the_bounds_of_the_analysis_body`: `KeyError: 'additionalProperties'`, because the body schema was a `$ref` with no bounds.
+- Failed, `test_a_fifth_upload_while_four_are_in_flight_gets_429_and_none_of_its_body_is_read`: `assert 415 == 429`. The fifth upload was read in full.
+- Passed on purpose, as controls for the new path: `test_a_body_that_is_not_an_object_is_a_422` (three cases: empty, a list, bytes that are not UTF-8), `test_a_body_that_arrives_in_pieces_still_starts_the_analysis` and `test_every_way_an_upload_ends_gives_its_slot_back`.
+
+The tests call the app through ASGI with a `Body` helper in `tests/synthetic.py` that counts the bytes the app takes. The `TestClient` sends the whole body before the app runs, so it cannot show when the app reads.
+
+### What changed
+
+- `routes.py`: `_read_body` takes its limit. `_analysis_request` is a dependency on `require_session`. It reads at most `MAX_JSON_BODY_BYTES` and validates with `model_validate_json`. A body that is too long, empty or invalid raises `RequestValidationError([])`, so the existing handler answers 422, names no field and echoes no input. `start_analysis` stays a plain `def` and still runs in the thread pool. The request shape reaches the schema through `openapi_extra`. `upload_document` checks `uploads_in_flight` after the bearer check and before the first read. At 4 it answers 429 `QUEUE_FULL`. It gives its place back in a `finally`. The old body of the route is now `_take_upload`.
+- `config.py`: `MAX_UPLOADS_IN_FLIGHT` (4) and `MAX_JSON_BODY_BYTES` (65,536). `main.py` starts `uploads_in_flight` at 0. The count runs on the event loop with no await between the check and the increment, so it needs no lock.
+- `schemas.py`: `category_ids` holds at most 100 ids of at most 64 characters. The catalogue has 46 ids of at most 38.
+- The export script regenerated `docs/app/openapi.json`. `AnalysisRequest` is no longer a component, because no route declares it. The body schema sits inline under the route. Nothing in `frontend/` or `docs/` refers to the component.
+- Docs: `API.md` (the error table, the upload and analysis check lists, section 6, and section 8 with seven limits), `Architecture.md` (the upload body row, a new JSON body row, the config and test lists) and `Phases.md` (the decisions, a 3-A note and a 4-B note).
+
+### Reviews in this session, with no outside tool
+
+- Mutation check on the new code. Ten mutants on copies in the session scratchpad, run against the two API test files, one pytest process each. 9 killed and 1 survived. The unmutated copy passed first (104 tests). Killed: the cap off by one (M1), a slot never released (M2), no cap check (M3), the JSON cap set to the upload cap (M4), the body read before the bearer check (M5), a bad body turning into a 500 (M6), the list bound raised (M8), the id bound dropped (M9) and the slot check moved after the body read (M10). Survived: M7 (`data or b"{}"` for an oversize body). It is an equivalent mutant: `{}` fails the model too, so the reply is the same 422.
+- Jury review of the diff. Five readings, then one verdict.
+  - Correctness: a slot comes back on every exit, a cancelled read included, because the release is a `finally`. The check and the increment have no await between them. The order in `API.md` holds: token, then body, then document.
+  - Security: the token check runs before any body byte and before the slot check, so a stranger holds no slot and costs no read. A session is free (R5), so a few sessions with slow bodies can hold all 4 slots. A body read timeout at the proxy is the fix, and the 4-B note in `Phases.md` carries it.
+  - Compatibility: three behaviours change, and no current client depends on any of them. The analysis body no longer checks `Content-Type` (the upload never did, and the bearer header means a cross-site form cannot send it). A caller with no token and a bad body now gets 401 and not 422. The `AnalysisRequest` component leaves the schema.
+  - Tests: the mutation check above. The one weak spot is the slot release on a cancelled read, which no test cancels.
+  - Docs: every line of `API.md` that the change made stale moved with it (two error rows, both check lists, section 6, section 8 and its count), and `test_docs.py` now pins the two new limits.
+  - Verdict: no defect. One wording change applied: the route docstrings appear in `openapi.json` as descriptions, so the upload and `AnalysisRequest` docstrings were rewritten for a reader of the schema.
+- Ponytail review of the diff. Kept: the dependency in place of an `async def` handler (the threading model stays as 2-C and 2-D left it, so R19 is no worse), and `max_length` on the two fields (two keywords, and the schema then tells the client its bounds). Cut or not added: a `Settings` field for either limit (the other limits are constants), a lock around the counter, a generic `_read_json(model)` helper (3-A writes it when a second model needs it) and a per-session upload count (R5 owns client limits, at the proxy).
+
+### Differences from the step 1 fix
+
+- A dependency reads the body, not the handler. The effect is the same, and the handler keeps its thread.
+- `max_length` is 100 for the list and 64 for each id.
+- The slot check comes before the `Content-Length` check, so a 429 wins over a 413 while 4 uploads are in flight.
+- `MAX_JSON_BODY_BYTES` is a named constant, so `API.md` section 8 lists seven limits.
+
+### Checks
+
+- `pytest` in `backend/.venv`, full suite, after the last edit: 1645 passed, 27 skipped, 1 warning. That is 9 more than the baseline (7 in `test_analyses_api.py` counting each case, 2 in `test_documents_api.py`). `ruff check` clean and `ruff format --check` 62 files already formatted.
+- Rules section 1 attribution scrub, with the command in `Rules.md`, over `backend/`, `frontend/` and `docs/app/`: no output.
+- Tool-name grep, both forms: no output from either. A first run of the second form caught a line in `Phases.md` that named the writing tools. The line now points at `Rules.md` section 6.
+- Dash scan for U+2014 and U+2013 over the added lines of the 13 changed files: no hit, with a control string that holds both dashes matching.
+- 2-0A contract-word scan: the first page of each of the 25 contracts (the first three pages when page 1 held under 1,500 characters, or the first 3,000 characters of a Word file), words of five letters or more kept when they appear in 8 files or fewer and in no doc at `HEAD`, up to 20 per contract (268 distinct words), searched over every added line of the 13 files (344 lines). It printed positions only. A control line holding a chosen word was found and a neutral line was not. A run after this entry was written flagged one line, for a plain English word that a contract heading also uses. The line was reworded, and the last run found 0 hits.
+- Git: `status`, `diff`, `log` and `show` only. Nothing staged, committed, branched or pushed.
+
+### Not verified
+
+- Behaviour under a real server. The tests call the app through ASGI, and no server ran. How uvicorn treats a connection whose request body the app never read is unchecked, for the new 429 and for the old 401 and 413 alike.
+- A slow client that holds a slot. The tests hold a body with an event and not with a clock. The proxy read timeout (4-B) is the bound.
+- The 80 MiB bound is arithmetic: 4 uploads, two copies of 10 MiB each. Step 1 measured 20.1 MiB for one upload and 104 MiB for ten.
+- A cancelled read. The `finally` runs when a read is cancelled, and no test cancels a request.
+
+Processes. Python-family processes of my own, counted by hand from my calls, so the figure is approximate: about 51 started, and none was left running. They were `ruff` (8 runs), `pytest` (19 runs, among them the baseline, the red runs, the mutation check's 11 and the full suite twice), the schema export (2), the mutation driver (1), the contract-word scan (5) and 16 small edit, count and token scripts. The tests start their own capped parse children inside `pytest`, and the `spawned` fixture checks that none outlives its test. Three PowerShell calls read two process lists and one command line. A last process-list check, after the final suite, found no `python`, `pytest`, `ruff`, `pip` or `uvicorn` process. It listed 3 `node` processes, MCP servers that the desktop app runs for itself, and none is mine. No browser and no server ran, and nothing was killed by image name.
+
+Suggested commit message for this commit: `fix(api): read JSON bodies after the bearer check and cap uploads`.
+
+Next action: Aryan commits this step and replies "committed, next". Commit 2 is `fix(api): refuse files that parse to too many blocks and nodes` (R3).

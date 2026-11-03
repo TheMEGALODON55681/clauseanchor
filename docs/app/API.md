@@ -43,7 +43,7 @@ Every error response has this body, with the status code in the table below:
 
 | Code | Status | Retryable | When |
 |---|---|---|---|
-| `VALIDATION_ERROR` | 422 | no | A path, query or body value fails validation. For an analysis request that includes an unknown or repeated category id, and in sample mode an id the sample does not hold. FastAPI's own 422 body repeats the submitted input, so the envelope replaces it and names no field |
+| `VALIDATION_ERROR` | 422 | no | A path, query or body value fails validation. For an analysis request that includes a body over 64 KiB, a list over 100 ids, an id over 64 characters, an unknown or repeated category id, and in sample mode an id the sample does not hold. FastAPI's own 422 body repeats the submitted input, so the envelope replaces it and names no field |
 | `NOT_FOUND` | 404 | no | No route matches |
 | `METHOD_NOT_ALLOWED` | 405 | no | The route exists but not for this method. The `Allow` header lists the methods that work |
 | `INTERNAL_ERROR` | 500 | no | An unhandled exception. The body has no exception text, and the server logs only the exception class name |
@@ -55,7 +55,7 @@ Every error response has this body, with the status code in the table below:
 | `EMPTY_FILE` | 400 | no | The upload has no bytes |
 | `UNSUPPORTED_TYPE` | 415 | no | The bytes are not a PDF and not a DOCX. The check reads the bytes and ignores the `Content-Type` header |
 | `DOCUMENT_LIMIT` | 429 | no | The session already holds `MAX_DOCUMENTS_PER_SESSION` documents (section 8). Delete one, then upload again |
-| `QUEUE_FULL` | 429 | yes | `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` parses are already waiting (section 9) |
+| `QUEUE_FULL` | 429 | yes | `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` parses are already waiting (section 9), or `MAX_UPLOADS_IN_FLIGHT` uploads are already arriving (section 8) |
 | `DOCUMENT_NOT_PARSED` | 409 | no | An analysis was started on a document whose parse is still running or failed. Read the parse job first |
 | `SAMPLE_MODE_ONLY` | 409 | no | The analyzer is the stub, and the document is not the prepared sample (section 10) |
 | `ANALYSIS_IN_PROGRESS` | 409 | yes | The session already has an analysis waiting or running (section 10) |
@@ -172,12 +172,13 @@ The name comes from `filename*` (RFC 5987) alone. A plain `filename=` has no def
 The API runs these checks in order and stops at the first that fails:
 
 1. The bearer token: 401 `SESSION_INVALID`. A session that ends while the body arrives gets the same reply.
-2. A `Content-Length` over 10 MiB: 413 `FILE_TOO_LARGE`.
-3. The size of the body: the API counts the bytes as they arrive and stops at 10 MiB plus one byte with the same 413, so a body with no `Content-Length`, or a false one, is bounded too.
-4. An empty body: 400 `EMPTY_FILE`.
-5. The type, read from the bytes: a PDF header in the first 1,024 bytes, or a ZIP that holds `word/document.xml`. Anything else is 415 `UNSUPPORTED_TYPE`. A ZIP that cannot be read passes as a DOCX and fails its parse job with `MALFORMED_FILE`.
-6. The session already holds `MAX_DOCUMENTS_PER_SESSION` documents: 429 `DOCUMENT_LIMIT`.
-7. `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` parses are already waiting: 429 `QUEUE_FULL`. The API keeps nothing of the upload.
+2. `MAX_UPLOADS_IN_FLIGHT` uploads are already arriving: 429 `QUEUE_FULL`, before the API reads a byte. An upload keeps its place until it gets its reply, whatever the reply.
+3. A `Content-Length` over 10 MiB: 413 `FILE_TOO_LARGE`.
+4. The size of the body: the API counts the bytes as they arrive and stops at 10 MiB plus one byte with the same 413, so a body with no `Content-Length`, or a false one, is bounded too.
+5. An empty body: 400 `EMPTY_FILE`.
+6. The type, read from the bytes: a PDF header in the first 1,024 bytes, or a ZIP that holds `word/document.xml`. Anything else is 415 `UNSUPPORTED_TYPE`. A ZIP that cannot be read passes as a DOCX and fails its parse job with `MALFORMED_FILE`.
+7. The session already holds `MAX_DOCUMENTS_PER_SESSION` documents: 429 `DOCUMENT_LIMIT`.
+8. `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` parses are already waiting: 429 `QUEUE_FULL`. The API keeps nothing of the upload.
 
 202:
 
@@ -302,13 +303,13 @@ Queues an analysis of a parsed document and answers at once. The role does not t
 
 | Field | Type | Rule |
 |---|---|---|
-| `category_ids` | array of strings | Required. At least one id, none repeated, each one an `id` in the catalogue (section 5). The API holds no id of its own. In sample mode each must also be one the sample holds (section 10) |
+| `category_ids` | array of strings | Required. From 1 to 100 ids of at most 64 characters each, none repeated, each one an `id` in the catalogue (section 5). The API holds no id of its own. In sample mode each must also be one the sample holds (section 10) |
 | `jurisdiction_scope` | string | Required. `india_review` or `unspecified` (`Phases.md` D1) |
 
 A field the table does not list is refused. The API runs these checks in order and stops at the first that fails:
 
 1. The bearer token: 401 `SESSION_INVALID`.
-2. The body: 422 `VALIDATION_ERROR` for a missing, mistyped or extra field, an empty list, or invalid JSON.
+2. The body: the API reads it after the bearer check and stops at `MAX_JSON_BODY_BYTES`. 422 `VALIDATION_ERROR` for a body over that size, a missing, mistyped or extra field, an empty list or one over 100 ids, an id over 64 characters, or invalid JSON.
 3. The document: 404 `NOT_FOUND` for an unknown id and for another session's document.
 4. The parse: 409 `DOCUMENT_NOT_PARSED` unless the document's `status` is `parsed`.
 5. The analyzer: 503 `NOT_READY` while it is `loading` or `failed`.
@@ -459,7 +460,7 @@ This file governs, and the plan will copy it.
 - Readiness adds `store` and `database` to the checks.
 - `POST /api/v1/documents` takes the raw file as the body, where the plan has multipart with `role` and `jurisdiction_scope` fields. The raw body keeps the file off disk, and the role and scope travel later (`Phases.md` D1). The file name comes from `Content-Disposition`.
 - The plan's 409 for sample mode on upload does not exist here. A parse does not depend on the analyzer, and the default analyzer is the stub, so every upload would get the 409. Sample mode limits the analysis (2-D).
-- The upload statuses are 413, 415 and 429, as the plan says, plus 400 `EMPTY_FILE`, which the plan does not list. A full session and a full queue both answer 429, with `DOCUMENT_LIMIT` and `QUEUE_FULL` to tell them apart.
+- The upload statuses are 413, 415 and 429, as the plan says, plus 400 `EMPTY_FILE`, which the plan does not list. A full session and a full queue both answer 429, with `DOCUMENT_LIMIT` and `QUEUE_FULL` to tell them apart. `QUEUE_FULL` also answers when 4 uploads are already arriving (section 8).
 - `GET /api/v1/documents/{document_id}` has no `include_text` query. The full text is always in `parsed`. The reply holds metadata and `parsed`, where the plan's `Document` is flat (`source_text`, `nodes`, `warnings` as strings). The nesting is final, and the 4-C adapter reads `parsed.source_text`, `parsed.text_sha256`, `parsed.nodes` and `parsed.warnings`.
 - A failed job's `error` has `code`, `message` and `retryable`. The plan's `ErrorBody` adds `request_id` and `details`, which a job state has no use for. The job also leaves out the plan's `analysis_id`, `stage`, unit counts, `queue_position`, `result_url` and timestamps. 2-D adds the ones the analysis needs.
 - An unreadable ZIP passes the upload and fails its parse job with `MALFORMED_FILE`. The type check reads the first bytes only.
@@ -493,7 +494,7 @@ One code covers unknown and expired, for two reasons. The frontend mock raises o
 
 ## 8. Limits
 
-These five are constants in `app/config.py`, not settings. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so those values are proposals for Aryan to confirm. Plan 9.3 gives the analysis queue and the time, and 2-D.1 checked the time against the real model.
+These seven are constants in `app/config.py`, not settings. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so those values are proposals for Aryan to confirm. Plan 9.3 gives the analysis queue and the time, and 2-D.1 checked the time against the real model. The last two came with the 2-R review.
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -502,6 +503,8 @@ These five are constants in `app/config.py`, not settings. Plan 9.2 names a 429 
 | `SWEEP_INTERVAL_SECONDS` | 30 | How often the sweep runs. Every lookup checks the time, so an expired session is unreachable at once. The sweep sets how long its data stays in memory after that |
 | `ANALYSIS_QUEUE_LENGTH` | 2 | Analyses that can wait while one runs (plan 9.3). A further start answers 429 `ANALYSIS_QUEUE_FULL`. A cancelled analysis gives its place back at once |
 | `ANALYSIS_TIMEOUT_SECONDS` | 1800 | Wall-clock limit for one analysis, counted from the moment it starts running and not from the start request. Past it the API stops the analysis and the job ends `timed_out` (section 10) |
+| `MAX_UPLOADS_IN_FLIGHT` | 4 | Uploads the API takes at once, from the bearer check to the reply. A fifth gets 429 `QUEUE_FULL`, and the server reads none of its body. Each upload holds its body twice while the chunks join, so 4 hold at most 80 MiB. The limit covers all sessions together |
+| `MAX_JSON_BODY_BYTES` | 65536 | Largest JSON request body (64 KiB), today the analysis start. The API stops reading at this size and answers 422 `VALIDATION_ERROR` |
 
 2-D.1 timed the real model on a laptop with torch's default 8 threads and a batch size of 1. A window took 0.34 to 0.51 s through the API (0.37 and 0.51 s in two runs of the 33-page contract below) and 0.68 s in the receiver check, which times the whole call. A 33-page contract (74,821 characters, 17,350 tokens) plans 50 to 55 windows for each category, so 2,185 for all 41 CUAD categories. That run takes 804 to 1,123 s at the two contract rates and 1,486 s at the receiver-check rate. All three fit in 1,800 s, so the limit stays. The same contract with every category stops fitting when a window costs more than 0.82 s. The plan's ceiling of 15,000 category-window pairs would take 1.5 to 2.8 hours at these rates, so the limit still ends the largest documents the parser accepts. The deploy host is unmeasured, and 4-C times it there.
 

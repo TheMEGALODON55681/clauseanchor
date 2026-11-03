@@ -9,7 +9,9 @@ from app.config import (
     ANALYSIS_QUEUE_LENGTH,
     ANALYSIS_TIMEOUT_SECONDS,
     MAX_DOCUMENTS_PER_SESSION,
+    MAX_JSON_BODY_BYTES,
     MAX_SESSIONS,
+    MAX_UPLOADS_IN_FLIGHT,
     SWEEP_INTERVAL_SECONDS,
 )
 from app.parsing import parse_document
@@ -49,6 +51,8 @@ def test_api_md_names_each_limit_with_its_value(api_md: str) -> None:
         "SWEEP_INTERVAL_SECONDS": SWEEP_INTERVAL_SECONDS,
         "ANALYSIS_QUEUE_LENGTH": ANALYSIS_QUEUE_LENGTH,
         "ANALYSIS_TIMEOUT_SECONDS": ANALYSIS_TIMEOUT_SECONDS,
+        "MAX_UPLOADS_IN_FLIGHT": MAX_UPLOADS_IN_FLIGHT,
+        "MAX_JSON_BODY_BYTES": MAX_JSON_BODY_BYTES,
     }
     assert [n for n, v in limits.items() if f"`{n}` | {v} |" not in api_md] == []
 

@@ -3,6 +3,8 @@ mode on a fake core, and the errors on both."""
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import threading
 import uuid
@@ -36,7 +38,7 @@ from tests.fake_core import (
     parsed_document,
     real_result,
 )
-from tests.synthetic import wait_until
+from tests.synthetic import Body, asgi_post, wait_until
 
 SESSIONS = "/api/v1/sessions"
 IDS = ["synthetic.alpha", "synthetic.beta", "synthetic.gamma"]
@@ -377,6 +379,60 @@ def test_a_body_that_is_not_json_is_a_422(real: TestClient) -> None:
         headers={**bearer(token), "Content-Type": "application/json"},
     )
     assert_error(response, 422, "VALIDATION_ERROR")
+
+
+CHUNK = b"x" * 65536
+
+
+def analyses_path(document_id: str) -> str:
+    return f"/api/v1/documents/{document_id}/analyses"
+
+
+def test_a_start_with_no_token_reads_none_of_its_body(real: TestClient) -> None:
+    body = Body([CHUNK] * 48)  # 3 MiB, and the API takes none of it
+    status, reply = asyncio.run(asgi_post(real.app, analyses_path("any"), body))
+    assert status == 401
+    assert reply["error"]["code"] == "SESSION_INVALID"
+    assert body.read == 0
+
+
+def test_a_body_over_the_cap_is_a_422_before_the_document_is_looked_up(real: TestClient) -> None:
+    token = open_session(real)
+    body = Body([CHUNK] * 48)
+    status, reply = asyncio.run(asgi_post(real.app, analyses_path("no-such-id"), body, token))
+    assert status == 422
+    assert reply["error"]["code"] == "VALIDATION_ERROR"
+    assert body.read <= 2 * 65536  # the cap is 64 KiB, and reading stops within a chunk of it
+
+
+@pytest.mark.parametrize("raw", [b"", b"[]", b"\xff\xfe"], ids=["empty", "list", "not-utf8"])
+def test_a_body_that_is_not_an_object_is_a_422(real: TestClient, raw: bytes) -> None:
+    token = open_session(real)
+    document = new_document(real, token)
+    status, reply = asyncio.run(asgi_post(real.app, analyses_path(document.id), Body([raw]), token))
+    assert status == 422
+    assert reply["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_a_body_that_arrives_in_pieces_still_starts_the_analysis(real: TestClient) -> None:
+    token = open_session(real)
+    document = new_document(real, token)
+    raw = json.dumps(body()).encode()
+    pieces = Body([raw[:10], raw[10:]])
+    status, reply = asyncio.run(asgi_post(real.app, analyses_path(document.id), pieces, token))
+    assert status == 202
+    assert set(reply) == {"analysis_id", "job_id"}
+    assert pieces.read == len(raw)
+
+
+def test_the_schema_states_the_bounds_of_the_analysis_body(client: TestClient) -> None:
+    spec = client.get("/api/v1/openapi.json").json()
+    request_body = spec["paths"]["/api/v1/documents/{document_id}/analyses"]["post"]["requestBody"]
+    schema = request_body["content"]["application/json"]["schema"]
+    assert request_body["required"] is True
+    assert schema["additionalProperties"] is False
+    ids = schema["properties"]["category_ids"]
+    assert (ids["minItems"], ids["maxItems"], ids["items"]["maxLength"]) == (1, 100, 64)
 
 
 def test_a_document_that_is_not_parsed_yet_cannot_be_analysed(real: TestClient) -> None:
