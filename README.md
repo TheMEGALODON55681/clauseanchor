@@ -105,6 +105,14 @@ python -m app.scripts.parse_file CONTRACT.pdf
 
 The JSON leaves out the contract text unless you add `--text`. Add `--summary` for a count of blocks, nodes and warnings instead. A file the parser rejects prints its error code and exits with status 2.
 
+### Export the API schema
+
+After any change to a route or a response model, regenerate `docs/app/openapi.json` from `backend/` with the virtual environment active:
+
+```bash
+python -m app.scripts.export_openapi
+```
+
 ### Test
 
 From `backend/`, with the virtual environment active:

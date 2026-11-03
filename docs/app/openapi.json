@@ -1,0 +1,1674 @@
+{
+  "components": {
+    "schemas": {
+      "Analysis": {
+        "properties": {
+          "artifact_manifest_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Manifest Sha256"
+          },
+          "catalogue_version": {
+            "title": "Catalogue Version",
+            "type": "string"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryView"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "contract_version": {
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision_coverage": {
+            "$ref": "#/components/schemas/DecisionCoverage"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "jurisdiction_scope": {
+            "enum": [
+              "india_review",
+              "unspecified"
+            ],
+            "title": "Jurisdiction Scope",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "sample",
+              "real"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "processing_complete": {
+            "title": "Processing Complete",
+            "type": "boolean"
+          },
+          "scope_notice": {
+            "title": "Scope Notice",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "partial",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text_sha256": {
+            "title": "Text Sha256",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "text_sha256",
+          "contract_version",
+          "artifact_manifest_sha256",
+          "status",
+          "mode",
+          "jurisdiction_scope",
+          "created_at",
+          "finished_at",
+          "scope_notice",
+          "catalogue_version",
+          "processing_complete",
+          "decision_coverage",
+          "categories",
+          "warnings"
+        ],
+        "title": "Analysis",
+        "type": "object"
+      },
+      "AnalysisRequest": {
+        "additionalProperties": false,
+        "description": "Unknown fields are refused (plan 9.1). The ids and the scope are both required (D1).",
+        "properties": {
+          "category_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Category Ids",
+            "type": "array"
+          },
+          "jurisdiction_scope": {
+            "enum": [
+              "india_review",
+              "unspecified"
+            ],
+            "title": "Jurisdiction Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category_ids",
+          "jurisdiction_scope"
+        ],
+        "title": "AnalysisRequest",
+        "type": "object"
+      },
+      "Capabilities": {
+        "properties": {
+          "catalogue_version": {
+            "title": "Catalogue Version",
+            "type": "string"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategorySpec"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "sample",
+              "real"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "scope_notice": {
+            "title": "Scope Notice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope_notice",
+          "mode",
+          "catalogue_version",
+          "categories"
+        ],
+        "title": "Capabilities",
+        "type": "object"
+      },
+      "CategorySpec": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "cuad",
+              "india_extension"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "support_status": {
+            "title": "Support Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "source",
+          "support_status"
+        ],
+        "title": "CategorySpec",
+        "type": "object"
+      },
+      "CategoryView": {
+        "properties": {
+          "category_id": {
+            "title": "Category Id",
+            "type": "string"
+          },
+          "clauses": {
+            "items": {
+              "$ref": "#/components/schemas/ClauseView"
+            },
+            "title": "Clauses",
+            "type": "array"
+          },
+          "decision_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Confidence"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "search_complete": {
+            "title": "Search Complete",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "found",
+              "absent",
+              "abstained",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unresolved_count": {
+            "title": "Unresolved Count",
+            "type": "integer"
+          },
+          "windows_done": {
+            "title": "Windows Done",
+            "type": "integer"
+          },
+          "windows_total": {
+            "title": "Windows Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category_id",
+          "status",
+          "decision_confidence",
+          "reason_code",
+          "search_complete",
+          "windows_done",
+          "windows_total",
+          "unresolved_count",
+          "clauses"
+        ],
+        "title": "CategoryView",
+        "type": "object"
+      },
+      "ClauseView": {
+        "properties": {
+          "calibration_scope": {
+            "enum": [
+              "per_category",
+              "pooled",
+              "unvalidated"
+            ],
+            "title": "Calibration Scope",
+            "type": "string"
+          },
+          "category_id": {
+            "title": "Category Id",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "confidence_band": {
+            "enum": [
+              "higher",
+              "review",
+              "unvalidated"
+            ],
+            "title": "Confidence Band",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "origin": {
+            "enum": [
+              "model",
+              "fixture"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "passages": {
+            "items": {
+              "$ref": "#/components/schemas/PassageView"
+            },
+            "title": "Passages",
+            "type": "array"
+          },
+          "retrieval_status": {
+            "title": "Retrieval Status",
+            "type": "string"
+          },
+          "rule_flags": {
+            "items": {
+              "$ref": "#/components/schemas/RuleFlagView"
+            },
+            "title": "Rule Flags",
+            "type": "array"
+          },
+          "span": {
+            "$ref": "#/components/schemas/SpanView"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "review_candidate"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category_id",
+          "span",
+          "status",
+          "confidence",
+          "confidence_band",
+          "calibration_scope",
+          "origin",
+          "rule_flags",
+          "passages",
+          "retrieval_status"
+        ],
+        "title": "ClauseView",
+        "type": "object"
+      },
+      "DecisionCoverage": {
+        "properties": {
+          "requested": {
+            "title": "Requested",
+            "type": "integer"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "resolved",
+          "requested"
+        ],
+        "title": "DecisionCoverage",
+        "type": "object"
+      },
+      "DocumentView": {
+        "properties": {
+          "byte_count": {
+            "title": "Byte Count",
+            "type": "integer"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "parsed": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null unless status is parsed. Then the parser's full output, as described by docs/app/parser_output.schema.json, with one added field: a page on every node (API.md section 3).",
+            "title": "Parsed"
+          },
+          "status": {
+            "enum": [
+              "parsing",
+              "parsed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "status",
+          "media_type",
+          "byte_count",
+          "expires_at",
+          "parsed"
+        ],
+        "title": "DocumentView",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id",
+          "retryable",
+          "details"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Job": {
+        "properties": {
+          "analysis_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Id"
+          },
+          "completed_units": {
+            "title": "Completed Units",
+            "type": "integer"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "parse",
+              "analysis"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "partial",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "total_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Units"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "document_id",
+          "analysis_id",
+          "status",
+          "stage",
+          "completed_units",
+          "total_units",
+          "error"
+        ],
+        "title": "Job",
+        "type": "object"
+      },
+      "JobError": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "title": "JobError",
+        "type": "object"
+      },
+      "NewAnalysis": {
+        "properties": {
+          "analysis_id": {
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "job_id"
+        ],
+        "title": "NewAnalysis",
+        "type": "object"
+      },
+      "NewSession": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "title": "NewSession",
+        "type": "object"
+      },
+      "PassageView": {
+        "properties": {
+          "authority_status": {
+            "title": "Authority Status",
+            "type": "string"
+          },
+          "case_name": {
+            "title": "Case Name",
+            "type": "string"
+          },
+          "citation": {
+            "title": "Citation",
+            "type": "string"
+          },
+          "corpus_version": {
+            "title": "Corpus Version",
+            "type": "string"
+          },
+          "court": {
+            "title": "Court",
+            "type": "string"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "judgment_id": {
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "judgment_text_sha256": {
+            "title": "Judgment Text Sha256",
+            "type": "string"
+          },
+          "provenance_status": {
+            "title": "Provenance Status",
+            "type": "string"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "required": [
+          "id",
+          "judgment_id",
+          "case_name",
+          "court",
+          "year",
+          "citation",
+          "source_url",
+          "start",
+          "end",
+          "text",
+          "judgment_text_sha256",
+          "corpus_version",
+          "authority_status",
+          "provenance_status",
+          "rank"
+        ],
+        "title": "PassageView",
+        "type": "object"
+      },
+      "Ready": {
+        "properties": {
+          "checks": {
+            "$ref": "#/components/schemas/ReadyChecks"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ready",
+          "checks"
+        ],
+        "title": "Ready",
+        "type": "object"
+      },
+      "ReadyChecks": {
+        "properties": {
+          "analyzer": {
+            "enum": [
+              "ok",
+              "loading",
+              "failed"
+            ],
+            "title": "Analyzer",
+            "type": "string"
+          },
+          "catalogue": {
+            "enum": [
+              "ok",
+              "missing",
+              "invalid"
+            ],
+            "title": "Catalogue",
+            "type": "string"
+          },
+          "database": {
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Database",
+            "type": "string"
+          },
+          "store": {
+            "enum": [
+              "ok",
+              "sweep_stopped"
+            ],
+            "title": "Store",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analyzer",
+          "catalogue",
+          "store",
+          "database"
+        ],
+        "title": "ReadyChecks",
+        "type": "object"
+      },
+      "RuleFlagView": {
+        "properties": {
+          "authority_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Authority Ids",
+            "type": "array"
+          },
+          "evidence_spans": {
+            "items": {
+              "$ref": "#/components/schemas/SpanView"
+            },
+            "title": "Evidence Spans",
+            "type": "array"
+          },
+          "label_key": {
+            "title": "Label Key",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "scope_status": {
+            "title": "Scope Status",
+            "type": "string"
+          },
+          "statute_citations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Statute Citations",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_id",
+          "version",
+          "label_key",
+          "note",
+          "statute_citations",
+          "authority_ids",
+          "evidence_spans",
+          "scope_status"
+        ],
+        "title": "RuleFlagView",
+        "type": "object"
+      },
+      "SpanView": {
+        "properties": {
+          "doc_id": {
+            "title": "Doc Id",
+            "type": "string"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "text_sha256": {
+            "title": "Text Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "doc_id",
+          "text_sha256",
+          "start",
+          "end",
+          "text"
+        ],
+        "title": "SpanView",
+        "type": "object"
+      },
+      "Upload": {
+        "properties": {
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "parse_job_id": {
+            "title": "Parse Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "parse_job_id",
+          "expires_at"
+        ],
+        "title": "Upload",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "ClauseAnchor API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/analyses/{analysis_id}": {
+      "get": {
+        "description": "The analysis as it stands: a snapshot with no categories while the job waits or runs, and\nafter a cancel, a time-out or a failure. Only a result puts categories in it.",
+        "operationId": "read_analysis_api_v1_analyses__analysis_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Analysis"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Analysis"
+      }
+    },
+    "/api/v1/capabilities": {
+      "get": {
+        "operationId": "capabilities_api_v1_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capabilities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Capabilities"
+      }
+    },
+    "/api/v1/documents": {
+      "post": {
+        "description": "Takes the file as the raw body, queues a parse and answers at once. The type comes from\nthe bytes. The session check runs first, so a stranger's body is never read.",
+        "operationId": "upload_document_api_v1_documents_post",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Document"
+      }
+    },
+    "/api/v1/documents/{document_id}": {
+      "delete": {
+        "description": "Deletes the document and its jobs. A parse that is still running loses its child first.",
+        "operationId": "delete_document_api_v1_documents__document_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Document"
+      },
+      "get": {
+        "description": "The document's metadata and, once it is parsed, the full parser output. Another session's\nid gets the same 404 as an unknown one.",
+        "operationId": "read_document_api_v1_documents__document_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Document"
+      }
+    },
+    "/api/v1/documents/{document_id}/analyses": {
+      "post": {
+        "description": "Queues an analysis of a parsed document and answers at once. The checks run in order and\nstop at the first that fails (API.md section 10).",
+        "operationId": "start_analysis_api_v1_documents__document_id__analyses_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewAnalysis"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start Analysis"
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Liveness only. It checks no dependency, so a probe cannot fail on a missing catalogue.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "operationId": "read_job_api_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Job"
+      }
+    },
+    "/api/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "description": "Stops an analysis that is waiting or running. A waiting one ends before this returns. A\nrunning one ends at the core's next check, so the reply can still say `running`.",
+        "operationId": "cancel_job_api_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Job"
+      }
+    },
+    "/api/v1/ready": {
+      "get": {
+        "operationId": "ready_api_v1_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ready"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Ready"
+      }
+    },
+    "/api/v1/sessions": {
+      "post": {
+        "description": "Starts a session. The token is in this reply and nowhere else. It takes no body.",
+        "operationId": "create_session_api_v1_sessions_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Create Session"
+      }
+    },
+    "/api/v1/sessions/current": {
+      "delete": {
+        "description": "Ends the session now and deletes its documents and jobs from RAM and SQLite. A parse that\nis still running loses its child.",
+        "operationId": "delete_current_session_api_v1_sessions_current_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Current Session"
+      }
+    }
+  }
+}

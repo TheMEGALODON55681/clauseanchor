@@ -348,7 +348,10 @@ def test_a_parsed_document_carries_its_metadata_and_the_full_parser_output(
     assert (body["id"], body["status"], body["byte_count"]) == (document_id, "parsed", len(raw))
     assert body["media_type"] == "application/pdf"
     assert datetime.fromisoformat(body["expires_at"]) == session_end(client, token)
-    # The whole output: text, blocks, nodes, decorations, warnings and coverage
+    # The whole output: text, blocks, nodes, decorations, warnings and coverage. Each node also
+    # has a `page` (2-E), which test_document_read.py checks.
+    for node in body["parsed"]["nodes"]:
+        del node["page"]
     assert body["parsed"] == json.loads(json.dumps(to_json(parse_document(raw))))
 
 

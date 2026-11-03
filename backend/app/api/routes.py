@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import re
+from bisect import bisect_right
 from datetime import UTC, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from urllib.parse import unquote
 
 from clauseanchor_core import CONTRACT_VERSION
@@ -15,6 +16,7 @@ from app.api.errors import JOB_ERRORS, error_response
 from app.parsing import ErrorCode, ParseError
 from app.parsing.detect import detect_type
 from app.parsing.errors import MAX_INPUT_BYTES
+from app.parsing.model import ParsedDocument
 from app.parsing.schema import to_json
 from app.schemas import (
     Analysis,
@@ -63,6 +65,19 @@ _CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f]")
 def _utc(seconds: float) -> datetime:
     """Whole seconds, rounded down: the client never sees a later end than the store holds."""
     return datetime.fromtimestamp(int(seconds), UTC)
+
+
+def _document_json(doc: ParsedDocument) -> dict[str, Any]:
+    """The parser's full output, plus `page` on every node (API.md section 3). The page is the one
+    of the block that holds the node's `start`: a number for a PDF, null for a DOCX, and null for
+    a start no block holds. The parser's own output has no such field, and stays as it is."""
+    data = to_json(doc)
+    starts = [block.start for block in doc.blocks]
+    for node in data["nodes"]:
+        i = bisect_right(starts, node["start"]) - 1  # the last block that starts at or before it
+        held = i >= 0 and node["start"] < doc.blocks[i].end
+        node["page"] = doc.blocks[i].page if held else None
+    return data
 
 
 def _filename(content_disposition: str | None, extension: Literal["pdf", "docx"]) -> str:
@@ -241,7 +256,7 @@ def read_document(
         media_type=document.media_type,
         byte_count=document.byte_count,
         expires_at=_utc(document.expires_at),
-        parsed=None if document.parsed is None else to_json(document.parsed),
+        parsed=None if document.parsed is None else _document_json(document.parsed),
     )
 
 

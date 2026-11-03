@@ -3065,3 +3065,68 @@ Blockers: none besides the precision stop above, which Aryan resolved.
 Held `[CONTRACT]` items for Tanishq: one, printed in the report in chat only. `parser_version` is 1.3.0, nodes may have `kind="party"` with a `name_span`, `source_text` and offsets are unchanged, and his bridge accepts the kind unchanged, as tested.
 
 Suggested commit message: `feat(parser): add party nodes and name_span`. Next action: 2-E (the API field on top of the party nodes). Open for Aryan: whether the parser stores the defined short name (3-A), and Tanishq's word on the shape (`ParserContract.md` 15, item 3).
+
+## 2026-11-03: Part 2-E, final API names, contract decisions and the OpenAPI export
+
+Part: 2-E. Ticked `[x]` in `Phases.md`. `ml/`, `docs/ml/` and `frontend/` were not touched, no browser or server ran (`TestClient` and `app.openapi()` cover everything), and no dependency was added. Contract text stays in `data/`: no test, fixture, doc or report holds any, the fixtures are invented, and the counts below are numbers and file names only.
+
+Start checks. `git status` was clean on `main`. `git log -8` put `0644592` (2-0C, parser 1.3.0) on top, and the latest commit on `backend/` and `docs/app/` was 2-0C. The baseline in `backend/.venv` was 1616 passed, 27 skipped, and `ruff check` was clean, as the brief expected.
+
+Step 0, recorded under 2-0D in `Phases.md` in place of its "Open for Aryan" line (Aryan, 1 November 2026): the full set of nine bullet glyphs stays, because a false cut moves only a block boundary; 011's lowercase `a.` items stay out of scope, as a recorded ceiling; 003 stays in the set as a lease deed, and item 3 of the stamp section stays open. Two lines that the decisions made stale were updated: the 003 sentence under 2-0B and the 003 sentence in `AnnotationGuidelines.md` section 8.
+
+Step 1, the decisions (Aryan, 3 November 2026), each written in `API.md`:
+1. Names. `scope_notice`, `catalogue_version`, `processing_complete` and `decision_coverage {resolved, requested}` stay, because the API already serves them. `ReviewUnit`, `ManualReview` and `getManualReview` are reserved for 3-D, with no endpoint (sections 6 and 13).
+2. The analysis is read by its own id, as 2-D built it. The mock's `getAnalysis(token, documentId)` is a recorded mismatch for 4-C. No second route.
+3. Party binding `[CONTRACT]` for 3-A (section 12): `role` and exactly one of `party_node_id` and `selected_span {start, end}`, with the validation rules. `alias_spans` is dropped until 3-A settles the short-name question. Shape only: no model, route or test.
+4. `name_span` `[CONTRACT]` (section 11), as `ParserContract.md` section 8 and the 2-0C build have it.
+5. Warnings are objects `{code, page, detail}`. `detail` was checked first. The parser has 12 places that build a warning, and the only detail that is not `None` comes from `docx.py` (`altChunk` or `unknown_block`, two literals), so `detail` never holds file text and stays in the response. A test reads the parser's source and fails if any place builds a detail from anything else.
+6. `page` on nodes, from the block that holds the node's `start` (section 11). This is the one code change: `_document_json` in `routes.py`, called by the document read. The parser output is unchanged.
+7. `coverage.partial` as `parsed.coverage.partial`. Two partial causes raise no warning, so the 4-C notice follows `partial` and not the warning list.
+
+Step 2, the export. `app/scripts/export_openapi.py` builds the app with the default settings and never starts it, and writes `docs/app/openapi.json` with sorted keys, two-space indent, ASCII and one trailing newline. 42,373 bytes at the first run, 12 routes, 23 schemas. `DocumentView.parsed` got a description, so the schema says what the open object holds. Three checks guard it, in `tests/test_openapi_export.py`.
+
+Red runs, recorded before the code:
+- Both new test files, nothing written: collection errors (`cannot import name '_document_json'`, and no `export_openapi` module).
+- `test_document_read.py` with `_document_json` as a pass-through: 5 failed, 8 passed. The 5 are the `page` tests. The 8 are the `name_span`, warning-object, partial and `detail` checks, which pin behaviour that already existed, so they passed on arrival and the mutation check below is their evidence.
+- `test_openapi_export.py` with the script and no committed file: 1 failed (the file is out of date, with the message that names the command), 6 passed. No route gap existed, so the parity test passed at once. The test that doctors `API.md` shows that it fails on a missing route on either side.
+- One test bug on the way: the adds-page test compared tuples with lists and was fixed with the same JSON round trip the older test uses.
+
+Tests: 20 new (13 in `test_document_read.py`, 7 in `test_openapi_export.py`), and one older assertion changed (`test_a_parsed_document_carries_its_metadata_and_the_full_parser_output` removes `page` before it compares with the parser output). Backend 1616 to 1636 passed, 27 skipped, `ruff format --check` and `ruff check` clean.
+
+Measured with the page rule on contracts 001 to 025, counts only: 413 nodes, every node `start` inside a block, every PDF page inside the page count, and 68 `null` pages, all on DOCX nodes. The 69 valid fixtures give 136 nodes with no `start` outside a block.
+
+Mutation check, on copies in the scratchpad: 21 changes, each compiled before it ran. They covered the page rule (an off-by-one block, always null, no block end, `bisect_left`, first block only), the warnings (strings, `detail` dropped), `name_span` (removed, on every node, a wrong span), `coverage.partial`, a `detail` built from file text in two ways, the export (unsorted, no newline, non-ASCII), a score field and a percentage field in a response model, a stale committed file, and two `API.md` route faults. 20 killed, 0 invalid. One survived, `ensure_ascii=False`: the schema holds no non-ASCII character today, so the output is identical. It is an equivalent mutant, and the `isascii` check fails the day a non-ASCII character enters the schema.
+
+Review inside this session, no outside tool. A jury of six readings of the diff, then one verdict:
+- Spec fidelity: every step of the brief maps to a change. Nothing missing besides this entry, which was open at that point.
+- Privacy: `page` is a number. The schema file and the new docs hold no contract text. `detail` is proved to be two literals.
+- Correctness: `bisect_right` finds the last block that starts at or before the node, the end check rejects a start in a separator, and an empty block list gives `null`. The data is a fresh dict per call, so no shared state is changed.
+- Test quality: the page tests compare with a linear scan, and they use a node that starts inside a block. The vacuity guards are in (the names scan walks more than 50 names, and both `detail` words are reached).
+- Compatibility: the response model is unchanged. Only a description was added to it. The older document test still passes once `page` is removed, which shows that nothing else moved.
+- Docs accuracy: found two wording points, "Three tests" (they are three checks) and a missing trigger for regenerating the file (a pinned FastAPI or Pydantic version). Both fixed.
+Verdict: no open finding.
+
+The ponytail review of the same diff found nothing to delete. Kept on purpose, as P2: the bisect (a linear scan costs nodes times blocks on a 500,000 character file); the `null` branch for a start in no block, with its test (the sweep found no such node, but a missing guard would give the last block's page silently); the source-reading test for `detail` (a fixture sweep cannot cover inputs the fixtures lack); the typed `parsed` model that was not built (it would need a model for every node, block and warning and a way to omit `name_span` on other kinds, and the brief asked for the one field). No dependency, no config, no second route.
+
+Checks after the last edit:
+- `pytest` in `backend/.venv`: 1636 passed, 27 skipped, 1 warning (the Starlette `httpx` deprecation), in 194 s. `ruff format --check` (62 files) and `ruff check`: clean.
+- Frontend: untouched, so its build and tests did not run.
+- Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`: no output. Tool-name grep, both forms (the code, config files and README; then the lines added to the tracked docs other than this file and `Rules.md`), and the same grep over the new `openapi.json`: no output.
+- Dash scan for U+2014 and U+2013 over every changed and new file: no hit. A control string that holds both dashes matched both.
+- 2-0A contract-word scan, as in 2-0C (capitalised words of five letters or more from the first page of each of the 25 contracts, kept when they appear in 8 files or fewer and in no doc at `HEAD`, up to 20 per contract, 277 distinct words), searched over the added lines of the changed files and the whole of the new ones. It printed file names, line numbers and columns only. A control line was found and a neutral one was not. 16 hit lines before this entry was written, all on generic English words in my own text, read by location: one word in the invented party names of `test_document_read.py`, two words in generated schema titles and descriptions, and one ordinary sentence start in `Architecture.md`. No contract name or term. The entry itself then scanned clean.
+- The docs prose went through copywriting, then copy-editing, then stop-slop. Four sentences changed (the `page` null rule, the `detail` guard, whose shape 3-A starts from, and the scope of the adapter sentence in section 6).
+- Git: `status`, `diff`, `log`, `ls-files` and `check-ignore` only. Nothing staged, committed, branched or pushed.
+
+Docs checked for staleness:
+- Changed: `API.md` (the opening paragraph, section 1, the capabilities and document rows, section 6 and new sections 11 to 14), `Phases.md` (2-0D decisions, the 2-0B and 2-C lines, the 2-E tick with decisions and deviations, the 3-A, 3-D and 4-C notes, two tense fixes, the frontend track line), `Architecture.md` (the file tree, two decision rows, the type names row and the party paragraph), `README.md` (one section), `FrontendDesign.md` 6.3 (the parser warnings paragraph), `AnnotationGuidelines.md` (the 003 sentence), `openapi.json` (new) and this entry.
+- Checked and left alone: `ParserContract.md` (it describes the parser, which did not change), `Rules.md` (section 6 asks for `API.md` per part, and it is done), `DesignSystem.md`, the `FrontendDesign.md` amendment rows 17.5 to 17.7 (they record what was open at that time), `docs/ml/` (Tanishq's), and the plan in `.handoff/` (section 9 copies `API.md` later).
+
+Throwaway scripts (the page sweeps, the mutation script and its copy, the contract-word scan and its word list, the red-run captures) lived in the scratchpad, outside the repository, and were deleted at the end.
+
+Processes: 61 started, 61 closed, counted from my own calls. Two were background processes, tracked by PID: the contract sweep (launcher 28460, interpreter 24948), which ended on its own. The other 59 each ended with their command: 56 Python-family runs (`pytest`, `ruff`, the export script, the sweeps, the scan scripts and the mutation wrapper, which started 22 `pytest` children and waited on each) and 3 PowerShell calls. No browser, server or node process started, and nothing was killed by image name. A last process-list check found no Python, `pytest` or `ruff` process with `clauseanchor`, the scratchpad or a script name on its command line, and neither tracked PID.
+
+Blockers: none.
+
+Open: the spelling of the mock's "None of these" choice under the one-field binding rule (3-A, `API.md` section 12), Tanishq's word on the `name_span` shape (`ParserContract.md` 15, item 3), and the open object for `parsed` in the schema, which 4-C can ask to have typed.
+
+Suggested commit message: `feat(api): fix the API contract and export the OpenAPI schema`, with the body `Adds page to document nodes and exports docs/app/openapi.json.` Next action: 2-R, the phase review.

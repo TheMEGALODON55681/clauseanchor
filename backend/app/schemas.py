@@ -73,8 +73,13 @@ class DocumentView(BaseModel):
     media_type: str
     byte_count: int
     expires_at: datetime
-    # The full parser output once parsed, in the shape of docs/app/parser_output.schema.json
-    parsed: dict[str, Any] | None
+    parsed: dict[str, Any] | None = Field(
+        description=(
+            "Null unless status is parsed. Then the parser's full output, as described by "
+            "docs/app/parser_output.schema.json, with one added field: a page on every node "
+            "(API.md section 3)."
+        )
+    )
 
 
 class JobError(BaseModel):

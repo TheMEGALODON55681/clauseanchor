@@ -1,6 +1,6 @@
 # API
 
-The contract for the HTTP API. This file governs: the frontend adapter follows it, and plan section 9 copies it (`Phases.md`, D1). Each part adds its endpoints here. Part 2-A adds health, readiness and capabilities, part 2-B adds sessions, part 2-C adds documents and parse jobs, and part 2-D adds analyses and cancel.
+The contract for the HTTP API. This file governs: the frontend adapter follows it, and plan section 9 copies it (`Phases.md`, D1). Each part adds its endpoints here. Part 2-A adds health, readiness and capabilities, part 2-B adds sessions, part 2-C adds documents and parse jobs, and part 2-D adds analyses and cancel. Part 2-E fixes the final names, defines the document fields and the party binding shape, and exports the OpenAPI schema (sections 11 to 14).
 
 `[CONTRACT]` marks a shape Tanishq has to agree to.
 
@@ -15,6 +15,7 @@ The contract for the HTTP API. This file governs: the frontend adapter follows i
 - **Scope notice.** `GET /api/v1/capabilities` and every analysis response carry it.
 - **Sessions.** Health, readiness and capabilities are public. Every other route takes the bearer token from `POST /api/v1/sessions` (section 7).
 - **No caching.** Every response carries `Cache-Control: no-store`, errors included.
+- **OpenAPI.** The app serves its OpenAPI document at `/api/v1/openapi.json`, and `docs/app/openapi.json` is the committed copy (section 14).
 
 ## 2. Error envelope
 
@@ -106,7 +107,7 @@ The core checks the artifact manifest and every file hash while it loads (`Candi
 
 ### `GET /api/v1/capabilities`
 
-The review scope, the mode and the category catalogue. The field names follow the frontend mock, and 2-E may rename them.
+The review scope, the mode and the category catalogue. `scope_notice` and `catalogue_version` are the frontend mock's names, and they are final (section 6).
 
 ```json
 {
@@ -220,7 +221,7 @@ The document's metadata and, once the parse has succeeded, the full parser outpu
 | `media_type` | string | `application/pdf` or `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, from the bytes |
 | `byte_count` | integer | The size of the upload in bytes |
 | `expires_at` | string | The session's `expires_at` |
-| `parsed` | object or `null` | `null` unless `status` is `parsed`. Then it holds the parser's full output, the form `to_json` writes with text (`ParserContract.md` section 2, `parser_output.schema.json`). The full text is always included. Since parser 1.3.0 its `nodes` can hold nodes of kind `party`, each with a `name_span` (`ParserContract.md` section 8), so the read already returns them. Part 2-E still owns the API field for the party list on top of them |
+| `parsed` | object or `null` | `null` unless `status` is `parsed`. Then it holds the parser's full output, the form `to_json` writes with text (`ParserContract.md` section 2, `parser_output.schema.json`). The full text is always included. Every node also has a `page`, which the API adds (section 11). Its `nodes` can hold nodes of kind `party`, each with a `name_span`, and its `warnings` are objects, not strings. `coverage.partial` says whether text may be missing (all in section 11) |
 
 404 `NOT_FOUND` for an unknown id and for another session's document alike, so an id tells a stranger nothing. 401 `SESSION_INVALID` for a bad token, an expired session included.
 
@@ -459,10 +460,10 @@ This file governs, and the plan will copy it.
 - `POST /api/v1/documents` takes the raw file as the body, where the plan has multipart with `role` and `jurisdiction_scope` fields. The raw body keeps the file off disk, and the role and scope travel later (`Phases.md` D1). The file name comes from `Content-Disposition`.
 - The plan's 409 for sample mode on upload does not exist here. A parse does not depend on the analyzer, and the default analyzer is the stub, so every upload would get the 409. Sample mode limits the analysis (2-D).
 - The upload statuses are 413, 415 and 429, as the plan says, plus 400 `EMPTY_FILE`, which the plan does not list. A full session and a full queue both answer 429, with `DOCUMENT_LIMIT` and `QUEUE_FULL` to tell them apart.
-- `GET /api/v1/documents/{document_id}` has no `include_text` query. The full text is always in `parsed`. The reply holds metadata and `parsed`, where the plan's `Document` is flat (`source_text`, `nodes`, `warnings` as strings). 2-E fixes the final names.
+- `GET /api/v1/documents/{document_id}` has no `include_text` query. The full text is always in `parsed`. The reply holds metadata and `parsed`, where the plan's `Document` is flat (`source_text`, `nodes`, `warnings` as strings). The nesting is final, and the 4-C adapter reads `parsed.source_text`, `parsed.text_sha256`, `parsed.nodes` and `parsed.warnings`.
 - A failed job's `error` has `code`, `message` and `retryable`. The plan's `ErrorBody` adds `request_id` and `details`, which a job state has no use for. The job also leaves out the plan's `analysis_id`, `stage`, unit counts, `queue_position`, `result_url` and timestamps. 2-D adds the ones the analysis needs.
 - An unreadable ZIP passes the upload and fails its parse job with `MALFORMED_FILE`. The type check reads the first bytes only.
-- Analyses (2-D). The plan's three routes stay: `POST /documents/{id}/analyses`, `GET /analyses/{id}` and `POST /jobs/{id}/cancel`. The mock fetches the analysis by document id and the plan by analysis id. This file follows the plan, and 2-E may revisit it.
+- Analyses (2-D). The plan's three routes stay: `POST /documents/{id}/analyses`, `GET /analyses/{id}` and `POST /jobs/{id}/cancel`. The mock fetches the analysis by document id and the plan by analysis id. This file follows the plan and the route stays (2-E): the mock's `getAnalysis(token, documentId)` is a mismatch for the 4-C adapter, which keeps the `analysis_id` that the start returns and reads the analysis by it. No route reads the latest analysis of a document, and none is added.
 - `category_ids` is required, at least one id, and the plan's `null` for "all" is not accepted. "All" would mean the whole catalogue in real mode and the sample's four ids in sample mode, so the client sends the ids it shows. `jurisdiction_scope` is required too. The plan puts it on the upload, and the mock's `startAnalysis` sends it with the start. The plan's `Idempotency-Key` header is not read.
 - The plan lets a start answer 409 for "parse pending" and "already running". Here they are two codes (`DOCUMENT_NOT_PARSED`, `ANALYSIS_IN_PROGRESS`), and the second applies to the whole session as plan 9.3 says ("one active analysis per session"), where the plan's 409 reads as per document.
 - Sample mode is enforced at the analysis start with 409 `SAMPLE_MODE_ONLY`, where the plan has the 409 at upload (section 6, above). The prepared sample document itself comes from the plan's `POST /samples/{sample_id}/open`, which part 3-C builds. Until then no HTTP route makes the sample document, and the tests put it in the store.
@@ -472,6 +473,15 @@ This file governs, and the plan will copy it.
 - `Analysis` leaves out the plan's `party` (3-A) and the clauses' `polarity` and `actor_evidence` (3-A), and adds `scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage` and `finished_at`, which the mock names. The frontend's `Clause` lacks `origin`, and its `Passage` lacks `judgment_text_sha256` and `corpus_version`. The core has all three and this file passes them on.
 - `GET /api/v1/ready` reports the analyzer as `ok`, `loading` or `failed`. The plan's `{ready, mode, artifact_manifest_sha256}` stays replaced by `{ready, checks}` (section 6, above).
 - `CLAUSEANCHOR_ARTIFACTS_SHA256` is a new variable. D8 lists none for the manifest digest. The core needs the canonical digest from outside the bundle, and a digest stored inside the bundle would trust the bundle itself.
+
+Differences settled in 2-E. The 4-C adapter follows each one, and `frontend/` does not change before then.
+
+- Names. `scope_notice`, `catalogue_version`, `processing_complete` and `decision_coverage {resolved, requested}` are the mock's names, the API already serves them, and they stay. The plan has none of the four. `ReviewUnit`, `ManualReview` and `getManualReview` have no endpoint. They are reserved for 3-D (section 13).
+- The mock's `DocNode.page` is a number, and the plan's `Node` also has `source_locator`. Here `page` is a number or `null`, and a node has no locator, because locators belong to blocks (`ParserContract.md` section 4). The plan's `offset_unit` is not served, because every offset is a code point.
+- The mock's `name_span` is an optional object. Here a party node has it as an object or `null`, and no other node has the key (section 11).
+- Parser warnings are objects `{code, page, detail}`. The plan's `Document.warnings` and the mock's are strings. The `warnings` of an analysis stay strings, because they are the core's codes (section 11).
+- The mock has no `coverage` on a `Document`. It is `parsed.coverage.partial` here, and the partial-read notice follows it and not the warning list (section 11).
+- The party binding is `role` with `party_node_id` or `selected_span {start, end}`. The plan has `selected_span` as a full `Span` and adds `alias_spans`, which is dropped until 3-A decides the short-name question (section 12).
 
 ## 7. Bearer token
 
@@ -561,3 +571,88 @@ The API adds the analysis id, the job status, the timestamps, the jurisdiction, 
 - `confidence` and `decision_confidence` stay as the core set them. A null stays null, and the API fills in none.
 - `confidence_band`, `calibration_scope`, `origin`, `rule_flags`, `reason_code`, `search_complete`, the window counts and `unresolved_count` stay as the core set them. The API marks no category validated.
 - No response holds a verdict, a risk score, a safety percentage or a completeness percentage.
+
+## 11. Document fields
+
+The document read (section 3) returns the parser's output under `parsed`. The API adds one field to it, `page` on every node. Take `page` off the nodes and `parsed` is the parser's output again, as `parser_output.schema.json` describes it.
+
+### Nodes
+
+A node holds the parser's fields (`ParserContract.md` section 7) and `page`.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `page` | integer or `null` | The page of the block that holds the node's `start`. A PDF gives its 1-based page number. A DOCX has no pages, so it gives `null`. It is also `null` for a `start` that no block holds, and the parser never produces one |
+
+The API works `page` out when it serves the document. The parser, the parse child and `parser_output.schema.json` have no such field.
+
+### `name_span` `[CONTRACT]`
+
+A node of kind `party` has `name_span`, and no other node has the key (`ParserContract.md` section 8):
+
+```json
+{ "id": "n0001", "kind": "party", "start": 41, "end": 112, "page": 1, "name_span": { "start": 41, "end": 63 }, "...": "..." }
+```
+
+- `start` and `end` are code points into `source_text`, in the same coordinates as the node's own `start` and `end`, with `node.start <= start < end <= node.end`.
+- It covers the party's name alone (`ABC Technologies, Inc.`) and not the defining phrase around it (`(the "Supplier")`), so the frontend never cuts a name at a comma.
+- It is `null` when the parser cannot isolate the name.
+- A `null` span, and a node without the key, read as the whole node text.
+
+### Warnings
+
+`parsed.warnings` is an array of objects `{code, page, detail}`, as the parser emits them (`ParserContract.md` section 10). It never holds strings.
+
+```json
+{ "code": "UNSUPPORTED_DOCX_FEATURE", "page": null, "detail": "altChunk" }
+```
+
+`code` is one of the parser's warning codes. `page` is a 1-based PDF page or `null`. `detail` is `null` or one of two fixed words, `altChunk` and `unknown_block`, so it never holds file text. The parser builds it from those two literals, and a test reads the parser's source to keep it so (`tests/test_document_read.py`). Before a parser release can put file text in `detail`, the API must drop the field.
+
+The `warnings` of an analysis (section 3) are another list. They are the core's codes, as strings.
+
+### Partial reads
+
+`parsed.coverage.partial` is true when text may be missing from `source_text` (`ParserContract.md` section 6). Two causes raise no warning: a searchable scan page (an image page with 20 to 199 characters outside the margins) and a PDF form field or free-text annotation that holds text. So `partial` can be true while `warnings` is empty.
+
+For the 4-C adapter: the frontend shows its partial-read notice whenever `coverage.partial` is true, whether or not a warning exists. A partial parse never reads as "nothing found".
+
+## 12. Party binding `[CONTRACT]`
+
+Part 3-A builds the endpoint, which the plan puts at `PATCH /api/v1/documents/{document_id}/party`. This section fixes the shape of its request, so the frontend and 3-A start from the same shape. There is no route, no model and no test for it yet, and it is not in section 3.
+
+The request has `role` and exactly one of the two fields below. `role` is one of the plan's seven: `buyer_customer`, `supplier_vendor`, `employer`, `employee`, `licensor`, `licensee` and `other` (`Phases.md` D1).
+
+| Field | Type | Meaning |
+|---|---|---|
+| `party_node_id` | string | The `id` of a node in `parsed.nodes` whose `kind` is `party` |
+| `selected_span` | `{start, end}` | A party the parser missed. `start` and `end` are code points into `source_text` |
+
+Validation, each failure a 422 `VALIDATION_ERROR`:
+
+- Both fields, or neither.
+- A `party_node_id` that names no node of the document, or a node whose `kind` is not `party`.
+- A `selected_span` that breaks `0 <= start < end <= len(source_text)`.
+- Any field the table does not list. `alias_spans` is not part of the shape until 3-A decides the short-name question (`Phases.md`, 3-A).
+
+Open for 3-A: the mock's "None of these" choice sends `party_node_id: null`, and the one-field rule has no spelling for it yet.
+
+## 13. Reserved names
+
+`ReviewUnit`, `ManualReview` and `getManualReview` are the frontend mock's names for the manual-review list. Part 3-D owns them and may change them. No endpoint serves them now, and `docs/app/openapi.json` holds none of the three.
+
+## 14. The OpenAPI schema
+
+`docs/app/openapi.json` is the OpenAPI document of the app, built in stub mode on the default settings, with sorted keys and one trailing newline, so the same code gives the same bytes. After any change to a route, a response model or the pinned FastAPI or Pydantic version, regenerate it from `backend/` with the virtual environment active:
+
+```bash
+python -m app.scripts.export_openapi
+```
+
+Three checks guard it (`tests/test_openapi_export.py`):
+
+- The committed file equals what the app builds. The failure message names the command above.
+- Every route in section 3 (a `###` heading with a method and a path) is in the schema, and every route in the schema is in section 3. The route that serves the schema itself is in neither.
+- No field in the schema or in the parser's JSON Schema is named for a score, a verdict, a percentage, a risk or safety.
+
+The schema types `parsed` as an open object, because the API passes the parser's output through as plain data. Its shape is `parser_output.schema.json` plus `page`. This file governs where the two disagree.
