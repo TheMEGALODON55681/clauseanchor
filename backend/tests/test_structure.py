@@ -265,7 +265,17 @@ def test_a_short_numbered_party_list_does_not_take_the_clause_numbers() -> None:
         "2. Term",
         "3. Fees",
     )
-    assert labels(nodes)[1:] == ["1", "2", "1", "1.1", "2", "3"]
+    # Since parser 1.3.0 the two items are party nodes and not clause nodes (ParserContract.md 8).
+    assert [n.kind for n in nodes] == [
+        "heading",
+        "party",
+        "party",
+        "section",
+        "clause",
+        "section",
+        "section",
+    ]
+    assert labels(nodes)[3:] == ["1", "1.1", "2", "3"]
     assert nodes[3].text == "1. Definitions\n1.1 Words."
 
 

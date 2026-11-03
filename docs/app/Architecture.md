@@ -96,6 +96,7 @@ backend/
       pdf.py                # pdfplumber extraction: error mapping, words to rows to blocks, columns (1-B); decoration, scanned checks, content budget (1-C)
       docx.py               # python-docx extraction: archive checks, tracked-change check, body order, tables, text boxes (1-D); headers, footers, footnotes, numbering (1-D2)
       structure.py          # clause tree from block text and list labels: numbered labels, headings, schedules, tables, definitions (1-E)
+      parties.py            # party nodes and name_span, found in the preamble and added by structure.py (2-0C)
       schema.py             # JSON Schema of the output (docs/app/parser_output.schema.json), to_json, which turns a document into the data the schema describes (with text=False it also drops list_label and sets a definition's label to null), and from_json, which rebuilds a document from the full form and refuses a text that does not match its hash (2-C)
     scripts/
       parse_file.py         # CLI: parse a local file and print JSON or a summary (dev only); refuses a file over 10 MiB before reading it
@@ -162,7 +163,7 @@ Fixtures are generated at test time, so no binary files are committed.
 class ParsedDocument:
     source_text: str
     text_sha256: str             # sha256 of source_text.encode("utf-8"), lowercase hex
-    parser_version: str          # "1.2.0"
+    parser_version: str          # "1.3.0"
     media_type: str              # "application/pdf" or the DOCX mime type
     page_count: int | None       # None for DOCX
     blocks: tuple[Block, ...]    # every text block, in reading order
@@ -172,7 +173,7 @@ class ParsedDocument:
     coverage: Coverage
 ```
 
-Party nodes (a requirement from the frontend, `FrontendDesign.md` 17.7, BR). The party list is built from nodes of kind `party`, and each carries `name_span`: `{start, end}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`, inside that range, covering the party's name alone (`ABC Technologies, Inc.`, not the defining phrase around it). The consumer never cuts a name at a comma, so the parser decides where the name ends. A party node with no span reads as its whole text. Not built: `StructureNode.kind` in `model.py` has no `party` value and no `name_span` field. `ParserContract.md` section 8 carries the field (status: required, not built), and API.md defines it on the document node, tagged `[CONTRACT]` (`Phases.md`, 2-E).
+Party nodes (a requirement from the frontend, `FrontendDesign.md` 17.7, BR). The party list is built from nodes of kind `party`, and each carries `name_span`: `{start, end}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`, inside that range, covering the party's name alone (`ABC Technologies, Inc.`, not the defining phrase around it). The consumer never cuts a name at a comma, so the parser decides where the name ends. A party node with no span reads as its whole text. Built in part 2-0C as `parser_version` 1.3.0: `StructureNode.kind` has the value `party` and `StructureNode` has the optional `name_span`, which only a party node carries. `app/parsing/parties.py` finds the parties in the preamble, and `ParserContract.md` section 8 carries every rule. API.md defines the field on the document node, tagged `[CONTRACT]` (`Phases.md`, 2-E).
 
 Separators: lines inside a block join with `"\n"`, blocks join with `"\n"`, pages join with `"\n\n"`. Trailing spaces and tabs are stripped from each line before it is appended. CRLF and CR become LF. In PDF text, runs of spaces collapse to one space and U+00A0 becomes U+0020. DOCX text keeps U+00A0.
 
@@ -182,7 +183,7 @@ DOCX blocks carry one of three locators, with every number 1-based. A body parag
 
 Headers and footers use `{"part": "header" or "footer", "section": s, "variant": "default" or "first" or "even", "paragraph": i}`, with `s` counting sections from 1. Footnotes and endnotes use `{"part": "footnotes" or "endnotes", "id": n, "paragraph": i}`, where `n` is the note's `w:id`. Tables and text boxes inside these parts add the same keys as in the body, numbered from 1 within each header, footer or note.
 
-Nodes. `StructureNode` holds `id` (`n0001`, `n0002` and on, in order of start and then level), `parent_id`, `kind` (`heading`, `section`, `clause`, `subclause`, `schedule`, `definition` or `table`), `label`, `level`, `start`, `end` and `text`, which is `source_text[start:end]`. A parent holds its children's range and sits at a lower level. A numbered node's kind follows its level, and a heading word, an all-caps line, a schedule, a table or a definition has its own kind. `ParserContract.md` carries the field list and every rule.
+Nodes. `StructureNode` holds `id` (`n0001`, `n0002` and on, in order of start and then level), `parent_id`, `kind` (`heading`, `section`, `clause`, `subclause`, `schedule`, `definition`, `table` or `party`), `label`, `level`, `start`, `end` and `text`, which is `source_text[start:end]`, and `name_span` on a party node. A parent holds its children's range and sits at a lower level. A numbered node's kind follows its level, and a heading word, an all-caps line, a schedule, a table or a definition has its own kind. `ParserContract.md` carries the field list and every rule.
 
 ## 5. Interface to the core
 

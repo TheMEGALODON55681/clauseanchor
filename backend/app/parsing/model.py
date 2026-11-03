@@ -22,15 +22,24 @@ class Block:
 
 
 @dataclass(frozen=True, slots=True)
+class NameSpan:
+    start: int
+    end: int
+
+
+@dataclass(frozen=True, slots=True)
 class StructureNode:
     id: str
     parent_id: str | None
-    kind: Literal["heading", "section", "clause", "subclause", "schedule", "definition", "table"]
+    kind: Literal[
+        "heading", "section", "clause", "subclause", "schedule", "definition", "table", "party"
+    ]
     label: str | None
     level: int
     start: int
     end: int
     text: str
+    name_span: NameSpan | None = None  # party nodes only; None reads as the whole node text
 
 
 @dataclass(frozen=True, slots=True)

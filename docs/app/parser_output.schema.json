@@ -168,7 +168,8 @@
             "subclause",
             "schedule",
             "definition",
-            "table"
+            "table",
+            "party"
           ]
         },
         "label": {
@@ -191,6 +192,44 @@
         },
         "text": {
           "type": "string"
+        },
+        "name_span": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end"
+          ],
+          "properties": {
+            "start": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "party"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "name_span"
+        ]
+      },
+      "else": {
+        "properties": {
+          "name_span": false
         }
       }
     },

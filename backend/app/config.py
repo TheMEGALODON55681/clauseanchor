@@ -29,7 +29,8 @@ MAX_DOCUMENTS_PER_SESSION = 5
 SWEEP_INTERVAL_SECONDS = 30  # after expiry a session is unreachable at once and gone within this
 
 # Analysis limits, constants and not variables (D8 names none). Plan 9.3 gives the queue and the
-# 30 minutes. Nothing here measured the real model, so the time is a proposal (Phases.md, 2-D).
+# 30 minutes. The real model ran in 2-D.1: the slowest analysis took 80.4 s, and a 33-page contract
+# with all 41 CUAD categories plans 2,185 windows, 804 to 1,123 s (BuildLog, 2-D.1).
 ANALYSIS_QUEUE_LENGTH = 2  # analyses that can wait while one runs
 ANALYSIS_TIMEOUT_SECONDS = 1800  # one analysis, from the moment it starts running
 

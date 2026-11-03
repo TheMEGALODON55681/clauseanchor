@@ -2992,3 +2992,76 @@ Blockers: none. Nothing was blocked: all four libraries loaded, no Application C
 Held `[CONTRACT]` items for Tanishq: none new. `docs/ml/CandidateAPIIntegration.md` still names parser 1.1.0, and the backend parses at 1.2.0 (the 2-0D item stands).
 
 Suggested commit message: `docs: record the first real-mode run with the v0 bundle`. Next action: 2-0C (1.3.0), then 2-E. Aryan still decides the open 2-0D items.
+
+
+## 2026-11-03: Part 2-0C, party nodes and `name_span` (parser 1.3.0)
+
+Part: 2-0C. Ticked `[x]` in `Phases.md`. `ml/` and `docs/ml/` were not touched, the frontend was not touched, and no browser or server ran. Contract text stays in `data/`: no test, fixture, doc or report holds any, every test name is invented, and the judgments below are file numbers, counts and offsets only.
+
+Start checks. An earlier try of this part stopped at them, because the tree still held the 2-D.1 docs uncommitted. Aryan committed them, and this run began with a clean tree on `main`, `9a7e18a` (2-D.1) as the latest commit on `backend/` and `docs/app/`, and a baseline in `backend/.venv` of 1458 passed and ruff clean. One correction to the 2-D.1 entry: it said four docs changed, and the change was five files, `README.md` included.
+
+The design is Aryan's of 3 November 2026 and now stands in `ParserContract.md` section 8. Code: `app/parsing/parties.py` (new), called at the end of `build_structure`; `model.py` (`NameSpan`, kind `party`, `StructureNode.name_span`); `schema.py` (`to_json` drops the key on any other node, `from_json` rebuilds the span, the JSON Schema requires the key on a party and forbids it elsewhere); `assemble.py` (`PARSER_VERSION` 1.3.0); `docs/app/parser_output.schema.json` regenerated.
+
+Red runs, recorded before the code:
+- `tests/test_parties.py` first run: 117 failed, 5 passed, 27 skipped. The 5 are the cases that expect no party, and the 27 skips are fixtures the reader refuses.
+- After the decision below: 4 failed, 152 passed, 27 skipped. The 4 were the lone-anchor cases.
+- The timing test for a long run of connectives inside one bracket was red at 3.6 s against a 1.5 s limit before the fix. The test for a bare short name (`hereinafter referred to as the Company`) was written after the code and passed on its first run, so the mutation check below is its evidence.
+
+First measurement, with the design as written: 61 party nodes, 46 true and 15 false, precision 75.4 percent, under the 90 percent gate. The work stopped there and reported. 11 of the 15 came from a lone anchor (no `between` word or `AND` line before it) that defines something other than a party, 2 from an anchor that had a lead-in word, and 2 from a `BETWEEN` line over a long block (024, 025). Aryan decided: drop a lone anchor unless its short name is a party role word, skip an anchor whose segment overlaps a party already found, keep the rescue if precision stays at 90 percent or more, and finish the totals.
+
+Measured on contracts 001 to 025 at 1.3.0. **The rules were tuned on the same 25 contracts they are measured on, so the figures are optimistic.**
+
+| Measure | Result |
+|---|---|
+| Party nodes | 45, of which 38 have a non-null `name_span` |
+| True, false | 42 true, 3 false: precision 93.3 percent (the rescue stays, plain dropping was not needed) |
+| Missed | 10: 7 in reach of a trigger (004, 006, 010, 017, 022, two in 025) and 3 in a form no trigger reads (013 twice, 018). The two parties of 003 sit in tables and are out of scope |
+| Names on the 42 | 14 exact, 6 wrong, 5 null (4 of them hide a name in the text), 17 blanks where the span covers fill-in text |
+| Files | 20 of the 23 files with parties get a node. The others are 003, 013 and 018. Neither file without parties (008, 009) gets one |
+| 2-0A forms | All 11 `BETWEEN` files, all 10 `by and between` files and all 19 anchor files get at least one node |
+| Parties table, other forms | 0 read, as designed |
+
+The 3 false nodes are one anchor in 006, a merged pair in 024 and a 1,200 code point node over a covering letter in 025. The 4 true parties lost to the lone-anchor rule are one each in 004, 006, 017 and 025. In 010 and 022 the party after a node is merged into it.
+
+Offset proof. Before any code changed, a throwaway script stored the 1.2.0 `text_sha256`, block count and node count of all 25 contracts. At 1.3.0 `text_sha256` and the block count are equal on 25 of 25, and the non-party node count is equal on 24 and 1 lower on 025 (the two false numbered-list nodes became one party node and the other stayed). In the repository, `test_the_party_step_changes_no_character_of_any_fixture` (69 compared, 27 refused fixtures skipped) and the smoke test (8 files) compare the full document with and without the step: equal `source_text`, `text_sha256` and blocks, and the non-party nodes of 1.3.0 are a subset of those without the step. Another test checks that every party node lies before the first clause and that the rest of the tree is identical.
+
+Decisions beyond the written design, each in section 8 and in `Phases.md`: a name also stops before ` hereinafter`; a `BETWEEN` line followed by numbered items gives a party per item; a segment must begin with a letter, digit, quote or `[`; the preamble ends at a labelled heading or a schedule as well as at a clause; a bare short name is read for its role from the 60 code points after the anchor; the bracket check reads back at most 2,000 code points. One existing test changed: `test_a_short_numbered_party_list_does_not_take_the_clause_numbers` now expects two party nodes where it expected two false clause nodes. `test_assemble.py` and `fake_core.py` carry 1.3.0.
+
+Core bridge. `test_the_core_bridge_takes_party_nodes_unchanged` calls `context_from_parsed_document` from the installed core on a document with party nodes. It accepts them, and the bridged id, parent, kind, start and end equal the parser's. The core was not changed.
+
+Stale comments from 2-D.1, comments only: `config.py` (the analysis time limit now cites the 80.4 s slowest run and the 804 to 1,123 s plan for 2,185 windows), `main.py` and `services/analysis_jobs.py` (load time 42.6 s on the first run and 6.2 s on the second).
+
+Mutation check, on copies in the scratchpad: 42 changes to `parties.py`, each compiled before it ran. They turned off each of the three triggers and the `between` word, removed each stop of the name rule (the comma, the bracket, the eight words and `hereinafter`), moved the 150 limit up and down, allowed lowercase starts, stopped trimming quotes at each end, moved the 5,000 window and the run of 3, set the 400 reach to 0, turned off the lone-anchor rule, the bare look-ahead, two role words, the bracket phrase, the quoted short name, the marker skip, the initial guard, the top level `and` test, the numbered-list continuation, the stray-dot start, the overlap guard, the sentence split, the leading-run replacement and the dropping of false items. 42 killed, 0 survived, 0 invalid.
+
+Review inside this session, no outside tool. A jury of six readings of the diff, then one verdict:
+- Spec fidelity: every rule of the design is in section 8, and the additions above are listed there. Verdict: no gap.
+- Offsets: every offset is a Python string index, so a code point. Tests use an astral character before the party and a name with non-ASCII letters. No gap.
+- Privacy: a party's `label` is `null` and the node text is dropped in the text-free form, and a test searches the text-free JSON for the name. No gap.
+- Performance: found that the bracket check re-read the whole stretch for each connective, so time grew with the square (3.6 s for 60,000 connectives, which a 500,000 character file can hold). Fixed with the 2,000 code point look-back and a test.
+- Compatibility: the API reads `to_json` and the parse child sends it back to `from_json`, and both carry the span. No gap.
+- Test quality: before the first run, two vacuous assertions and one `or True` placeholder were removed and a weak schema test was deleted. No gap left.
+
+The ponytail review of the same diff found one cut: the lead-in word list held three expressions where one covers the other two (`between` also ends `by and between` and the `BETWEEN` line), so `_lead_end` uses the word and the AND line only. Nothing else was cut: `NameSpan` is the JSON shape, and the short name, a parties table reader and a name field per party were left out as the design says. Applied, and the measurement gave the same 45 and 38.
+
+Checks after the last edit:
+- `pytest` in `backend/.venv`: 1616 passed, 27 skipped, 1 warning, in 110 s. The baseline was 1458, and the 158 new passes are `test_parties.py`. The skips are the refused fixtures. The warning is the Starlette `httpx` deprecation. `ruff check` and `ruff format --check` are clean.
+- Frontend: untouched, so its build and tests did not run.
+- Rules section 1 attribution scrub, with the command in Rules, over `backend/`, `frontend/` and `docs/app/`: no output. The tool-name grep, both forms (the first over the code, the config files and the README, the second over the lines added to the tracked docs other than this file and `Rules.md`): no output from either. A control string (`ponytail`) matched the pattern.
+- Dash scan for U+2014 and U+2013 over every changed file, code and docs: no hit. A control string that holds both dashes matched twice.
+- 2-0A contract-word scan, as in 2-D.1 (distinctive capitalised words from the first page of each of the 25 contracts, kept when they appear in 8 files or fewer and in no doc at `HEAD`, up to 20 per contract, 194 distinct words), searched over the 1,130 lines this part added to the 19 changed files. It printed file names, line numbers and columns only, and never a word. A control line holding a chosen word was found, and a neutral line was not. Hits: 12 on the generic role words of the design (Supplier, Company and the like, in `ParserContract.md`, `parties.py` and `test_parties.py`), and 0 on anything else. Two hits on generic words in one invented test sentence came first, and the sentence was rewritten.
+- Git: `status`, `diff`, `log`, `check-ignore` only. Nothing staged, committed, branched or pushed.
+
+Docs checked for staleness:
+- Changed: `ParserContract.md` (header version, 2.1 history, the kind table and field list in 7, all of section 8, 12.6, sections 14 and 15), `parser_output.schema.json`, `API.md` (the `parsed` row), `Architecture.md` (version, node kinds, the party note, the file list), `Phases.md` (the 2-0C tick with deviations and results, the two "not built" lines, the question under 3-A), `AnnotationGuidelines.md` (the version line and the 1.3.0 note) and this entry.
+- Checked and left alone: `README.md` (it names no node kind and no parser version), `Rules.md`, `FrontendDesign.md`, `DesignSystem.md`, `docs/ml/` (Tanishq's; `CandidateAPIIntegration.md` still names parser 1.1.0, which is the 2-0D item). `AnnotationGuidelines.md` needed only the version line, because annotators work on `source_text` offsets and party nodes change none.
+- The docs prose went through copywriting, then copy-editing, then stop-slop.
+
+Throwaway scripts (baseline, measure, what-if, mutation and timing scripts, the mutation copies and the viewing folder with contract text) lived in the scratchpad, outside the repository, and were deleted at the end.
+
+Processes. Four background `pytest` launchers: PIDs 14608 (baseline), 25440 (first full run), 23836 (second) and 15624 (last), all exited and confirmed gone by a process-list check. The foreground runs of `pytest`, `ruff`, `git` and the Python scripts each ended with their command. The mutation script started 84 `pytest` child processes (42 changes, run twice, the second time with the compile check) and waited on each. Nothing was killed by image name. A final process-list check found no Python, `pytest` or `ruff` process with `clauseanchor`, the scratchpad or `mutate` on its command line.
+
+Blockers: none besides the precision stop above, which Aryan resolved.
+
+Held `[CONTRACT]` items for Tanishq: one, printed in the report in chat only. `parser_version` is 1.3.0, nodes may have `kind="party"` with a `name_span`, `source_text` and offsets are unchanged, and his bridge accepts the kind unchanged, as tested.
+
+Suggested commit message: `feat(parser): add party nodes and name_span`. Next action: 2-E (the API field on top of the party nodes). Open for Aryan: whether the parser stores the defined short name (3-A), and Tanishq's word on the shape (`ParserContract.md` 15, item 3).

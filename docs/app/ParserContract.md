@@ -2,7 +2,7 @@
 
 The exact output of the parser, for the analysis core and the annotation tool. This file replaces every earlier contract message. If it disagrees with one of them, this file is right.
 
-`parser_version` is `1.2.0`, set by the rule in section 2.1. Code: `backend/app/parsing/`. The machine form of the output is `docs/app/parser_output.schema.json`, and a test keeps it equal to `app/parsing/schema.py`.
+`parser_version` is `1.3.0`, set by the rule in section 2.1. Code: `backend/app/parsing/`. The machine form of the output is `docs/app/parser_output.schema.json`, and a test keeps it equal to `app/parsing/schema.py`.
 
 ## 1. How to read this file
 
@@ -30,7 +30,7 @@ Where the first message's nine points went:
 | 8 | Structure levels | 7 |
 | 9 | Node ranges across page breaks | 7.2 |
 
-One item is not built yet: `name_span` on party nodes (section 8).
+Party nodes and `name_span` (section 8) are built, as 1.3.0.
 
 ## 2. The document
 
@@ -39,7 +39,7 @@ One item is not built yet: `name_span` on party nodes (section 8).
 class ParsedDocument:
     source_text: str
     text_sha256: str          # sha256 of source_text.encode("utf-8"), lowercase hex
-    parser_version: str       # "1.2.0"
+    parser_version: str       # "1.3.0"
     media_type: str           # "application/pdf" or the DOCX type below
     page_count: int | None    # None for DOCX
     blocks: tuple[Block, ...]
@@ -60,7 +60,7 @@ The DOCX media type is `application/vnd.openxmlformats-officedocument.wordproces
 | `warnings` | What the parser had to guess or could not read (section 10). Reader warnings first, then structure warnings | refined |
 | `coverage` | Section 6 | same |
 
-JSON form: `to_json` in `app/parsing/schema.py` turns a document into plain data with the same field names. Tuples become arrays and `bbox` is an array of four numbers or `null`. The command line `python -m app.scripts.parse_file FILE [--text] [--summary]` prints it. By default it leaves out `source_text`, `blocks[].text` and `nodes[].text`. It also leaves out every block's `locator.list_label` and sets the `label` of every `definition` node to `null`, because both hold words from the file (a numbering level can say anything, and a defined term is often a party or product name). The other node labels (`1.1`, `(a)`, `ARTICLE I`) follow a fixed grammar and stay. A result can then be shared without the contract. `--text` keeps all of it, and `to_json(doc, text=False)` does the same as the default. A file over 10 MiB is refused with `FILE_TOO_LARGE` before it is read. A rejected file prints its code to stderr and exits with status 2. Every offset is present either way. **new**
+JSON form: `to_json` in `app/parsing/schema.py` turns a document into plain data with the same field names. Tuples become arrays and `bbox` is an array of four numbers or `null`. The command line `python -m app.scripts.parse_file FILE [--text] [--summary]` prints it. By default it leaves out `source_text`, `blocks[].text` and `nodes[].text`. It also leaves out every block's `locator.list_label` and sets the `label` of every `definition` node to `null`, because both hold words from the file (a numbering level can say anything, and a defined term is often a party or product name). The other node labels (`1.1`, `(a)`, `ARTICLE I`) follow a fixed grammar and stay. A result can then be shared without the contract. `--text` keeps all of it, and `to_json(doc, text=False)` does the same as the default. A party node keeps its `name_span` in both forms (section 8). A file over 10 MiB is refused with `FILE_TOO_LARGE` before it is read. A rejected file prints its code to stderr and exits with status 2. Every offset is present either way. **new**
 
 `from_json` in the same module is the way back. It rebuilds a `ParsedDocument` from the full form, and `to_json(from_json(x)) == x` holds for every fixture and for every file of the real-file smoke set on a machine that has it. It raises `ValueError` when `text_sha256` is not the hash of `source_text`, and for the text-free form, which has no text to rebuild. The message holds no document text. The API's parse child sends the full form over a pipe, and the API process rebuilds the document with `from_json` (Phase 2, part 2-C). **new**
 
@@ -79,8 +79,9 @@ A fix that moves `source_text` or an offset is major, whatever its reason, becau
 - **1.0.0**, parts 1-A to 1-F: the contract as first sent.
 - **1.1.0**, part 1-R. New: the warning `UNMAPPED_GLYPHS` (sections 6 and 10) and the locator key `list_level` (4.3). Fixed: a Word numeral list under a letter on a deeper level (7.4), and a PDF with bytes in front of its header, which now parses (section 9). New errors for files that used to parse: a DOCX member with another compression method, a PDF stream with two growing filters, more than 100,000 DOCX paragraphs, a DOCTYPE and a bad note id (sections 9 and 11). The text-free form drops `list_label` and definition labels (section 2). `ParsedDocument` and the full form keep both, so that is not a break.
 - **1.2.0**, part 2-0D. Fixed: a PDF line that opens with a list item marker now starts a block (7.9). The markers are `a)`, `1)`, `iv)`, `i.`, `A.` and the bullet glyphs, on top of the numbering tokens that already cut. A line that only looks like a marker no longer cuts, whichever kind it is: a section reference that wrapped (`4.2 of ...`), an initial (`A. K. Sharma`) and the number of a wrapped amount. No field, code or kind changes, and `source_text` and every offset are identical to 1.1.0: both separators are `\n`, and a test compares the two releases on every fixture and on the real-file smoke set. Block ids, block locators and block boundaries move, so re-parse a file to get the new ones. Node counts did not move on any of the 25 contracts, and the tree still reads only the labels of 7.3.
+- **1.3.0**, part 2-0C. New: the node kind `party` and the field `name_span` on party nodes (section 8). A node of any other kind has no `name_span` key. A numbered party list in the preamble that 1.2.0 read as clause nodes now gives party nodes (8.4), so a document can have fewer clause nodes than at 1.2.0: 1 of the 25 contracts (025), by 1 node. `source_text`, `text_sha256`, the blocks and every offset are identical to 1.2.0, and a test compares the two steps on every fixture and on the real-file smoke set. Node ids can move, because party nodes sit in the order of `start`, so re-parse a file to get the new ones.
 
-Output stamped `1.0.0` predates 1-R. Re-parse it. Output stamped `1.1.0` has the same text and offsets as 1.2.0 and coarser PDF blocks.
+Output stamped `1.0.0` predates 1-R. Re-parse it. Output stamped `1.1.0` or `1.2.0` has the same text and offsets as 1.3.0, and no party nodes.
 
 Part 2-C added `from_json` (section 2) and changed no output, so the version stayed 1.1.0 until 2-0D.
 
@@ -248,12 +249,13 @@ DOCX: header and footer parts are always decoration. Their tables and text boxes
 class StructureNode:
     id: str                 # "n0001", "n0002" ...
     parent_id: str | None
-    kind: str               # heading, section, clause, subclause, schedule, definition, table
+    kind: str               # heading, section, clause, subclause, schedule, definition, table, party
     label: str | None
     level: int              # 1-based
     start: int
     end: int
     text: str               # source_text[start:end]
+    name_span: NameSpan | None = None   # party nodes only (section 8)
 ```
 
 The tree is built from block text and block offsets only. It reads blocks of kind `text` and `table_cell`. A header, footer or footnote block never opens a node and never extends one, and no definition is found in them. **new**
@@ -265,7 +267,7 @@ The tree is built from block text and block offsets only. It reads blocks of kin
 | `id` | Nodes come in order of `start`, then `level`, and the ids follow that order. A container comes before what it holds | same |
 | `parent_id` | The node that holds this one, or None. A parent starts no later than its child, ends no earlier, and has a lower `level` | same |
 | `kind` | Which label gets which kind is below | new |
-| `label` | The label without its trailing full stop: `1`, `1.1`, `(a)`, `(ii)`, `ARTICLE I`, `Section 2.1`, `SCHEDULE 2`. A definition's label is its term without the quotes. An unnumbered heading and a table have None | new |
+| `label` | The label without its trailing full stop: `1`, `1.1`, `(a)`, `(ii)`, `ARTICLE I`, `Section 2.1`, `SCHEDULE 2`. A definition's label is its term without the quotes. An unnumbered heading, a table and a party have None | new |
 | `level` | 7.4 | refined |
 | `start`, `end` | 7.2 | refined |
 
@@ -280,6 +282,7 @@ Kinds **new**:
 | `schedule` | `SCHEDULE`, `ANNEXURE`, `APPENDIX` and `EXHIBIT` followed by a number, a roman numeral or one capital letter |
 | `definition` | A quoted defined term (7.7) |
 | `table` | A DOCX table (7.8) |
+| `party` | A party of the contract, from the preamble (section 8) |
 
 ### 7.2 Ranges
 
@@ -388,18 +391,52 @@ The cut changes block boundaries only. Both separators are `\n`, so `source_text
 
 ## 8. Party nodes and `name_span`
 
-**Status: required, not built.** Part 2-0C of `Phases.md` builds it, after Tanishq confirms the shape below, and ships it as `parser_version` 1.3.0 (2.1). Part 2-0D shipped first as 1.2.0 and changed no field (7.9), so 2-0C reads the cut blocks.
+Built in part 2-0C and shipped as `parser_version` 1.3.0 (2.1). The code is `app/parsing/parties.py`. Part 2-0D shipped first as 1.2.0 and changed no field (7.9), so the detector reads the cut blocks.
 
-The frontend lists the parties of a contract and must never cut a name at a comma, so the parser decides where a name ends (`FrontendDesign.md` 17.7, BR). The requirement:
+The frontend lists the parties of a contract and must never cut a name at a comma, so the parser decides where a name ends (`FrontendDesign.md` 17.7, BR). The shape:
 
-- `StructureNode.kind` gains the value `party`.
+- `StructureNode.kind` has the value `party`.
 - Every node of kind `party` carries `name_span`: `{"start": int, "end": int}` in code points into `source_text`, in the same coordinates as the node's own `start` and `end`.
 - `name_span` lies inside the node's range and covers the party's name alone (`ABC Technologies, Inc.`), not the defining phrase around it (`(the "Supplier")`).
 - `name_span` is `null` when the parser cannot isolate the name, and a null span reads as the whole node text. Nodes of other kinds have no `name_span` key.
 
-Today `StructureNode` has no `party` kind and no `name_span` field, and the JSON Schema has neither. API.md defines the field on the document node and tags it `[CONTRACT]` (`Phases.md`, 2-E). Part 2-0C gives the parser the field before 2-E starts. Send back any change to the shape before 2-0C starts.
+The schema requires the key on a party and forbids it on any other node. The text-free form (section 2) keeps `name_span`, because it holds offsets only, and a party's `label` is `null` in every form, because a name is file text.
 
-Not specified yet, and needed before 2-0C starts: which text makes a party node (a `BETWEEN` and `AND` list, a `by and between` sentence, or a `hereinafter referred to as` anchor, which none of the definition forms in 7.7 match), the node's own range, its level and parent when no node is open, and what a file with no recognisable party gives.
+### 8.1 Where the parser looks
+
+Only the preamble: the text before the first numbered node (a section, clause, subclause, schedule, or a heading that has a label), or the first 5,000 code points when there is none. A run of up to three level 1 numbers at the head of the document that a restart at 1 replaces (7.4) is not a numbered node here, so the preamble ends at the restart. A party node lies inside the preamble. Nothing outside it changes. **new**
+
+### 8.2 What makes a party
+
+A party is a segment of the preamble that ends at an anchor or at a list boundary. Matching ignores case. **new**
+
+| Trigger | Rule |
+|---|---|
+| Lead-in | A line that is `BETWEEN` or starts with it, or `by and between` (it may wrap a line). The first party starts after it |
+| Anchor | `hereinafter referred to as` or `hereinafter called`. It closes the segment before it. The defining phrase is the bracket that holds the anchor, else the quoted short name that follows it, else the anchor words. A short name with no quotes stays outside the node |
+| List boundary | A standalone `AND` line. In a `by and between` sentence with no anchor, the first `and` outside brackets and quotes. After a `BETWEEN` line, each item that starts with a number (`1.`, `(2)`) is a party. The last party with no anchor ends at the end of its block |
+
+The segment begins after the lead-in word, the `AND` line, the connective or a list marker (`1.`, `(a)`, `B.`; an initial such as `R. K.` is no marker). With none of these before an anchor, it begins at the start of the block, and after an earlier party it begins after the last connective `and` that follows that party. It must begin with a letter, a digit, a quote or `[`, so a lone `Between.` makes nothing. An `AND` line starts a party only within 400 code points of the party before it.
+
+**Lone anchors.** An anchor with no `between` word and no standalone `AND` line since the party before it closes a party only when its short name starts with a party role word: Party, Contractor, Supplier, Vendor, Purchaser, Buyer, Seller, Client, Employer, Owner, Lessor, Lessee, Licensor, Licensee, Consultant, Company, Bank, Institute, University, Authority, Government, Disclosing Party, Receiving Party, First Party, Second Party. Without one, the anchor defines a price, a project or a document, or repeats a party already found, and makes nothing. The short name is the quoted string in the defining phrase, else the 60 code points after the anchor. An anchor whose segment overlaps a party already found is skipped. A preamble with no trigger gives no party node and no warning, because a missing party is no error. **new**
+
+### 8.3 The node
+
+`kind` is `party`, `parent_id` is `null`, `level` is 1, and `label` is `null`. The range is the whole segment, from its first character up to and including the defining phrase. A party holds no clause nodes. A definition node (7.7) inside the range stays where it was. **new**
+
+### 8.4 A numbered party list
+
+When 1.2.0 read the items of a numbered party list in the preamble as clause nodes (`1.` and `2.`, 12.6), 1.3.0 replaces the items that overlap a party node with party nodes. A child of a replaced item goes up to the item's parent, and the ids are numbered again in the order of `start`, then `level`. A recital list that overlaps no party keeps its nodes. **new**
+
+### 8.5 `name_span`
+
+It runs from the segment's first character that is not a space to just before the first comma, `(`, ` a company`, ` having`, ` represented`, ` through`, ` incorporated`, ` registered`, ` residing`, ` acting` or ` hereinafter`, with spaces and quotes trimmed from both ends. The last stop keeps the defining phrase out of a name that has no comma or bracket in front of it. It is `null` when the result is empty, longer than 150 code points, or starts with a lowercase letter. **new**
+
+### 8.6 Not in 1.3.0
+
+The defined short name (`the "Supplier"`) is not stored, because no field holds it. Part 3-A needs it for polarity and records the question (`Phases.md`). The parties table (2-0A counted none) is not read, because tables are leaves for labels (7.8).
+
+### 8.7 Observed before the design, and measured after it
 
 Observed on contracts 001 to 025 (part 2-0A, 31 October 2026, and part 2-0D for the replacements 002 and 003, 1 November 2026). This is data for that design, and no rule. All 25 files parse, and 23 of them introduce parties. A file can use more than one form.
 
@@ -413,6 +450,17 @@ Observed on contracts 001 to 025 (part 2-0A, 31 October 2026, and part 2-0D for 
 | No recognisable party (platform terms that name roles only, a cover note) | 2 |
 
 The party block sits before the first numbered clause in all 23 files, and the first anchor starts within 650 characters in 18 of the 19 files that have one. Short names come in quotes inside brackets, in quotes alone, in brackets alone, bare, and in mixed styles. A party can be a blank to fill in (three templates), and one template defines a short name with `hereinafter` and no verb. `Phases.md` 2-0C holds the file numbers per form and the cases a detector must survive.
+
+Measured on the same 25 files at 1.3.0 (part 2-0C, 3 November 2026). **The rules were tuned on these 25 contracts and measured on them, so every figure here is optimistic.** A reading of each party node, by file number and offsets only:
+
+| Measure | Result |
+|---|---|
+| Party nodes | 45: 42 are a party and 3 are not, precision 93.3 percent. Without the lone-anchor rule the same code gave 61, 46 and 15 (75.4 percent) |
+| Files | 20 of the 23 files with parties get at least one party node. The 3 that get none are 003 (a parties table), 013 (a letter) and 018 (a one-signatory form). Neither of the 2 files without parties (008, 009) gets one |
+| By form of 2-0A | Every one of the 11 `BETWEEN` files, the 10 `by and between` files and the 19 anchor files gets at least one party node |
+| Missed parties | 7 that a trigger could reach (004, 006, 010, 017, 022 and two in 025: a lone anchor without a role word, or a party merged into the node before it) and 3 in a form no trigger reads (013 twice, 018). The two parties of 003 sit in tables and are out of scope |
+| Names on the 42 | 14 exact, 6 wrong, 5 null (4 of them hide a name in the text, which starts in lower case or in an OCR error) and 17 blanks, where the span covers fill-in text such as a row of underscores |
+| Text | `source_text`, `text_sha256` and the block count equal 1.2.0 on all 25. The non-party node count equals 1.2.0 on 24 and is 1 lower on 025 (8.4) |
 
 ## 9. Errors
 
@@ -538,7 +586,7 @@ These are the cases where the tree is wrong or coarse and offsets are still exac
 |---|---|
 | **Athens-style lists.** A numbered list inside a section that shares numbers with the section sequence takes them. In one agency agreement a definitions list `1.` to `6.` inside Section 4 took 5 and 6, so Sections 5 and 6 are missed and two false nodes `5` and `6` appear. A Part A and a Part B pair that restarts after a long run reads as a list inside the clause. Separate sequences for heading words and bare numbers would split these, and would then open the list items as level 1 nodes, which cuts Section 4 short. Not built. Measured on contracts 001 to 025 (parts 2-0A and 2-0D): 0 of the 25 files, so no fix part is planned | Missed and false sections |
 | A short all-capitals line is a heading and closes open nodes. Seen: signature block names, formula words (`MULTIPLIED BY`), and a page header that was not marked as furniture | Nodes end early |
-| A party list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay. The same happens with a recital list of three items before the clauses (two files in 2-0A, three false nodes each), with the first item of a numbered list under an unnumbered heading (one scanned file, four false nodes with its party list), and with a witness list in a signature block (`1.` and `2.`, twice in one file in 2-0D: four false level 1 nodes) | Two or more false nodes |
+| A numbered list at the top of a document (`1.` and `2.`) opens two level 1 nodes. The clause sequence then replaces its run by restart, and the two nodes stay. Since 1.3.0 the items of a party list that overlap a party node become party nodes (8.4), and the other lists stay false nodes. The same happens with a recital list of three items before the clauses (two files in 2-0A, three false nodes each), with the first item of a numbered list under an unnumbered heading (one scanned file, four false nodes with its party list), and with a witness list in a signature block (`1.` and `2.`, twice in one file in 2-0D: four false level 1 nodes) | Two or more false nodes |
 | A Word list whose first item is an empty numbered paragraph is not read when it is a nested decimal (`1.1` empty, `1.2` first), a letter list or a numeral list. A top-level decimal list is read. A gap in the middle of any list is read (7.5) | A list is missed |
 | In a PDF, and in a DOCX whose list is typed, a numeral list that opens right after `(h)` reads `(i)` as the ninth letter, because there is no Word level to tell the two apart. Its other numerals stay inside that node. A Word list is read right (7.4), unless letters and numerals share one level in different lists, which the parser cannot tell apart because the number format is not passed on. Seen in a state government services template (`(h) a reference to:` then `(i)` to `(iv)`), which now gives `(h)` four numeral children. Measured on contracts 001 to 025 (parts 2-0A and 2-0D): 0 of 25 files for the PDF and typed-list case, and 0 of 4 Word files for the shared level. File 005 puts letters and numerals on one Word level, and the tree is right, because its numeral label `i)` is not read (next row). No fix part is planned | One coarse node, wrong level |
 | Numbers inside a table cell are not read, so a contract laid out as one large table has a `table` node and no clauses | No clauses |
@@ -548,6 +596,10 @@ These are the cases where the tree is wrong or coarse and offsets are still exac
 | A typed label that follows white space at the start of a Word paragraph (a tab or spaces before `(a)`) is body text, because a label is read only at the first character of the block. The white space stays in `source_text`. Seen in 2-0A in one Word file (001), where six items of a lettered list give no nodes | A list is missed |
 | A list label with only a closing bracket (`a)`, `i)`, `1)`) or only a full stop (`a.`, `i.`, `A.`) is body text, because 7.3 needs both brackets for a letter or a numeral. A Word list that numbers this way gives a label, and the tree still skips it. Since 1.2.0 a PDF line that opens this way starts a block (7.9), so the block is cut and the tree still skips it. Seen in 2-0A in two Word files (`i)` to `v)` and `a)` to `d)`) and in the PDF lists behind the fused blocks in 12.3, and in 2-0D in a bank's format of agreement (002), whose clauses `1)` to `10)` give no nodes | A list is missed |
 | A row of column letters at the head of a PDF table (`(a) (c) (e)`) reads as the label `(a)` and opens a false node, because a PDF has no table nodes (7.8). Seen in 2-0D in one file (003), one false node | One false node |
+| **Party nodes (section 8).** A lone anchor (8.2) whose short name is not a role word makes no party, so a party defined as `the "Bidder"` or `the "Disclosing Entity"` with no `between` word or `AND` line before it is missed. Seen in 4 files in 2-0C (004, 006, 017, 025). A party defined with `hereinafter` and no verb, or with a broken word (`herein/after`), has no anchor. Seen in 010 and 022, where the party before it ends up in the same node | A party is missed or merged |
+| A party in a form that no trigger reads: a letter with sender and recipient blocks, a one-signatory form with fill-in fields, a parties table. Seen in 013, 018 and 003 | No party node |
+| A party node can hold more than one party or too much text: a `BETWEEN` line over a long block (024, 025), or a cover page that repeats the parties before the body (015, 020 to 023), which gives one node per mention. A name can start with an OCR error in lower case (`lndian`) or run on into the next line, and a blank party (a row of underscores or dots) gives a span over the fill-in text | A wrong or null `name_span`, a repeated party |
+| The detector was tuned on contracts 001 to 025 and measured on them (8.7). Its precision on other files is not known | An optimistic figure |
 
 ## 13. A worked example
 
@@ -609,7 +661,7 @@ The first two entries of `decorations` are `[0, 23]` and `[96, 107]`. Page 2 sta
 - Structure: node kinds and label format, the run of 3, the prefix rule, schedules clearing sequences, typed numbers never skipping ahead, Word lists opening above 1, the gap rule of 1-F, capitals headings, titles, contents lines, bare numbers, definitions, tables, and header, footer and footnote blocks never read (section 7).
 - The DOCX paragraph limit (section 11).
 - The `UNMAPPED_GLYPHS` warning (sections 6 and 10).
-- `parser_version` 1.1.0 and the versioning rule (2.1). Version 1.2.0 adds the PDF block cuts at list item markers (7.9).
+- `parser_version` 1.1.0 and the versioning rule (2.1). Version 1.2.0 adds the PDF block cuts at list item markers (7.9). Version 1.3.0 adds the party nodes and `name_span` (section 8).
 - The ceilings (section 12), the command line and the schema (section 2). The text-free form also leaves out `list_label` and sets a definition's label to `null`.
 
 **Refined** (stated before, now exact or changed):
@@ -625,7 +677,7 @@ State on 30 October 2026, read from Tanishq's code in `ml/clauseanchor_core` and
 
 1. The separators and offsets in section 3, which the core reads without change. **Answered.** The core takes `source_text` as it is and never cleans or reflows it. Every span is a code point slice of that text, with `end` exclusive.
 2. How the core treats `decorations` (mask them) and `partial` (report "not checked", never "not found"). **Answered.** `AnalysisContext` still has no field for `decorations`. `context_from_parsed_document` adds one `StructureNode(kind="decoration")` for each `[start, end]` range instead, so contract 2.0 does not change. For model input the core blanks the non-whitespace characters in those ranges, omits any candidate that crosses one and marks that search incomplete. A partial parse also marks it incomplete. A processed category comes back `abstained` and never `absent`.
-3. The shape of `name_span` in section 8, before the parser builds it. **Open.**
+3. The shape of `name_span` in section 8. **Built as 1.3.0 in part 2-0C.** Tanishq has not objected, and a test shows that `context_from_parsed_document` accepts party nodes unchanged. His word on the shape is still open.
 4. Which ceilings in section 12 the core wants a warning for. Each one needs a signal the parser does not have today. **Open.**
 5. What `AnalysisContext.parser_complete` and `warnings` must hold. **Answered.** The bridge sets `parser_complete` to `not coverage.partial` and `warnings` to the warning codes, which is what the backend planned (`Phases.md`, 2-D). The core keeps the codes. A warning alone does not mean omitted text, and `coverage.partial` decides whether the parse is complete.
 6. Spans, added on 30 October 2026. **Answered.** The core stays single-span per finding (`ClauseFinding.span`). The disjoint decoder can return several findings for one category, each with its own span, and the core does not merge them. How an annotation that joins several spans into one finding is grouped and scored stays open (`AnnotationGuidelines.md`, section 9).

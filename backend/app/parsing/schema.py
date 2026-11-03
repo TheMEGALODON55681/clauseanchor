@@ -16,6 +16,7 @@ from app.parsing.model import (
     Block,
     BlockKind,
     Coverage,
+    NameSpan,
     ParsedDocument,
     ParseWarning,
     StructureNode,
@@ -92,9 +93,19 @@ SCHEMA: dict[str, Any] = {
                 "start": _OFFSET,
                 "end": _OFFSET,
                 "text": {"type": "string"},
+                "name_span": {
+                    **_object({"start": _OFFSET, "end": _OFFSET}),
+                    "type": ["object", "null"],
+                },
             },
-            optional=("text",),
-        ),
+            optional=("text", "name_span"),
+        )
+        | {
+            # Only a party node has the key, and it may be null (ParserContract.md section 8).
+            "if": {"properties": {"kind": {"const": "party"}}},
+            "then": {"required": ["name_span"]},
+            "else": {"properties": {"name_span": False}},
+        },
         "ParseWarning": _object(
             {
                 "code": {"enum": [code.value for code in WarningCode]},
@@ -119,6 +130,9 @@ def to_json(doc: ParsedDocument, *, text: bool = True) -> dict[str, Any]:
     the block text, the node text, a block's `list_label` and a definition's label (the term) are
     left out, and every offset is still there."""
     data = asdict(doc)
+    for node in data["nodes"]:
+        if node["kind"] != "party":
+            del node["name_span"]
     if not text:
         data.pop("source_text")
         for block in data["blocks"]:
@@ -129,6 +143,10 @@ def to_json(doc: ParsedDocument, *, text: bool = True) -> dict[str, Any]:
             if node["kind"] == "definition":
                 node["label"] = None
     return data
+
+
+def _name_span(span: Mapping[str, int] | None) -> NameSpan | None:
+    return None if span is None else NameSpan(**span)
 
 
 def from_json(data: Mapping[str, Any]) -> ParsedDocument:
@@ -152,7 +170,10 @@ def from_json(data: Mapping[str, Any]) -> ParsedDocument:
             Block(**{**b, "bbox": None if b["bbox"] is None else tuple(b["bbox"])})
             for b in data["blocks"]
         ),
-        nodes=tuple(StructureNode(**n) for n in data["nodes"]),
+        nodes=tuple(
+            StructureNode(**{**n, "name_span": _name_span(n.get("name_span"))})
+            for n in data["nodes"]
+        ),
         decorations=tuple((start, end) for start, end in data["decorations"]),
         warnings=tuple(ParseWarning(**w) for w in data["warnings"]),
         coverage=Coverage(**data["coverage"]),

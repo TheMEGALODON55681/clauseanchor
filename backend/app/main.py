@@ -40,7 +40,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     sweeper = asyncio.create_task(_sweep_forever(app.state.store))
     app.state.sweeper = sweeper
     app.state.parse_queue.start()
-    # The analysis worker loads the analyzer in its own thread, about 25 s for the real model.
+    # The analysis worker loads the analyzer in its own thread: 42.6 s for the real model on the
+    # first run and 6.2 s on the second (BuildLog, 2-D.1).
     # The app serves meanwhile, and /ready says `loading`.
     app.state.analysis_queue.start()
     try:

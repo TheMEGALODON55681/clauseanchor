@@ -220,7 +220,7 @@ The document's metadata and, once the parse has succeeded, the full parser outpu
 | `media_type` | string | `application/pdf` or `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, from the bytes |
 | `byte_count` | integer | The size of the upload in bytes |
 | `expires_at` | string | The session's `expires_at` |
-| `parsed` | object or `null` | `null` unless `status` is `parsed`. Then it holds the parser's full output, the form `to_json` writes with text (`ParserContract.md` section 2, `parser_output.schema.json`). The full text is always included |
+| `parsed` | object or `null` | `null` unless `status` is `parsed`. Then it holds the parser's full output, the form `to_json` writes with text (`ParserContract.md` section 2, `parser_output.schema.json`). The full text is always included. Since parser 1.3.0 its `nodes` can hold nodes of kind `party`, each with a `name_span` (`ParserContract.md` section 8), so the read already returns them. Part 2-E still owns the API field for the party list on top of them |
 
 404 `NOT_FOUND` for an unknown id and for another session's document alike, so an id tells a stranger nothing. 401 `SESSION_INVALID` for a bad token, an expired session included.
 

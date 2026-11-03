@@ -13,6 +13,7 @@ from typing import NamedTuple
 
 from app.parsing.errors import WarningCode
 from app.parsing.model import Block, ParseWarning, StructureNode
+from app.parsing.parties import add_parties
 
 _BODY = ("text", "table_cell")
 _SHORT = 80  # the longest line that reads as a heading
@@ -378,7 +379,8 @@ def build_structure(
     source_text: str, blocks: Sequence[Block]
 ) -> tuple[tuple[StructureNode, ...], tuple[ParseWarning, ...]]:
     """The clause tree of one document, and the warnings its numbering raised. Header, footer
-    and footnote blocks are skipped. Nodes come in order of start, then level."""
+    and footnote blocks are skipped. Party nodes are added from the preamble (parties.py). Nodes
+    come in order of start, then level."""
     builder = _Builder()
     tables = iter(_outer_tables(blocks))
     span = next(tables, None)
@@ -390,4 +392,5 @@ def build_structure(
             builder.read(block, table)
         if span and index == span[1]:
             span, table = next(tables, None), None
-    return builder.finish(source_text)
+    nodes, warnings = builder.finish(source_text)
+    return add_parties(source_text, blocks, nodes), warnings

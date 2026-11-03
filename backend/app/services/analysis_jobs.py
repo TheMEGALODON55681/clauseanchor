@@ -1,6 +1,7 @@
 """The analysis queue: one worker thread, a FIFO with a named limit, and the one analyzer.
 
-The worker thread loads the analyzer first (about 25 s for the real model), so the app answers
+The worker thread loads the analyzer first (42.6 s for the real model on the first run, 6.2 s on
+the second, BuildLog 2-D.1), so the app answers
 `/health` and `/ready` meanwhile, and then feeds the analyzer one job at a time. The core
 serializes calls per instance and raises a busy error on concurrent ones, so one worker is the rule.
 
