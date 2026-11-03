@@ -50,7 +50,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/documents/$DOCUMENT_ID/analyses -H "Au
 
 Poll the job, which now reports progress. Then `GET /api/v1/analyses/{analysis_id}` returns the result, and `POST /api/v1/jobs/{job_id}/cancel` stops an analysis that is waiting or running. The result carries the scope notice, and it holds no verdict and no risk score. `processing_complete` says whether the run left anything out, and `decision_coverage` says how many categories reached a decision. API.md section 10 defines both.
 
-The default analyzer is the stub, which serves sample mode. It reads only the core's own sample contract, so it answers 409 for an uploaded file, and the route that opens the sample document comes with part 3-C. Real mode runs the candidate-only analyzer on CPU. It needs the artifacts bundle from Tanishq, the digest of its manifest, and the CPU torch install that `docs/ml/RealAnalyzer.md` describes. Set `CLAUSEANCHOR_ANALYZER=real` with `CLAUSEANCHOR_ARTIFACTS_DIR` and `CLAUSEANCHOR_ARTIFACTS_SHA256`, then start the API. `GET /api/v1/ready` reports the analyzer as `loading` for about 25 seconds, then `ok`. If the bundle does not match the digest, it reports `failed`, and the API does not fall back to the stub. Real mode has not run on this laptop yet.
+The default analyzer is the stub, which serves sample mode. It reads only the core's own sample contract, so it answers 409 for an uploaded file, and the route that opens the sample document comes with part 3-C. Real mode runs Tanishq's candidate-only analyzer on CPU, and the section "Real mode" below walks through it.
 
 The API reads these environment variables once, at start, and does not read a `.env` file. Every one is optional.
 
@@ -66,6 +66,34 @@ The API reads these environment variables once, at start, and does not read a `.
 | `CLAUSEANCHOR_PARSE_MEMORY_MIB` | `1536` | Memory cap for the process that parses one file, in MiB |
 
 A bad value stops the start and the message names the variable. `docs/app/API.md` section 4 has the details.
+
+### Real mode
+
+Real mode runs the candidate-only analyzer with Tanishq's v0 bundle. It has run behind the API on this laptop (`docs/app/Phases.md`, 2-D.1). Every finding is a `review_candidate` with a null confidence, all 46 categories stay `not_validated`, and the five India categories come back `unavailable`.
+
+1. **Check the bundle.** Take `clauseanchor-candidate-prototype-v0.zip` from Tanishq, compare its size and SHA-256 with `docs/ml/ReleaseHandoff.md` section 2, and extract it into a new folder outside the repository. Nothing from it belongs in Git.
+2. **Make an environment for it.** Use Python 3.12 and a virtual environment of its own, apart from `backend/.venv`, because torch is large and the tests do not need it. Install in this order, with `backend/` as the working directory:
+
+   ```bash
+   pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+   pip install -r ../ml/requirements-inference.txt
+   pip install -r requirements.txt -c constraints.txt
+   ```
+
+   The last command installs the runtime packages and `../ml` as an editable install. The inference pins and `constraints.txt` do not conflict, and `pip check` is clean.
+3. **Run the receiver check.** Use the command in `docs/ml/ReleaseHandoff.md` section 3, from inside the extraction, with its output outside it. It checks every file in the bundle and runs the trained model on authored text. It took about a minute here.
+4. **Set the variables and start the API** from `backend/`:
+
+   ```bash
+   export CLAUSEANCHOR_ANALYZER=real
+   export CLAUSEANCHOR_ARTIFACTS_DIR=/path/to/extraction/models/clauseanchor_candidate_v0
+   export CLAUSEANCHOR_ARTIFACTS_SHA256=<the inference digest in ReleaseHandoff.md section 2>
+   uvicorn app.main:create_app --factory
+   ```
+
+   Use the inference manifest's digest, which differs from the ZIP's. `GET /api/v1/ready` reports the analyzer as `loading`, then `ok`. If the bundle does not match the digest, it reports `failed`, and the API does not fall back to the stub.
+
+The run on this laptop (torch's default 8 threads, 15.7 GiB of RAM) used `TestClient`, so real mode has not run under `uvicorn` yet. The API reached `ok` after 42.6 s on the first run and 6.2 s on the second. The process peaked at 1,281 MiB while loading and settled near 950 MiB. A 33-page contract with all 41 CUAD categories plans 2,185 windows of 0.37 to 0.51 s each, so it would take 804 to 1,123 s, inside the 30-minute analysis limit.
 
 ### Parse a file
 

@@ -2866,3 +2866,129 @@ source_text, text_sha256 and every offset are identical at 1.1.0 and
 ```
 
 Next action: Aryan decides on the bullet glyph set, 011 `a.` and the 6 files that still fuse. Then 2-0C (1.3.0), then 2-E.
+
+
+## 2026-11-03: Part 2-D.1, real mode with the v0 bundle (a verification run)
+
+Part: 2-D.1. Ticked `[x]` in `Phases.md`. A verification run: no product code, no test and no dependency in the repository changed, and the time limit stays at 1,800 s. `ml/` and `docs/ml/` were not touched (`git status` lists four files, all docs). No browser and no listening server: `TestClient` ran every request. Four questions: does the package pass Tanishq's receiver check here, does the backend reach `/ready` `ok` in real mode, does an analysis return honest candidate-only output, and what does it cost in time and memory.
+
+Start checks, before anything else:
+- `git status` was clean on `main`. `git log --oneline -3 -- backend docs/app` gave `7f2e428` (2-0D) as the latest commit. HEAD is `7f2e428`, with no `ml/` commit on top.
+- Baseline in `backend/.venv`: `pytest` 1458 passed with the one Starlette `httpx` deprecation warning, in 179 s, and `ruff check` clean.
+
+What was already there. `C:\dev\clauseanchor-model\` held `ClauseAnchor_Handoff_v0.zip`, the inner `clauseanchor-candidate-prototype-v0.zip`, `candidate-release\` and `venv-real\`, stamped 22:36 to 22:47 on 2 November. An earlier attempt made them and this session did not. No process from it was alive, there was no resume note in `.handoff/`, and there was no receiver-check output. So steps 1 and 2 were verified in place, not redone. Nothing was deleted or overwritten, and no install command ran in this session.
+
+Step 1, unpack:
+- The inner ZIP is 509,869,238 bytes with SHA-256 `28d43542251d8b1800b2904f3c70e03840487188971ac0bf8bde8b3b93cbe758`, as `docs/ml/ReleaseHandoff.md` section 2 gives it.
+- A throwaway script compared every ZIP member with the file on disk by SHA-256: 32 members, 0 missing, 0 different, and 0 files on disk that the ZIP lacks. So the extraction was untouched, and it stayed so through every later run (32 files, no `__pycache__`).
+
+Step 2, environment (`venv-real`, Python 3.12.10):
+
+| Package | Installed | Pin |
+|---|---|---|
+| numpy | 2.3.5 | 2.3.5 |
+| torch | 2.9.1+cpu | 2.9.1 |
+| transformers | 4.57.6 | 4.57.6 |
+| tokenizers | 0.22.2 | 0.22.2 |
+| safetensors | 0.7.0 | 0.7.0 |
+
+- Every pin in `backend/constraints.txt` that is installed matches (0 differences), and so does every runtime pin in `backend/requirements.txt`. The six constraint pins not installed are the test and lint tools (`iniconfig`, `pluggy`, `pygments`, `pytest`, `reportlab`, `ruff`). `pip check`: no broken requirements. So the inference pins and the backend constraints do not conflict. Fourteen installed packages sit in neither file: `filelock`, `fsspec`, `huggingface-hub`, `jinja2`, `markupsafe`, `mpmath`, `networkx`, `regex`, `requests`, `sympy`, `tqdm`, `urllib3`, `pip` and `setuptools`. The backend's `constraints.txt` does not pin them, since the backend alone never installs torch or transformers.
+- `clauseanchor-core` 0.1.0 is an editable install of `C:\dev\clauseanchor\ml` (`direct_url.json`, and `pip freeze` shows commit `7f2e428`). It left no `egg-info` in `ml/`. Importing the core writes an ignored `__pycache__` in `ml/clauseanchor_core/`, and one already existed from earlier backend test runs. Every run in `venv-real` used `-B` and `PYTHONDONTWRITEBYTECODE`.
+- One plain `python -c` imported `numpy`, `torch`, `safetensors` and `tokenizers` and printed the versions above. Torch reports no CUDA build, and 8 threads. No DLL was blocked.
+
+Step 3, the receiver check, exactly as `ReleaseHandoff.md` section 3 gives it (`python -I -B ml/scripts/check_candidate_release.py --bundle-root . --expected-release-sha256 29b45537...84184 --output ../candidate-receiver-check`, from inside the extraction):
+- `status: passed`, 66.8 s wall. Free RAM was 5.34 GiB at launch.
+- Report `candidate-receiver-check\report.json`: 29,409 bytes, SHA-256 `755b61624554ffb2383b0f9bd36b732f2d6c805419f640aaf3aee0e4b632ffb1`, which is the value its own `manifest.json` records. The manifest file's SHA-256 is `7a2c11b3954e14d9a13823130aac8a46faf8da26e860bbc6b7969bc9c084ec51`.
+- The report says: artifact manifest `ccf0c0b6...57e8`, release manifest `29b45537...4184`, device `cpu`, batch size 1, `core_imported_from_extracted_bundle` true, `trained_weight_inference` true, and 10 exact source slices checked. It also says what it did not test: the backend API, the frontend and a live parser.
+- Load 54.03 s. The cases: full 8 windows in 5.47 s (7 candidates), simulated parser partial 3 windows in 2.05 s (2), window-limited 1 window in 0.69 s (1), not processed 0 windows, empty source 0 windows. A cancel after the first window took 0.61 s and raised `AnalysisCancelled` with no result, and a cancel before inference raised at once.
+- Process: launcher PID 22780 and interpreter PID 19084, both confirmed gone. The polled peak working set of the two was 1,248 MiB.
+
+Step 4, the backend in real mode. A throwaway script (`C:\dev\clauseanchor-model\scripts\realmode_run.py`, deleted at the end) built the app with `create_app` and `Settings(analyzer="real", artifacts_dir=<extraction>\models\clauseanchor_candidate_v0, artifacts_sha256="ccf0c0b6...57e8", db_path=":memory:")`, and drove it through `TestClient`. It hooks three things in its own process and changes no repository file: the analysis queue's progress callback (to stamp each event), the analyzer constructor (to time the load) and the parse child's peak read. It refuses to start under 4 GiB of free RAM.
+- `/ready` polled until the analyzer was `ok`. `/capabilities`: mode `real`, 46 categories (41 `cuad`, 5 `india_extension`), every `support_status` `not_validated`, catalogue version 1.0.0.
+- One session, then four analyses with `jurisdiction_scope` `india_review`, and a cancel. The synthetic DOCX and PDF are the backend test builders' `simple.docx` (208 code points, 7 nodes) and `simple.pdf` (213 code points, 8 nodes). Contract 008 from `data/indian/` is a 33-page PDF of 74,821 code points and 38 nodes, parsed with `coverage.partial` false and the warning `COLUMN_ORDER_UNCERTAIN`. All parse at parser 1.2.0.
+
+| Analysis | Ids | Job | `processing_complete` | Windows | Findings |
+|---|---|---|---|---|---|
+| DOCX | `document_name`, `governing_law`, `cap_on_liability`, `in.arbitration` | `partial` | false | 1, 1, 1 and 0 | 1 |
+| DOCX | `document_name`, `governing_law` | `succeeded` | true | 1 and 1 | 1 |
+| PDF | the same four | `partial` | false | 1, 1, 1 and 0 | 1 |
+| Contract 008 | the same four | `partial` | false | 50, 51, 55 and 0 | 14 (3, 2 and 9) |
+
+The 17 findings were checked, and the 7 checks of the brief passed on all four analyses in run 2:
+1. Every finding is a `review_candidate` with a null `confidence`, `origin` `model`, `confidence_band` and `calibration_scope` `unvalidated`, empty `rule_flags` and `passages`, and `retrieval_status` `not_run`. Every category has a null `decision_confidence`. Pass.
+2. The India id comes back `unavailable` with `unsupported_india_extension`, 0 of 0 windows, `search_complete` false and no findings. Pass on the three runs that asked for it.
+3. `decision_coverage.resolved` is 0 (`requested` 4, 2, 4 and 4). Pass.
+4. `processing_complete` equals the definition of API.md section 10 (the parse was not partial, there is a result, and every category has `search_complete`), and the job and analysis status agree with it. Pass: false and `partial` where a category was incomplete (the unavailable India id, and the truncated question of `cap_on_liability`), true and `succeeded` for the two-id DOCX run. On 008, `governing_law` and `cap_on_liability` were also incomplete because the core dropped candidates that cross a decoration range, and the parse itself was complete.
+5. No category reads `absent` or `found`. Statuses seen: `abstained` and `unavailable`. Pass.
+6. No key matches score, verdict, percent, probability, risk, safety, rating, grade or likelihood, no value is a float, and no string in an API field holds a percent sign. Pass. See the first run below for the one hit.
+7. Every span's offsets slice `parsed.source_text` exactly, with `doc_id` and `text_sha256` agreeing with the document (the hash was recomputed from the text), ids unique, and 0 <= start < end <= length. 17 of 17. Pass.
+Extra: the categories come back in the order asked for, and an abstained category's `unresolved_count` equals its number of findings. Pass.
+
+The first run failed check 6 on 008: one string with a percent sign. The script counted every string, and `span.text` is the contract's own words. The path of the hit in run 2 is `/categories[2]/clauses[3]/span/text`, in `cap_on_liability`. The scan now skips `span.text` and reports those paths, and run 2 is the clean one. Both runs passed checks 1 to 5 and 7, the cancel and the capability check. No API field held a percent sign in either run.
+
+The cancel. A 41-id analysis of the small DOCX (41 windows planned) had 2 windows done when the cancel went in. The reply was 202 with the job still `running`. The job ended `cancelled` 0.51 s later with 3 windows done, `categories` empty, `artifact_manifest_sha256` null, `processing_complete` false and `resolved` 0. A second cancel answered 409. Same result in both runs.
+
+Step 5, measurements (torch's default 8 threads, batch size 1, a laptop with 15.7 GiB of RAM and other applications open):
+
+| | Run 1 | Run 2 |
+|---|---|---|
+| `/ready` `ok` after app start | 42.63 s (constructor 42.55 s) | 6.18 s (constructor 6.06 s) |
+| Small fixtures, seconds a window | 0.341 to 0.368 | 0.350 to 0.363 |
+| Contract 008, 156 windows, wall time | 57.62 s | 80.41 s |
+| Contract 008, seconds a window | 0.368 | 0.514 |
+| Peak working set | 1,281 MiB | 1,280 MiB |
+| Peak committed | 2,211 MiB | 2,208 MiB |
+| Working set after the load | 937 MiB | 937 MiB |
+| Lowest free RAM during the run | 3.63 GiB | 3.93 GiB |
+
+- Run 2's gaps between windows on 008: minimum 0.350 s, median 0.490 s, 90th percentile 0.671 s, maximum 0.796 s. The time from the start request to the first progress event was 0.05 s, so tokenizing the 17,350-token context is negligible.
+- The peak came during the load and the analyses did not raise it. The working set read 953 to 967 MiB after the analyses. The peak was read through `K32GetProcessMemoryInfo` with `ctypes`, no new package.
+- Parse children (job object peak): 29 MiB, 29 MiB and 200 MiB, the last for contract 008, the same in both runs. All exited.
+- The second load was faster by a factor of 7. The file cache may explain it, and this part did not isolate it. The receiver check's 54.0 s load is another cold read. Tanishq measured 17.5 s to ready and 25.8 s to load.
+- The receiver check's figure (0.68 s a window) times the whole call, tokenizing included. The three figures differ by up to 2 times. I did not isolate the cause: the laptop was in normal use, and nothing controlled its CPU load or temperature.
+
+The time limit. The slowest real analysis was 80.41 s, 4.5 percent of 1,800 s. The question is whether 1,800 s cuts off a plausible 30-page contract, so the script planned every window of 008 for all 41 CUAD ids with the core's own tokenizer, no inference. The context has 17,350 tokens, and each category plans 50 to 55 windows, 2,185 in all. For the three categories that ran, the plan equals the run exactly. At 0.368, 0.514 and 0.68 s a window the full run takes 804, 1,123 and 1,486 s, so it fits, and the constant stays. A window above 0.82 s (1,800 / 2,185) would cut it off, which is 1.2 to 2.2 times the rates measured. The parser's own ceiling (500,000 characters) is about 116,000 tokens at 008's ratio, about 340 windows a category and about 14,000 for 41 categories. That is an extrapolation, and it would take 1.4 to 2.6 hours at those rates, so the limit still ends the largest documents. Decision: no change to `ANALYSIS_TIMEOUT_SECONDS`, so no test changed and the commit type is `docs:`. 4-C measures the deploy host, where a slower CPU would change this.
+
+Host sizing against 4-B. The API process alone peaks at 1,281 MiB, so real mode does not fit the 1 GiB host that 2-C assumed. With the 200 MiB parse child it needs about 1.5 GiB. With a parse child at its 1,536 MiB cap and a full store (about 0.8 GiB, API.md section 8) the worst case is about 3.6 GiB.
+
+Files changed:
+- `README.md`: the real-mode sentences in the analyzer paragraph become a pointer, and a new "Real mode" section holds the steps, the measured load, memory and window time, and the `TestClient` caveat. It points to `docs/ml/ReleaseHandoff.md` for Tanishq's own commands.
+- `docs/app/Phases.md`: the 2-D.1 entry after 2-D, and three lines that 2-D.1 supersedes (the 2-D status, its time-limit line and 4-A).
+- `docs/app/Architecture.md`: a paragraph in section 5 with the measured load and memory.
+- `docs/app/API.md`: the `loading` row of `/ready`, the intro and the timing paragraph of section 8, and one sentence on the real model's memory. The limit and its table row did not change.
+- This entry.
+
+Deviations from the brief, with reasons:
+1. Steps 1 and 2 were verified, not performed (see "What was already there"). The brief says to make a new environment. Rebuilding would have meant deleting a working environment and downloading CPU torch again, so the ZIP hash, the file-by-file comparison, the pin comparison, `pip check` and the receiver check carry the evidence. README lists the install commands in the brief's order, and nobody ran those exact commands in this session.
+2. Real mode ran twice, because the first run failed one check by a flaw in the script (see above). Both are reported.
+3. A two-id analysis of the DOCX was added to check `processing_complete` true, and the window plan for 41 ids was added to judge the limit. Neither needed more than a tokenizer or two windows.
+4. API.md changed although the limit did not, because three of its statements went stale: the 25 s load, "nothing has measured the real model", and "the plan's figure and not a measured one".
+5. Three code comments went stale and stay: `config.py` ("Nothing here measured the real model"), `main.py` ("about 25 s") and `analysis_jobs.py` ("about 25 s"). The brief allows no code change except the constant. The next part that edits those files should fix them.
+
+Reviews in this session, with no outside tool.
+- Jury review of the diff. Six reviewers each read it on their own terms, then one verdict. Accuracy: every figure re-derived from the stored run files (hashes, 17 findings, 156 windows, 2,185, 804, 1,123, 1,486, 0.82, 1.2 to 2.2, 1.5 and 3.6 GiB). Found two defects, "8 CPU threads" (torch's default thread count, never compared with the core count) and a committed-memory figure that read 2,208 MiB in one doc and 2,211 MiB in another because they quoted different runs. Both fixed. Honesty: the install commands were not run this session, and the Phases deviation says so. Nothing overclaims, and the cause of the faster second load is marked as not isolated. Consistency: the 2-D, 4-A and 2-C statements were superseded or pointed here, and API.md still said the stored documents "fit in 1 GiB" without the real model's own 1,281 MiB, so a sentence was added. Rules: docs only, no `ml/` path. README usability: the second install command uses `../ml/`, so the whole sequence needs `backend/` as the working directory, and the README said so only for the last command. Fixed. Scope: no code changed, and the three stale comments are listed. Verdict: ship with those four fixes, all applied.
+- ponytail review: the same measurements appeared in four docs, so four cuts were applied. The Phases entry no longer spells out the seven checks and the cancel in full (this entry does), `Architecture.md` lost its per-window sentence (API.md section 8 holds it), and the README's closing paragraph went from two sentences about windows to one. Kept with reasons: the API.md timing paragraph (it is the limit's evidence, and `test_docs.py` pins the constants beside it), the Phases deviations (the brief asks for them), and the throwaway scripts (outside the repository).
+
+Checks:
+- `ruff format --check`: 57 files already formatted. `ruff check`: all checks passed.
+- `pytest` in `backend/.venv`, run after the last edit to every doc that a test reads (`test_docs.py` reads `API.md`, `test_catalogue.py` reads `Phases.md`): 1458 passed, 1 warning, in 79.9 s. The count equals the baseline, because no test changed. The warning is the Starlette `httpx` deprecation that 2-A reported.
+- Frontend: untouched, so its build and tests did not run.
+- Rules section 1 attribution scrub, with the exact command in Rules, over `backend/`, `frontend/` and `docs/app/`: no output. The same pattern over `README.md` and `backend/.env.example`: no output.
+- Tool-name grep, both forms: no output from either.
+- Dash scan for U+2014 and U+2013 over the five changed files (`README.md`, `API.md`, `Architecture.md`, `BuildLog.md`, `Phases.md`): no hit. A control file that holds one of each matched on both of its lines. The scan ran again after this entry was filled in.
+- 2-0A contract-word scan. A throwaway script took capitalised words of five letters or more from the first page of each of the 25 contracts (the first three pages when the first held under 1,500 characters, or the first 3,000 characters of a Word file), kept those that appear in 8 files or fewer and in none of the docs at `HEAD`, took up to 20 per contract (2 to 20 each, 253 distinct words), and searched the 187 lines this part added to the five files. It printed file names, line numbers and columns only, and never a word. All 25 parsed. A control line holding a chosen word was found, and a neutral line was not. Hit lines: 0. The scan ran again after this entry was filled in. Weak spots: the same as in 2-0A (few distinctive words in short files, noisy text layers in scans).
+- Git: `status`, `diff`, `log`, `ls-files` and `show` only. Nothing staged, committed, branched or pushed. `git status --short` lists `README.md` and the four docs below, and no path under `ml/` or `docs/ml/`.
+
+Docs checked for staleness:
+- Changed: `README.md`, `API.md`, `Architecture.md`, `Phases.md` and this entry, as listed above.
+- Checked and left alone: `Rules.md`, `ParserContract.md` and `parser_output.schema.json` (no parser output moved), `FrontendDesign.md`, `DesignSystem.md`, `AnnotationGuidelines.md`, `backend/.env.example`, the requirements files, and `docs/ml/` (Tanishq's). Earlier BuildLog entries stay as they were written. The 2-D entry's "25 s" and "not measured" lines are superseded by this one.
+
+Kept and left in place for later use, outside the repository: `C:\dev\clauseanchor-model\ClauseAnchor_Handoff_v0.zip`, `clauseanchor-candidate-prototype-v0.zip`, `candidate-release\` (32 files, untouched), `venv-real\`, `candidate-receiver-check\` (`report.json` and `manifest.json`), `fixtures\` (the two synthetic files), and `scripts\` with both runs' result JSON and stdout. The throwaway scripts are deleted at the end of the part; the result files stay.
+
+Processes. 19 Python-family runs and 18 PowerShell calls of mine, all exited. The Python-family runs: `pytest` and `ruff check` for the baseline (the `pytest` launcher was PID 6936 and its interpreter 20932), the extraction comparison (twice, at the start and at the end), `pip freeze`, `pip check`, the version print and the four-library import in `venv-real`, the receiver check (launcher 22780, interpreter 19084), the fixture script, two syntax checks that only parse, real-mode run 1 (launcher 14392, interpreter 752), real-mode run 2 (launcher 3120, interpreter 4584), the contract-word scan (twice, before and after this entry was filled in), and the final `ruff format --check`, `ruff check` and `pytest`. The receiver check and the two real-mode runs ran under a wrapper that recorded every PID and descendant it saw and watched free RAM. It would have ended only those PIDs below 1 GiB free or after 40 minutes, and neither happened: the lowest free RAM was 3.63 GiB. The app started 6 parse children, 3 in each real-mode run (launcher PIDs 7480, 11652 and 15324 in run 1, and 16016, 3568 and 14320 in run 2, each with an interpreter child), and the script confirmed they all exited. The tests start their own capped children inside `pytest`, and those are not counted. Of the 18 PowerShell calls, 3 started the long processes above and 15 read file hashes, JSON and the process list. A process-list check after the final suite found no `python`, `pythonw`, `python3`, `py`, `pip`, `pytest`, `ruff`, `uvicorn`, `msedge`, `chrome` or `firefox` process, and none of the PIDs above alive. No browser, no server, nothing killed by name, and no Windows prompt appeared. Peak RAM seen: 1,281 MiB for the API process (1,248 MiB polled during the receiver check).
+
+Blockers: none. Nothing was blocked: all four libraries loaded, no Application Control prompt appeared, and no free-RAM stop fired.
+
+Held `[CONTRACT]` items for Tanishq: none new. `docs/ml/CandidateAPIIntegration.md` still names parser 1.1.0, and the backend parses at 1.2.0 (the 2-0D item stands).
+
+Suggested commit message: `docs: record the first real-mode run with the v0 bundle`. Next action: 2-0C (1.3.0), then 2-E. Aryan still decides the open 2-0D items.

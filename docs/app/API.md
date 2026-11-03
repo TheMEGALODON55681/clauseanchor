@@ -92,7 +92,7 @@ Readiness of the analyzer, the catalogue, the session store and the database.
 | Check | Value | Meaning |
 |---|---|---|
 | `analyzer` | `ok` | The analyzer loaded |
-| | `loading` | The analyzer is still loading. The real model takes about 25 s, and the stub a few milliseconds. The app answers every other route meanwhile |
+| | `loading` | The analyzer is still loading. The real model took 43 s on its first run and 6 s on the second (2-D.1), and the stub takes a few milliseconds. The app answers every other route meanwhile |
 | | `failed` | The load raised, for example a missing directory or a manifest that does not match `CLAUSEANCHOR_ARTIFACTS_SHA256`. The API never falls back to the stub, and the log holds the exception class and nothing else |
 | `catalogue` | `ok` | The catalogue loaded at start |
 | | `missing` | No readable catalogue file |
@@ -483,7 +483,7 @@ One code covers unknown and expired, for two reasons. The frontend mock raises o
 
 ## 8. Limits
 
-These five are constants in `app/config.py`, not settings. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so those values are proposals for Aryan to confirm. Plan 9.3 gives the analysis queue and the time. The time is a proposal as well, because nothing here has measured the real model.
+These five are constants in `app/config.py`, not settings. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so those values are proposals for Aryan to confirm. Plan 9.3 gives the analysis queue and the time, and 2-D.1 checked the time against the real model.
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -493,9 +493,9 @@ These five are constants in `app/config.py`, not settings. Plan 9.2 names a 429 
 | `ANALYSIS_QUEUE_LENGTH` | 2 | Analyses that can wait while one runs (plan 9.3). A further start answers 429 `ANALYSIS_QUEUE_FULL`. A cancelled analysis gives its place back at once |
 | `ANALYSIS_TIMEOUT_SECONDS` | 1800 | Wall-clock limit for one analysis, counted from the moment it starts running and not from the start request. Past it the API stops the analysis and the job ends `timed_out` (section 10) |
 
-The only timing of the real model is Tanishq's smoke run: 9 windows in 3.97 s on his machine, one run (`docs/ml/RealAnalyzer.md`), about 0.44 s a window. At that rate 1,800 s covers about 4,000 windows. The plan's ceiling of 15,000 category-window pairs would take about 110 minutes. So 30 minutes is the plan's figure and not a measured one, and the first real run on the deploy host (4-C) should settle it.
+2-D.1 timed the real model on a laptop with torch's default 8 threads and a batch size of 1. A window took 0.34 to 0.51 s through the API (0.37 and 0.51 s in two runs of the 33-page contract below) and 0.68 s in the receiver check, which times the whole call. A 33-page contract (74,821 characters, 17,350 tokens) plans 50 to 55 windows for each category, so 2,185 for all 41 CUAD categories. That run takes 804 to 1,123 s at the two contract rates and 1,486 s at the receiver-check rate. All three fit in 1,800 s, so the limit stays. The same contract with every category stops fitting when a window costs more than 0.82 s. The plan's ceiling of 15,000 category-window pairs would take 1.5 to 2.8 hours at these rates, so the limit still ends the largest documents the parser accepts. The deploy host is unmeasured, and 4-C times it there.
 
-2-C measured what a stored document costs (`BuildLog.md`). The largest document in the smoke set takes 1.9 MiB, which is about 12 bytes for each character of text. A document at the 500,000-character limit would take about 6.5 MiB. So 25 sessions of 5 documents take 241 MiB at the smoke-set size and about 0.8 GiB at the limit. The stored documents fit in 1 GiB. A parse child at its 1,536 MiB cap does not fit beside them on a 1 GiB host, and 4-B decides what to do about that.
+2-C measured what a stored document costs (`BuildLog.md`). The largest document in the smoke set takes 1.9 MiB, which is about 12 bytes for each character of text. A document at the 500,000-character limit would take about 6.5 MiB. So 25 sessions of 5 documents take 241 MiB at the smoke-set size and about 0.8 GiB at the limit. The stored documents fit in 1 GiB. A parse child at its 1,536 MiB cap does not fit beside them on a 1 GiB host, and 4-B decides what to do about that. With the real model loaded, the API process alone peaks at 1,281 MiB (`Architecture.md` section 5), so real mode needs a larger host than that.
 
 ## 9. Parse jobs
 

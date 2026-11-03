@@ -194,6 +194,8 @@ The switch is `CLAUSEANCHOR_ANALYZER=stub|real`, and the API `mode` comes from i
 
 `/ready` reports the analyzer as `loading` while the worker thread builds it, `ok` once it has loaded, and `failed` if the load raised. An analysis start answers 503 `NOT_READY` until the state is `ok`, and every other route answers meanwhile.
 
+Real mode has run behind the API with the v0 bundle (2-D.1, 3 November 2026, a laptop with torch's default 8 threads and 15.7 GiB of RAM, through `TestClient`). The load took 42.6 s on the first run and 6.2 s on the second. The file cache may have held the 500 MB of weights the second time, which this part did not isolate. The receiver check took 54 s to load. The API process peaked at 1,281 MiB of working set during the load (2,211 MiB committed) and settled near 950 MiB, and analyses did not raise the peak. A parse child for a 33-page PDF peaked at 200 MiB, and the two small fixtures at 29 MiB each. So the API process alone needs a host with more than 1 GiB, and one that also holds that parse child needs about 1.5 GiB before the stored documents. 4-B chooses the host, and 4-C repeats these timings on it.
+
 Findings pass through unchanged. The adapter in `routes.py` and `schemas.py` adds the analysis id, the job status, the timestamps, the jurisdiction, the scope notice, the catalogue version, `processing_complete` and `decision_coverage`, and writes `stub` as `sample`. It never upgrades a status, fills in a confidence or marks a category validated (API.md section 10).
 
 ## 6. Backend tech stack
