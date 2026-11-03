@@ -33,6 +33,12 @@ SWEEP_INTERVAL_SECONDS = 30  # after expiry a session is unreachable at once and
 MAX_UPLOADS_IN_FLIGHT = 4
 MAX_JSON_BODY_BYTES = 64 * 1024
 
+# What a parse may produce (2-R). A stored document costs about 550 bytes a block or node, and
+# 2 bytes a character, so a file of many short blocks takes many times the RAM its text suggests.
+# The parse child refuses a document whose blocks and nodes together pass this. The 25 contracts
+# peak at 385, and the largest document measured at the limit stores as 11.5 MiB.
+MAX_BLOCKS_AND_NODES = 20_000
+
 # Analysis limits, constants and not variables (D8 names none). Plan 9.3 gives the queue and the
 # 30 minutes. The real model ran in 2-D.1: the slowest analysis took 80.4 s, and a 33-page contract
 # with all 41 CUAD categories plans 2,185 windows, 804 to 1,123 s (BuildLog, 2-D.1).

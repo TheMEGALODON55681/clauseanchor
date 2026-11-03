@@ -3416,3 +3416,78 @@ Processes. Python-family processes of my own, counted by hand from my calls, so 
 Suggested commit message for this commit: `fix(api): read JSON bodies after the bearer check and cap uploads`.
 
 Next action: Aryan commits this step and replies "committed, next". Commit 2 is `fix(api): refuse files that parse to too many blocks and nodes` (R3).
+
+
+## 2026-11-03: Part 2-R, step 2, commit 2 of 8 (R3)
+
+Part: 2-R, step 2, commit 2. It closes R3: a file of many small blocks costs 7 to 21 times the RAM that the sizing assumes, and the parent built and stored all of it. Start: `main` at `cb80103` (commit 1), tree clean, and that commit is the latest on `backend/` and `docs/app/`. Baseline in `backend/.venv`: 1645 passed, 27 skipped, 1 warning (the Starlette `httpx` one), in 122.0 s. `ruff check` clean, `ruff format --check` 62 files already formatted. Nothing in `ml/`, `docs/ml/` or `frontend/` changed, no dependency changed, and no parser output changed (the parser stays at 1.3.0).
+
+### Measurements, before any code
+
+Made-up DOCX files, with no contract text, each parsed in its own Python process. The stored size is the `tracemalloc` figure after `from_json`, the way 2-C measured it. Numbers only.
+
+| File | Blocks | Nodes | Characters | Stored | Per character |
+|---|---|---|---|---|---|
+| 20,000 paragraphs of 5 characters | 20,000 | 0 | 119,999 | 10.76 MiB | 94.0 bytes |
+| 999 clauses with 9 sub-clauses each | 9,990 | 9,990 | 362,555 | 10.30 MiB | 29.8 bytes |
+| 20,000 paragraphs of 24 characters | 20,000 | 0 | 499,999 | 11.48 MiB | 24.1 bytes |
+| 2 paragraphs of 249,999 characters | 2 | 0 | 499,999 | 0.96 MiB | 2.0 bytes |
+
+A block or a node costs about 550 bytes and a character about 2. The 2-C figure of 12 bytes a character is an average over PDFs with about 45 characters in a block. A file of 20,001 paragraphs parses in 0.23 s, so the check costs the child almost nothing.
+
+At the limit the largest document measured is 11.48 MiB. 125 of them (25 sessions of 5) take 1,435 MiB, which is 1.40 GiB. Ordinary files at the 500,000-character limit take the 0.8 GiB that the docs already gave.
+
+### Red run, before the check
+
+The constant and its import went in first, with no check, so the new tests fail on behaviour and not on a missing name. Run before the check: 3 failed and 79 passed, over `test_parse_worker.py`, `test_docs.py` and the one new API test.
+- Failed, `test_blocks_plus_nodes_over_the_limit_give_an_error_and_no_document`: `AssertionError: a document over the limit was serialised`. The inclusive step passed first (a limit equal to the total still gave a document), and the next step showed the child serialising a document it should refuse.
+- Failed, `test_a_file_of_too_many_blocks_fails_its_job_and_leaves_no_document`: `assert None == {'code': 'TOO_MUCH_TEXT', ...}`. A file of 20,001 paragraphs parsed, and its job carried no error.
+- Failed, `test_api_md_names_each_limit_with_its_value`: `MAX_BLOCKS_AND_NODES` was missing from `API.md` section 8.
+
+### What changed
+
+- `config.py`: `MAX_BLOCKS_AND_NODES` (20,000), a constant like the other limits. The comment gives the cost of a block and the measured size at the limit.
+- `parse_worker.py`: `run` counts `len(blocks) + len(nodes)` after the parse. Past the limit it returns `{"error": "TOO_MUCH_TEXT"}` and never calls `to_json`. The check sits inside the existing `try`, so a `MemoryError` still gives `PARSE_MEMORY_LIMIT`. The parent needed no change: `TOO_MUCH_TEXT` is in `CHILD_CODES`, has its fixed message in `JOB_ERRORS` and is not retryable.
+- Tests: one in `test_parse_worker.py` (the limit is inclusive, nodes count, and no document is serialised past it), one in `test_documents_api.py` (20,001 paragraphs through the app and a real child: the job fails with the fixed `TOO_MUCH_TEXT` error, and the document has status `failed` and no `parsed`), and the new limit in the `test_docs.py` pin.
+- Docs: `API.md` (the `TOO_MUCH_TEXT` row of the job error table, section 8 with eight limits and the new row, and the sizing paragraph), `Architecture.md` (the config, parse worker and test lists, the parse child row and the storage row) and `Phases.md` (2-R item 2).
+
+### Reviews in this session, with no outside tool
+
+- Mutation check on the new code. Nine mutants on copies in the session scratchpad, run against the three test targets, one pytest process each. 9 killed and 0 survived. The unmutated copy passed first. Killed: `>=` for `>` (M1), blocks only (M2), nodes only (M3), a check that never fires (M4), the wrong error code (M5), a document sent beside the error (M6), the limit doubled (M7) and one higher (M8) in `config.py`, which the docs pin catches, and blocks plus decorations (M9).
+- Jury review of the diff. Five readings, then one verdict.
+  - Correctness: the check is inside the `try`, after the parse and before the serialisation. 20,000 passes and 20,001 fails. `TOO_MUCH_TEXT` reaches the job unchanged through `_read`.
+  - Security: the reply carries a code and no text, and no log line was added. The child still pays for the parse inside its memory cap and kill, and the parent never builds the JSON of a refused file.
+  - Compatibility: parser output, `parser_version`, `ParserContract.md` and the JSON Schema stay as they are, because the check belongs to the API's child and not to the parser. A file that used to parse and store now fails its job. `Phases.md` gives the UI string for this code as "This file is too large or complex to process", which fits, and 4-C checks it.
+  - Tests: the mutation check above. One gap: no test sends exactly 20,000 blocks through the real constant. The inclusive step uses a patched limit, and the pin in `test_docs.py` ties the constant to its documented value.
+  - Docs: the 12 byte claim in `API.md` section 8 and in the `Architecture.md` storage row now says where it holds, and the new row is in the table that `test_docs.py` reads.
+  - Verdict: no defect, no change.
+- Ponytail review of the diff. Kept: the check in the child (six lines, and the parent needs nothing), and the end-to-end test, which is the only one that uses the real constant and a real child. Cut or not added: a `Settings` field (the other limits are constants), a second check in the parent (the child already refuses), a test with exactly 20,000 blocks (a second 20,000-paragraph parse for no new branch), a new error code or message (this one is shared with the parser's own limits, and the UI string already says "complex"), and a check before the parse (the count needs the parsed document).
+
+### Differences from the step 1 fix
+
+- Step 1 said to correct the 12 byte claims. That is done in `API.md` section 8 and in the storage row of `Architecture.md`. They now say that 12 bytes a character holds for text-heavy files, that a block or node costs about 550 bytes, and that 125 documents at the limit take 1.4 GiB.
+- Step 1 used 0.8 GiB for the store in the host sum of R22 and said R3 removes the dense-file case. R3 bounds that case at 11.5 MiB a document and does not remove it. For a store full of the densest files the sum becomes 1.28 + 1.50 + 1.40 + 0.03 + 0.08 = 4.29 GiB, against 3.69 GiB for ordinary files. The 6 GiB recommendation covers both, and the 4 GiB minimum covers ordinary files only. Commit 8 records both figures under 4-B.
+- R3 closes two of the three costs that R13 lists against the opening sentence of `API.md` section 9 and the `README.md` line (the child's JSON and the stored document). The ZIP listing (R20) stays. Commit 8 rewrites both sentences.
+
+### Checks
+
+- `pytest` in `backend/.venv`, full suite, after the last edit to `API.md` and `Phases.md`: 1647 passed, 27 skipped, 1 warning, in 121.2 s. That is 2 more than the baseline (one in `test_parse_worker.py`, one in `test_documents_api.py`). `ruff check` clean and `ruff format --check` 62 files already formatted.
+- Rules section 1 attribution scrub, with the command in `Rules.md`, over `backend/`, `frontend/` and `docs/app/`: no output.
+- Tool-name grep, both forms: no output from either.
+- Dash scan for U+2014 and U+2013 over the added lines of the 9 changed files: no hit, with a control string that holds both dashes matching.
+- 2-0A contract-word scan: the first page of each of the 25 contracts (the first three pages when page 1 held under 1,500 characters, or the first 3,000 characters of a Word file), words of five letters or more kept when they appear in 8 files or fewer and in no doc at `HEAD`, up to 20 per contract (245 distinct words), searched over every added line of the 9 files. It printed positions only. A control line holding a chosen word was found and a neutral line was not. Hits: 0. The scan ran again after the last edit to this entry.
+- Docs prose: the three writing passes run in commit 8 over all the prose that 2-R added, as decision 7 says. This entry and the doc edits were checked by hand against the plain-language rules: short sentences, active voice, a figure where a word would do.
+- Git: `status`, `diff`, `log` and `show` only. Nothing staged, committed, branched or pushed. `git status --short` lists the 3 test files, `config.py`, `parse_worker.py`, `API.md`, `Architecture.md`, `BuildLog.md` and `Phases.md`, and no path under `ml/`, `docs/ml/` or `frontend/`.
+
+### Not verified
+
+- A real PDF of many short blocks. The probes are made-up DOCX files. The check reads the parsed document, so it treats a PDF the same way, and a PDF at 20,000 blocks within 100 pages and 500,000 characters needs a block every 25 characters.
+- The stored sizes count Python allocations only, as 2-C did. Allocator overhead adds to them, and so does non-ASCII text (up to 4 bytes a character). The 1.4 GiB is the figure for ASCII text.
+- The child's own peak for a file just over the limit. The end-to-end test ran under the default 1,536 MiB cap and passed, and the peak was not read. The probes ran in one process with no cap.
+- Behaviour under a real server, as in commit 1.
+
+Processes. Python-family processes of my own, counted by hand from my calls, so the figure is approximate: about 31 started, and none was left running. They were `pytest` (the baseline, the red run, the green run of the four touched files, the final suite, and 10 in the mutation check), `ruff` (6 runs), the sizing probe (7, one per file shape), the mutation driver (1) and the combined dash and contract-word scan (3). The tests start their own capped parse children inside `pytest`, and the `spawned` fixture checks that none outlives its test. One PowerShell call read the process list after the final suite and found no `python`, `pytest`, `ruff`, `pip` or `uvicorn` process. It listed 4 `node` processes, MCP servers that the desktop app runs for itself, and 9 `msedge.exe` processes, which are Aryan's own Edge. None is mine. No browser and no server ran, and nothing was killed by image name.
+
+Suggested commit message for this commit: `fix(api): refuse files that parse to too many blocks and nodes`.
+
+Next action: Aryan commits this step and replies "committed, next". Commit 3 is `fix(parser): bound the party search to the first 20,000 characters` (R4, parser 1.4.0).

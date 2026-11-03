@@ -20,7 +20,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.errors import ERRORS, JOB_ERRORS
-from app.config import MAX_DOCUMENTS_PER_SESSION, Settings
+from app.config import MAX_BLOCKS_AND_NODES, MAX_DOCUMENTS_PER_SESSION, Settings
 from app.main import create_app
 from app.parsing import parse_document
 from app.parsing.schema import to_json
@@ -411,6 +411,22 @@ def test_a_document_that_failed_has_no_output(
     token = open_session(client)
     document_id, job_id = upload(client, token, fixture_bytes["scanned.pdf"])
     settled(client, token, job_id)
+    body = get_document(client, token, document_id).json()
+    assert (body["status"], body["parsed"]) == ("failed", None)
+
+
+def test_a_file_of_too_many_blocks_fails_its_job_and_leaves_no_document(
+    client: TestClient,
+) -> None:
+    token = open_session(client)
+    paragraphs = "<w:p><w:r><w:t>Text.</w:t></w:r></w:p>" * (MAX_BLOCKS_AND_NODES + 1)
+    document_id, job_id = upload(client, token, build_docx(paragraphs))
+    message, retryable = JOB_ERRORS["TOO_MUCH_TEXT"]
+    assert settled(client, token, job_id)["error"] == {
+        "code": "TOO_MUCH_TEXT",
+        "message": message,
+        "retryable": retryable,
+    }
     body = get_document(client, token, document_id).json()
     assert (body["status"], body["parsed"]) == ("failed", None)
 

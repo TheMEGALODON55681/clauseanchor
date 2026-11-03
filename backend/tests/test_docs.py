@@ -8,6 +8,7 @@ from app.api.errors import ERRORS, JOB_ERRORS
 from app.config import (
     ANALYSIS_QUEUE_LENGTH,
     ANALYSIS_TIMEOUT_SECONDS,
+    MAX_BLOCKS_AND_NODES,
     MAX_DOCUMENTS_PER_SESSION,
     MAX_JSON_BODY_BYTES,
     MAX_SESSIONS,
@@ -53,6 +54,7 @@ def test_api_md_names_each_limit_with_its_value(api_md: str) -> None:
         "ANALYSIS_TIMEOUT_SECONDS": ANALYSIS_TIMEOUT_SECONDS,
         "MAX_UPLOADS_IN_FLIGHT": MAX_UPLOADS_IN_FLIGHT,
         "MAX_JSON_BODY_BYTES": MAX_JSON_BODY_BYTES,
+        "MAX_BLOCKS_AND_NODES": MAX_BLOCKS_AND_NODES,
     }
     assert [n for n, v in limits.items() if f"`{n}` | {v} |" not in api_md] == []
 

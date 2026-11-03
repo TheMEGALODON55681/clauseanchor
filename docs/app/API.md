@@ -270,7 +270,7 @@ A job fails with one of these codes. They are not HTTP errors, and the reply to 
 | `ENCRYPTED_PDF` | no | The PDF needs a password to open |
 | `SCANNED_PDF` | no | Every page with content is scanned, so there is no text to read |
 | `TOO_MANY_PAGES` | no | The PDF has more than 100 pages |
-| `TOO_MUCH_TEXT` | no | The file holds more text than the parser reads: 8 MiB of decoded PDF page content, 100,000 DOCX paragraphs or 500,000 characters |
+| `TOO_MUCH_TEXT` | no | The file holds more than the API processes: 8 MiB of decoded PDF page content, 100,000 DOCX paragraphs or 500,000 characters (the parser's limits), or more than `MAX_BLOCKS_AND_NODES` blocks and nodes (section 8) |
 | `ARCHIVE_TOO_LARGE` | no | The DOCX package expands to more than 100 MiB |
 | `ARCHIVE_UNSAFE` | no | A member of the DOCX package has an unsafe name or an unsupported compression method |
 | `TRACKED_CHANGES_PRESENT` | no | The DOCX has tracked changes. Accept all changes and upload it again |
@@ -494,7 +494,7 @@ One code covers unknown and expired, for two reasons. The frontend mock raises o
 
 ## 8. Limits
 
-These seven are constants in `app/config.py`, not settings. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so those values are proposals for Aryan to confirm. Plan 9.3 gives the analysis queue and the time, and 2-D.1 checked the time against the real model. The last two came with the 2-R review.
+These eight are constants in `app/config.py`, not settings. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so those values are proposals for Aryan to confirm. Plan 9.3 gives the analysis queue and the time, and 2-D.1 checked the time against the real model. The last three came with the 2-R review.
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -505,10 +505,11 @@ These seven are constants in `app/config.py`, not settings. Plan 9.2 names a 429
 | `ANALYSIS_TIMEOUT_SECONDS` | 1800 | Wall-clock limit for one analysis, counted from the moment it starts running and not from the start request. Past it the API stops the analysis and the job ends `timed_out` (section 10) |
 | `MAX_UPLOADS_IN_FLIGHT` | 4 | Uploads the API takes at once, from the bearer check to the reply. A fifth gets 429 `QUEUE_FULL`, and the server reads none of its body. Each upload holds its body twice while the chunks join, so 4 hold at most 80 MiB. The limit covers all sessions together |
 | `MAX_JSON_BODY_BYTES` | 65536 | Largest JSON request body (64 KiB), today the analysis start. The API stops reading at this size and answers 422 `VALIDATION_ERROR` |
+| `MAX_BLOCKS_AND_NODES` | 20000 | Blocks plus structure nodes that a parsed document may hold. The parse child counts them after the parse. Past the limit it sends `TOO_MUCH_TEXT` and no document, so the API never receives or stores one. The 25 contracts peak at 385 |
 
 2-D.1 timed the real model on a laptop with torch's default 8 threads and a batch size of 1. A window took 0.34 to 0.51 s through the API (0.37 and 0.51 s in two runs of the 33-page contract below) and 0.68 s in the receiver check, which times the whole call. A 33-page contract (74,821 characters, 17,350 tokens) plans 50 to 55 windows for each category, so 2,185 for all 41 CUAD categories. That run takes 804 to 1,123 s at the two contract rates and 1,486 s at the receiver-check rate. All three fit in 1,800 s, so the limit stays. The same contract with every category stops fitting when a window costs more than 0.82 s. The plan's ceiling of 15,000 category-window pairs would take 1.5 to 2.8 hours at these rates, so the limit still ends the largest documents the parser accepts. The deploy host is unmeasured, and 4-C times it there.
 
-2-C measured what a stored document costs (`BuildLog.md`). The largest document in the smoke set takes 1.9 MiB, which is about 12 bytes for each character of text. A document at the 500,000-character limit would take about 6.5 MiB. So 25 sessions of 5 documents take 241 MiB at the smoke-set size and about 0.8 GiB at the limit. The stored documents fit in 1 GiB. A parse child at its 1,536 MiB cap does not fit beside them on a 1 GiB host, and 4-B decides what to do about that. With the real model loaded, the API process alone peaks at 1,281 MiB (`Architecture.md` section 5), so real mode needs a larger host than that.
+2-C measured what a stored document costs (`BuildLog.md`). The largest document in the smoke set takes 1.9 MiB, which is about 12 bytes for each character of text. A document at the 500,000-character limit would take about 6.5 MiB at that ratio. So 25 sessions of 5 documents take 241 MiB at the smoke-set size and about 0.8 GiB at the limit. The ratio holds for text-heavy files only. A block or node costs about 550 bytes whatever its length, so a file of many short blocks costs far more for each character: 94 bytes at 6 characters a block. `MAX_BLOCKS_AND_NODES` bounds that. Made-up DOCX files at the limit stored as 10.3 MiB (9,990 blocks and 9,990 nodes), 10.8 MiB (20,000 blocks of 5 characters) and 11.5 MiB (20,000 blocks of 24 characters, 499,999 in all). So 125 documents at both limits take 1.4 GiB. The stored documents fit in 1 GiB for ordinary files, and a store full of the densest files does not. A parse child at its 1,536 MiB cap does not fit beside them on a 1 GiB host, and 4-B decides what to do about that. With the real model loaded, the API process alone peaks at 1,281 MiB (`Architecture.md` section 5), so real mode needs a larger host than that.
 
 ## 9. Parse jobs
 
