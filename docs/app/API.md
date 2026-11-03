@@ -635,7 +635,7 @@ Validation, each failure a 422 `VALIDATION_ERROR`:
 - A `selected_span` that breaks `0 <= start < end <= len(source_text)`.
 - Any field the table does not list. `alias_spans` is not part of the shape until 3-A decides the short-name question (`Phases.md`, 3-A).
 
-Open for 3-A: the mock's "None of these" choice sends `party_node_id: null`, and the one-field rule has no spelling for it yet.
+**None of these** (Aryan, 3 November 2026). When the user picks none of the detected parties, no binding exists. The client sends no binding request, and the analysis runs with no party, so polarity is not shown. If a binding exists and the user changes their mind, the client deletes it, and part 3-A defines that delete. The request keeps the rule above: exactly one of `party_node_id` or `selected_span`. The mock's `party_node_id: null` is not a valid body.
 
 ## 13. Reserved names
 
