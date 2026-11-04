@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import unicodedata
 from bisect import bisect_right
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -62,7 +63,9 @@ _MEDIA_TYPES = {
 }
 _FILENAME_STAR = re.compile(r"filename\*\s*=\s*utf-8''([^;\s]*)", re.IGNORECASE)
 _PATH_SEPARATORS = re.compile(r"[\\/]")
-_CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f]")
+# The Unicode categories a name never keeps: controls, format characters (U+202E, U+200B),
+# surrogates, private use, unassigned code points, and the line and paragraph separators
+_HIDDEN_CATEGORIES = frozenset({"Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp"})
 
 
 def _utc(seconds: float) -> datetime:
@@ -86,14 +89,19 @@ def _document_json(doc: ParsedDocument) -> dict[str, Any]:
 def _filename(content_disposition: str | None, extension: Literal["pdf", "docx"]) -> str:
     """The name from `filename*=UTF-8''...` (RFC 5987), cleaned, or `document.pdf` or
     `document.docx`. A plain `filename=` is not read. The name is for display only: it keeps no
-    directory part and no control character, and it lives in RAM (Rules section 5)."""
+    directory part and no control or invisible character, and it lives in RAM (Rules section 5)."""
     found = _FILENAME_STAR.search(content_disposition or "")
     if found:
         try:
             name = unquote(found.group(1), encoding="utf-8", errors="strict")
         except UnicodeDecodeError:
             name = ""
-        name = _CONTROL_CHARACTERS.sub("", _PATH_SEPARATORS.split(name)[-1])[:255].strip()
+        shown = (
+            c
+            for c in _PATH_SEPARATORS.split(name)[-1]
+            if unicodedata.category(c) not in _HIDDEN_CATEGORIES
+        )
+        name = "".join(shown)[:255].strip()
         if name.strip("."):
             return name
     return f"document.{extension}"
@@ -255,9 +263,12 @@ async def _take_upload(request: Request, session: Session) -> Upload | JSONRespo
     job_id = None if document is None else store.add_job(document.id, "parse")
     if document is None or job_id is None:  # the session ended while the body arrived
         return error_response("SESSION_INVALID", headers={"WWW-Authenticate": "Bearer"})
-    if not request.app.state.parse_queue.submit(document.id, job_id, data):
+    parse_queue = request.app.state.parse_queue
+    if not parse_queue.submit(document.id, job_id, data):
         store.delete_document(session.id, document.id)
         return error_response("QUEUE_FULL")
+    if store.get_job(session.id, job_id) is None:  # a delete landed before the submit
+        parse_queue.kill_documents([document.id])  # so the queue drops the bytes now
     return Upload(
         document_id=document.id, parse_job_id=job_id, expires_at=_utc(document.expires_at)
     )
@@ -406,6 +417,8 @@ def start_analysis(
     if not queue.submit(job_id, document.id, parsed, ids, body.jurisdiction_scope):
         store.delete_job(job_id)
         return error_response("ANALYSIS_QUEUE_FULL")
+    if store.get_job(session.id, job_id) is None:  # a delete landed before the submit
+        queue.cancel_documents([document.id])  # so the queue drops the text now
     return NewAnalysis(analysis_id=analysis_id, job_id=job_id)
 
 

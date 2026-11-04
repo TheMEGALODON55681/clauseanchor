@@ -15,6 +15,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -240,6 +241,9 @@ def test_a_refusal_never_repeats_the_name_or_the_content(client: TestClient) -> 
 # The file name
 
 
+# A Devanagari name with its combining marks, a space and the rupee sign
+KEPT = "".join(map(chr, (0x905, 0x928, 0x941, 0x92C, 0x902, 0x927, 0x20, 0x20B9))) + ".pdf"
+
 NAMES = [
     ("attachment; filename*=UTF-8''Master%20Agreement.pdf", "Master Agreement.pdf"),
     ("attachment; filename*=utf-8''Rs%E2%82%B9.pdf", "Rs" + chr(0x20B9) + ".pdf"),
@@ -254,7 +258,24 @@ NAMES = [
     ("attachment", "document.pdf"),
     ("this is not a header value", "document.pdf"),
     ("attachment; filename*=UTF-8''" + "a" * 300 + ".pdf", "a" * 255),
+    # Letters, marks and symbols stay: Devanagari with its combining marks, and the rupee sign
+    ("attachment; filename*=UTF-8''" + quote(KEPT), KEPT),
 ]
+
+
+# Every Unicode "other" character goes, and so do the line and paragraph separators, so the
+# name has nothing that reorders or hides part of it (R24): U+202E, U+0085, U+2028, U+2029,
+# U+200B, the private use U+E000 and the unassigned U+0378. They go before the cut at 255.
+NAMES += [
+    ("attachment; filename*=UTF-8''a" + quote(chr(code)) + "b.pdf", "ab.pdf")
+    for code in (0x202E, 0x0085, 0x2028, 0x2029, 0x200B, 0xE000, 0x0378)
+]
+NAMES.append(
+    (
+        "attachment; filename*=UTF-8''" + "a" * 250 + quote(chr(0x200B)) + "b" * 10,
+        "a" * 250 + "b" * 5,
+    )
+)
 
 
 @pytest.mark.parametrize(("header", "expected"), NAMES)
@@ -522,6 +543,28 @@ def test_deleting_a_document_mid_parse_kills_its_child(
     assert client.delete(f"{DOCS}/{document_id}", headers=bearer(token)).status_code == 204
     assert [child.poll() is not None for child in spawned] == [True]
     assert not process_alive(pid)
+    assert_error(get_job(client, token, job_id), 404, "NOT_FOUND")
+
+
+def test_a_delete_between_the_insert_and_the_queue_leaves_no_bytes_on_the_item(
+    make_client: MakeClient, hanging: Callable[[], int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = make_client()
+    token = open_session(client)
+    upload(client, token, b"%PDF-1.4 a")
+    hanging()  # the worker is inside the first parse, so the next upload waits in the queue
+    store, queue = client.app.state.store, client.app.state.parse_queue
+    session_id = store.get_session(token).id
+    real_submit = queue.submit
+
+    def submit_after_delete(document_id: str, job_id: str, data: bytes) -> bool:
+        store.delete_document(session_id, document_id)  # the delete that wins the race (R7)
+        return real_submit(document_id, job_id, data)
+
+    monkeypatch.setattr(queue, "submit", submit_after_delete)
+    document_id, job_id = upload(client, token, b"%PDF-1.4 b")
+    item = queue._items[document_id]
+    assert (item.data, item.stopped_by) == (None, "gone")
     assert_error(get_job(client, token, job_id), 404, "NOT_FOUND")
 
 

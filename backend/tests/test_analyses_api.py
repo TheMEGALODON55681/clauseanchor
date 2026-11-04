@@ -656,6 +656,29 @@ def test_deleting_the_document_mid_analysis_cancels_it(
     assert_error(real.get(f"/api/v1/jobs/{job_id}", headers=bearer(token)), 404, "NOT_FOUND")
 
 
+def test_a_delete_between_the_insert_and_the_queue_leaves_no_text_on_the_item(
+    real: TestClient, fake_core: FakeCore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_core.behave = fake_core.gated
+    first, second = open_session(real), open_session(real)
+    started(real, first, new_document(real, first).id)
+    wait_until(fake_core.running.is_set)  # the worker is busy, so the next job waits in the queue
+    store, queue = real.app.state.store, real.app.state.analysis_queue
+    session_id = store.get_session(second).id
+    real_submit = queue.submit
+
+    def submit_after_delete(job_id: str, document_id: str, *rest: object) -> bool:
+        store.delete_document(session_id, document_id)  # the delete that wins the race (R7)
+        return real_submit(job_id, document_id, *rest)
+
+    monkeypatch.setattr(queue, "submit", submit_after_delete)
+    _, job_id = started(real, second, new_document(real, second).id)
+    item = queue._items[job_id]
+    assert (item.parsed, item.stopped_by) == (None, "gone")
+    assert_error(real.get(f"/api/v1/jobs/{job_id}", headers=bearer(second)), 404, "NOT_FOUND")
+    fake_core.release.set()
+
+
 def test_deleting_the_session_mid_analysis_cancels_it(
     real: TestClient, fake_core: FakeCore
 ) -> None:

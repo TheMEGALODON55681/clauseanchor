@@ -3579,3 +3579,76 @@ Processes. Python-family processes of my own, counted by hand from my calls, so 
 Suggested commit message for this commit: `fix(parser): bound the party search to the first 20,000 characters`.
 
 Next action: Aryan commits this step and replies "committed, next". Commit 4 is `fix(api): drop queued text when a document is deleted mid-start` (R7, R24).
+
+
+## 2026-11-04: Part 2-R, step 2, commit 4 of 8 (R7 and R24)
+
+Part: 2-R, step 2, commit 4. It closes R7 (a delete that lands between the store insert and the queue submit left the upload bytes or the parsed text on the queue item until the worker took it) and R24 (the file name kept Unicode control and invisible characters). Start: `main` at `5c73e37` (commit 3), tree clean, and that commit is the latest on `backend/` and `docs/app/`. Baseline in `backend/.venv`: 1719 passed, 27 skipped, 1 warning (the Starlette `httpx` one), in 319.7 s. The `ruff check` of the start run came after I had begun editing the new tests, and its only two findings were in those new lines (ambiguous characters in string literals, since fixed), so the rest of the tree was clean. The final run below covers everything. Nothing in `ml/`, `docs/ml/` or `frontend/` changed, no dependency changed, and parser output is unchanged (parser 1.4.0).
+
+### The gap, read before any code
+
+The upload stores the document (`add_document`), stores the parse job (`add_job`) and then calls `ParseQueue.submit`. The analysis start stores the job (`add_analysis_job`) and then calls `AnalysisQueue.submit`. A delete that lands between the store step and `submit` runs `on_drop` while the queue holds no item, so nothing is halted. `submit` then accepts the item with its bytes or its parsed document. The worker drops it when it reaches the item and `start_job` finds no row: after up to 1,800 s of analysis ahead of it, or up to three parses of 120 s. Step 1 reproduced this on both queues.
+
+The fix is in the two routes, as step 1 proposed. After a successful `submit`, the route reads the job back with `store.get_job`. If the job is gone, it calls `kill_documents` (parse) or `cancel_documents` (analysis). That is complete because `submit` registers the item before the read-back, and a delete and `get_job` both take the store lock. At the read-back the delete has either finished (the row is gone, and the route calls the hook) or not started (and its own `on_drop` then finds the item). The calls sit outside the store lock and outside the queue lock, so the lock order (the store's, then one queue's) is unchanged.
+
+### Red run, before the change
+
+New tests only, selected with `-k`, run before any change to `app/`: 8 failed and 14 passed.
+- Failed, six name cases, one per character: `AssertionError: assert 'a\u202eb.pdf' == 'ab.pdf'`, and the same for U+0085, U+2028, U+2029, U+200B and U+0378.
+- Failed, `test_a_delete_between_the_insert_and_the_queue_leaves_no_bytes_on_the_item`: `assert (b'%PDF-1.4 b', None) == (None, 'gone')`. The item held the upload.
+- Failed, `test_a_delete_between_the_insert_and_the_queue_leaves_no_text_on_the_item`: the item held the `ParsedDocument`, and `stopped_by` was `None`.
+- Passed on purpose, as controls: the 13 names of 2-A to 2-C, and a Devanagari name with combining marks, a space and the rupee sign (letters, marks and symbols stay).
+
+Both race tests make the gap happen in the real order. They wrap the queue's `submit` so that the delete runs first and the real `submit` runs after it. The worker is busy with a first job (a child that hangs, and a gated fake core), so the second item waits and nothing else clears it. Two name cases were added after the red run, to close gaps that the mutation check showed: the private use character U+E000, and a name of 260 characters with an invisible one at position 250 (the removal must come before the cut at 255). They pass on the new code and were not run red.
+
+### What changed
+
+- `routes.py` (R7): `_take_upload` and `start_analysis` read the job back after a successful `submit`, and call `parse_queue.kill_documents([document.id])` or `queue.cancel_documents([document.id])` when it is gone. The reply does not change.
+- `routes.py` (R24): `_CONTROL_CHARACTERS`, which held the ASCII controls, becomes `_HIDDEN_CATEGORIES`: the Unicode categories `Cc`, `Cf`, `Cs`, `Co` and `Cn` (every category that starts with C) and `Zl` and `Zp` (U+2028 and U+2029). `_filename` drops each character in those categories, after the split at the last separator and before the cut at 255 and the trim, the order the old code had.
+- Tests: two race tests (`test_documents_api.py` and `test_analyses_api.py`) and nine more name cases in `test_documents_api.py` (the rupee and Devanagari control, seven characters one by one, and the 260 character name).
+- Docs: `API.md` (the name rule, and the delete bullets of sections 9 and 10), `Architecture.md` (the store lock row, the `routes.py` line and the two test lines) and `Phases.md` (2-R item 4).
+
+### Differences from the step 1 fix
+
+- Step 1 wrote "every character whose Unicode category starts with C, plus U+2028 and U+2029". It is built as an explicit set of the seven categories. The characters are the same, and no separator character has to appear in the source file.
+- A start or an upload that loses the race still answers 202, and the job then reads 404. Step 1 did not say. A 404 on the upload would be an API change that no client needs, and it would not stop the leak.
+
+### Reviews in this session, with no outside tool
+
+- Mutation check on the new code. 14 mutants on copies of `app/` and `tests/` in the session scratchpad, run against the two API test files (116 tests), one pytest process each. The unmutated copy passed first. 13 killed and 1 survived.
+  - Killed: no kill after the read-back on the parse route (P1), the parse read-back inverted (P2), the parse hook given no document (P3), the same three on the analysis route (A1 to A3), `Cc`, `Cf`, `Co`, `Cn`, `Zl` and `Zp` each left out of the set (F1, F2, F4 to F7), and the cut at 255 moved before the removal (F8).
+  - Survived: F3, `Cs` left out. It is an equivalent mutant. The name is decoded as strict UTF-8, which rejects every surrogate (`%ED%A0%80` and `%ED%BF%BF` both raise `UnicodeDecodeError`), so no surrogate reaches the filter. `Cs` stays in the set so that the set matches the rule "every category that starts with C".
+  - The first run of the driver stopped on a bug in the driver itself (`Path.read_text` has no `newline` argument on this Python) before it started a test. Its process ledger was empty, and it ran again.
+- Jury review of the diff. Five readings, then one verdict.
+  - Correctness: the order argument above holds. `kill_documents` and `cancel_documents` are safe to run twice, because `_halt` keeps the first stop reason and clears the bytes or the text again to no effect. If the delete lands after `submit` and before the read-back, `on_drop` has already halted the item, and the second call repeats that. The second `kill_documents` can wait up to 5 s for a child on the event loop, but the first call has already waited for it, so it returns at once.
+  - Security: no log line was added and no reply carries text. The leak (document text on a queue item after a delete) is closed and no longer bounded by the queue wait. The name filter removes the characters that reorder or hide part of a name (U+202E) and the ones that split a line (U+2028, U+0085). The name stays data that the frontend must escape, as `API.md` says.
+  - Compatibility: no field, status or reply changes. Two display costs for names, both accepted. The format category holds the zero-width joiner and non-joiner, the directional marks, the soft hyphen and the byte order mark, so a name that uses them shows without them. `Cn` follows the interpreter's Unicode data (15.0 on Python 3.12.10), so a character that a later Unicode version assigns is dropped until the interpreter moves. `API.md` names the joiners and the marks.
+  - Tests: the mutation check above. What it does not reach is a race on a real connection, and a session delete or an expiry in the same window, which use the same two lines.
+  - Docs: every line that the change made stale moved with it (the name rule, both delete bullets, and the store lock row that said the hook covers every way out of the store).
+  - Verdict: no defect. One wording change applied: `API.md` names the directional marks as well as the joiners.
+- Ponytail review of the diff. Kept: the read-back in the two routes (two lines each, reusing `get_job`, `kill_documents` and `cancel_documents`), and one `frozenset` in place of the old regex, with no helper function. Cut or not added: a store method that tests whether a job exists (`get_job` does it), a check inside `submit` (it would take the store lock under the queue lock and break the lock order), a 404 reply for the lost race, a `Settings` field for the name length, Unicode normalisation of names (not asked), and a test of the session delete in the same gap.
+
+### Checks
+
+- `pytest` in `backend/.venv`, full suite, after the last edit to the docs that tests read (`API.md` and `Phases.md`): 1730 passed, 27 skipped, 1 warning, in 329.95 s. That is 11 more than the baseline: nine name cases (22 against 13) and the two race tests. `ruff check` clean and `ruff format --check` 62 files already formatted. `test_openapi_export.py` passes, and `docs/app/openapi.json` is unchanged, because no route signature, docstring or schema changed.
+- Rules section 1 attribution scrub, with the command in `Rules.md`, over `backend/`, `frontend/` and `docs/app/`: no output.
+- Tool-name grep, both forms: no output from either.
+- Dash scan for U+2014 and U+2013 over the added lines of the 7 changed files: no hit, with a control string that holds both dashes matching.
+- 2-0A contract-word scan: the first page of each of the 25 contracts (the first three pages when page 1 held under 1,500 characters, or the first 3,000 characters of a Word file), words of five letters or more kept when they appear in 8 files or fewer and in no doc at `HEAD`, up to 20 per contract (245 distinct words), searched over every added line of the 7 files. It printed positions only. A control line holding a chosen word was found and a neutral line was not. Hits: 0. The scan ran again after the last edit to this entry.
+- Docs prose: the three writing passes run in commit 8 over all the prose that 2-R added, as decision 7 says. This entry and the doc edits were checked by hand against the plain-language rules: short sentences, active voice, a figure where a word would do.
+- Git: `status`, `diff`, `log`, `ls-files` and `show` only. Nothing staged, committed, branched or pushed. `git status --short` lists `routes.py`, the two test files, `API.md`, `Architecture.md`, `BuildLog.md` and `Phases.md`, and no path under `ml/`, `docs/ml/` or `frontend/`.
+
+### Not verified
+
+- A delete from a second connection that races a real upload or start. The race tests make the gap happen by deleting inside a wrapped `submit`, and no server ran.
+- A session delete or a session expiry in the same gap. Both end in the same two lines, and neither has a test of its own.
+- How a name with joiners, directional marks or an Indic script looks in the browser. The frontend is untouched, and 4-C shows file names.
+- Names with a character that Unicode assigned after version 15.0. `Cn` follows the interpreter's table, so such a character is dropped.
+
+Held `[CONTRACT]` item for Tanishq: none. Parser output did not move, and the version stays 1.4.0.
+
+Processes. Python-family processes of my own, counted by hand from my calls, so the figure is approximate: about 45 started, and none was left running. They were `pytest` (22: the baseline, three red runs, the green run, the name run, the final suite and the 15 of the mutation check), `ruff` (7 runs), the mutation driver (2, one of which stopped on its own bug before it ran a test) and about 14 small probe, edit and scan scripts. The 15 `pytest` processes of the mutation check were started by the driver, which wrote each PID to a ledger in the scratchpad, and a process-list check found none of them alive. The tests start their own capped parse children inside `pytest`, and the `spawned` fixture checks that none outlives its test. One PowerShell call read the process list after the last suite and found no `python`, `pytest`, `ruff`, `pip` or `uvicorn` process and no `audit-venv` folder. It listed 2 `node` processes, MCP servers that the desktop app runs for itself, and none is mine. No browser and no server ran, and nothing was killed by image name.
+
+Suggested commit message for this commit: `fix(api): drop queued text when a document is deleted mid-start`.
+
+Next action: Aryan commits this step and replies "committed, next". Commit 5 is `refactor(store): drop the unused created_at columns` (R10).
