@@ -83,6 +83,22 @@ def test_a_result_for_another_document_mode_or_request_is_refused(change) -> Non
         accepted(change(real_result(MADE_UP_TEXT, "d", IDS)))
 
 
+def test_a_result_for_another_document_is_refused_when_no_span_gives_it_away() -> None:
+    """`validate_result` catches a span that names another document, but a category with no
+    finding has none to catch, so `check_result` compares the id itself (R9, A05)."""
+    result = real_result(MADE_UP_TEXT, "other", IDS, unavailable=frozenset(IDS))
+    with pytest.raises(ValueError, match="another document"):
+        accepted(result)
+
+
+def test_a_result_must_answer_the_categories_asked_for_and_not_just_as_many() -> None:
+    """Same count, other ids (R9, A08). The order of the answer does not matter."""
+    result = real_result(MADE_UP_TEXT, "d", IDS)
+    assert accepted(replace(result, categories=list(reversed(result.categories)))) is None
+    with pytest.raises(ValueError, match="categories"):
+        accepted(real_result(MADE_UP_TEXT, "d", ("cat.one", "cat.other")))
+
+
 def test_a_sample_run_wants_a_stub_result_and_a_real_run_wants_a_real_one() -> None:
     result = real_result(MADE_UP_TEXT, "d", IDS)
     with pytest.raises(ValueError):

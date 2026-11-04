@@ -151,11 +151,11 @@ backend/
     test_documents_api.py   # the upload, document and job routes: 413 by length and by stream, 400, 415, file name rules (Unicode "other" characters too, 2-R), 429, 404 across sessions, a 10 MiB upload that writes nothing, the four-in-flight cap, a file over the block-and-node limit and a delete between the insert and the queue (2-R)
     test_docs.py            # API.md names every error code, every job error code, every variable and every limit
     fake_core.py            # stand-ins for the core (2-D): FakeCore replaces CandidateOnlyAnalyzer through the factory, so no test loads weights or imports torch
-    test_store_analysis.py  # Store (2-D): analysis job rows with progress, the result in RAM, one active analysis per session, refused end states
+    test_store_analysis.py  # Store (2-D): analysis job rows with progress, the result in RAM, one active analysis per session (a waiting or running parse does not count, 2-R), refused end states
     test_analysis_factory.py # build_analyzer for both modes, and a fresh interpreter that must not import torch, transformers or numpy in stub mode
-    test_analysis_adapter.py # processing_complete, decisions_resolved and the result checks of API.md section 10
-    test_analysis_jobs.py   # AnalysisQueue with a fake core: load states, every way a job ends, FIFO and the limit, delete mid-analysis, shutdown, log contents
-    test_analyses_api.py    # start, read and cancel through the app: stub mode on the core's own sample, real mode on a fake core, every error and check order, the body read after the bearer check and capped at 64 KiB (2-R), a delete between the insert and the queue (2-R), cross-session 404
+    test_analysis_adapter.py # processing_complete, decisions_resolved and the result checks of API.md section 10, the document id and the category ids among them (2-R)
+    test_analysis_jobs.py   # AnalysisQueue with a fake core: load states, every way a job ends, FIFO and the limit, delete mid-analysis, the text dropped when a waiting job is stopped and no timer thread left behind (2-R), shutdown, log contents
+    test_analyses_api.py    # start, read and cancel through the app: stub mode on the core's own sample, real mode on a fake core, every error and check order, the body read after the bearer check and capped at 64 KiB (2-R), a delete between the insert and the queue (2-R), sample subsets, the core's warnings, the text hash and a parse job that cannot be cancelled (2-R), cross-session 404
     test_document_read.py   # the document read (2-E): `page` on PDF and DOCX nodes, `name_span` on party nodes only, warnings as objects, `detail` limited to two fixed words, partial reads with no warning
     test_openapi_export.py  # docs/app/openapi.json equals what the app builds, API.md and the schema list the same routes, no score, verdict or percentage field (2-E)
 ```

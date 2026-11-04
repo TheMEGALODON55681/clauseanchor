@@ -224,21 +224,56 @@ def test_an_analysis_that_outlives_the_time_limit_is_stopped_and_marked_timed_ou
 def test_the_time_limit_counts_from_the_start_of_the_run_not_from_the_wait(
     make_rig: Callable[..., Rig],
 ) -> None:
-    rig = make_rig(analysis_timeout_seconds=1.0)
+    rig = make_rig(analysis_timeout_seconds=2.0)
 
-    def takes_seven_tenths_of_a_second(text, **kwargs):
-        end = time.monotonic() + 0.7
+    def takes_one_point_two_seconds(text, **kwargs):
+        end = time.monotonic() + 1.2
         while time.monotonic() < end:
             rig.core._check(kwargs["cancelled"])
             time.sleep(0.01)
         return rig.core.default(text, **kwargs)
 
-    rig.core.behave = takes_seven_tenths_of_a_second
+    rig.core.behave = takes_one_point_two_seconds
     first, second = rig.start(), rig.start()
-    # The second one is 1.4 s old when it ends, which is over the limit of 1 s, and it still
-    # succeeds because its clock started when it did.
+    # The second one is 2.4 s old when it ends, which is over the limit of 2 s, and it still
+    # succeeds because its clock started when it did. A stall of 0.8 s fails neither run (R8).
     assert rig.wait(first, "succeeded", "timed_out").status == "succeeded"
     assert rig.wait(second, "succeeded", "timed_out").status == "succeeded"
+
+
+def test_a_finished_job_leaves_no_timer_thread_sleeping_behind(
+    make_rig: Callable[..., Rig],
+) -> None:
+    """Each job starts a timer for the time limit. One that is not cancelled sleeps for up to
+    the whole limit (1,800 s), so a worker that ran many jobs would hold many threads (R9, J13)."""
+    rig = make_rig(analysis_timeout_seconds=600)
+    before = set(threading.enumerate())
+    rig.wait(rig.start(), "succeeded")
+
+    def timers() -> list[threading.Thread]:
+        return [
+            t for t in threading.enumerate() if isinstance(t, threading.Timer) and t not in before
+        ]
+
+    wait_until(lambda: not timers(), timeout=5)
+
+
+@pytest.mark.parametrize("how", ["cancel", "delete"])
+def test_a_stopped_job_that_still_waits_drops_its_text_at_once(rig: Rig, how: str) -> None:
+    """The queue holds a waiting job's text until the worker reaches it, which can be 1,800 s
+    away. A stop must not leave it there (R9, J18, and the claim behind R7)."""
+    rig.core.behave = rig.core.gated
+    rig.start()
+    wait_until(rig.core.running.is_set)
+    waiting = rig.start()
+    item = rig.queue._items[waiting.job_id]
+    assert item.parsed is waiting.parsed  # it holds the text while it waits
+    if how == "cancel":
+        assert rig.queue.cancel(waiting.job_id) is True
+    else:
+        assert rig.store.delete_document(waiting.session.id, waiting.document_id)
+    assert item.parsed is None
+    rig.core.release.set()
 
 
 def test_an_analyzer_that_finishes_after_it_was_told_to_stop_leaves_no_result(rig: Rig) -> None:

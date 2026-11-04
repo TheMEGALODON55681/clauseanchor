@@ -39,6 +39,21 @@ def start(store: Store, session, doc, scope: str = "unspecified"):
     return started
 
 
+@pytest.mark.parametrize("running", [False, True], ids=["waiting", "running"])
+def test_a_parse_that_waits_or_runs_does_not_count_as_an_active_analysis(
+    store: Store, running: bool
+) -> None:
+    """Another document of the session may still be parsing, and this one's analysis starts
+    (R9, S02)."""
+    session, parsing = new_doc(store)
+    parse_job = store.add_job(parsing.id, "parse")
+    assert parse_job is not None
+    if running:
+        assert store.start_job(parse_job)
+    _, parsed = new_doc(store, session)
+    assert store.add_analysis_job(session.id, parsed.id, IDS, "unspecified") is not None
+
+
 def test_an_analysis_job_starts_queued_with_its_own_ids_and_a_record_in_ram(store: Store) -> None:
     session, doc = new_doc(store)
     job_id, analysis_id = start(store, session, doc, "india_review")

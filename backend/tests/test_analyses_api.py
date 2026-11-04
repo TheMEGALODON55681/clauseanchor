@@ -227,6 +227,27 @@ def test_sample_mode_takes_only_the_categories_the_sample_holds(stub: TestClient
     assert_error(start(stub, token, document.id, body([other])), 422, "VALIDATION_ERROR")
 
 
+def test_sample_mode_takes_any_subset_of_the_sample_categories_and_no_stranger(
+    stub: TestClient,
+) -> None:
+    """R9, A18. The whole set plus a stranger is refused though every held id is there, and a
+    part of the set starts and answers just those ids."""
+    token = open_session(stub)
+    document = new_document(stub, token, parsed_document(SAMPLE_TEXT))
+    held = list(StubAnalyzer(STUB_FIXTURE_DIR).category_ids)
+    other = next(
+        c["id"]
+        for c in stub.get("/api/v1/capabilities").json()["categories"]
+        if c["id"] not in held
+    )
+    assert_error(start(stub, token, document.id, body([*held, other])), 422, "VALIDATION_ERROR")
+    for subset in (held[:1], held[1:3]):
+        analysis_id, job_id = started(stub, token, document.id, body(subset))
+        assert settle(stub, token, job_id)["status"] in ("succeeded", "partial")
+        answered = analysis(stub, token, analysis_id).json()["categories"]
+        assert [c["category_id"] for c in answered] == subset
+
+
 # --- real mode, on a fake core -----------------------------------------------------------------
 
 
@@ -279,6 +300,33 @@ def test_a_partial_parse_is_incomplete_and_no_category_reads_absent(real: TestCl
     assert result["processing_complete"] is False
     assert all(c["status"] != "absent" for c in result["categories"])
     assert result["scope_notice"] == SCOPE_NOTICE
+
+
+def test_the_cores_warnings_reach_the_analysis_as_they_are(
+    real: TestClient, fake_core: FakeCore
+) -> None:
+    """R9, R05: nothing read the `warnings` of an analysis."""
+    warnings = ["experimental_candidate_only_unvalidated", "parser_incomplete"]
+
+    def warns(text, *, doc_id, category_ids, **_):
+        return replace(real_result(text, doc_id, category_ids), warnings=warnings)
+
+    fake_core.behave = warns
+    token = open_session(real)
+    analysis_id, job_id = started(real, token, new_document(real, token).id)
+    settle(real, token, job_id)
+    assert analysis(real, token, analysis_id).json()["warnings"] == warnings
+
+
+def test_the_analysis_names_the_document_and_the_text_it_read(real: TestClient) -> None:
+    """R9, R13: the hash is the parser's `text_sha256` and not another id."""
+    token = open_session(real)
+    document = new_document(real, token)
+    analysis_id, job_id = started(real, token, document.id)
+    settle(real, token, job_id)
+    result = analysis(real, token, analysis_id).json()
+    assert result["document_id"] == document.id
+    assert result["text_sha256"] == parsed_document().text_sha256
 
 
 def test_the_response_declares_exactly_the_fields_the_core_holds(real: TestClient) -> None:
@@ -574,6 +622,21 @@ def test_a_job_that_has_ended_or_is_a_parse_cannot_be_cancelled(real: TestClient
         for r in store._db.execute("SELECT id FROM jobs WHERE kind = 'parse'")  # one per document
     )
     assert_error(cancel(real, token, parse_job), 409, "JOB_NOT_CANCELLABLE")
+
+
+def test_a_parse_job_cannot_be_cancelled_while_it_waits_or_runs(real: TestClient) -> None:
+    """R9, R10: the test above only tries parse jobs that have ended."""
+    token = open_session(real)
+    store = real.app.state.store
+    document = store.add_document(
+        store.get_session(token).id, filename="a.pdf", media_type="application/pdf", byte_count=1
+    )
+    parse_job = store.add_job(document.id, "parse")
+    assert job(real, token, parse_job)["status"] == "queued"
+    assert_error(cancel(real, token, parse_job), 409, "JOB_NOT_CANCELLABLE")
+    assert store.start_job(parse_job)
+    assert_error(cancel(real, token, parse_job), 409, "JOB_NOT_CANCELLABLE")
+    assert job(real, token, parse_job)["status"] == "running"
 
 
 def test_an_analysis_over_the_time_limit_is_marked_timed_out(

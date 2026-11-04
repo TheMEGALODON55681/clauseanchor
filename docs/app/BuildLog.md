@@ -3715,3 +3715,84 @@ Processes. Python-family processes of my own, counted by hand from my calls, so 
 Suggested commit message for this commit: `refactor(store): drop the unused created_at columns`.
 
 Next action: Aryan commits this step and replies "committed, next". Commit 6 is `test(jobs): close the gaps the mutation check found` (R8, R9).
+
+
+## 2026-11-04: Part 2-R, step 2, commit 6 of 8 (R8 and R9)
+
+Part: 2-R, step 2, commit 6. It closes R8 (one timing test had a 0.3 s margin) and R9 (the mutation check found 12 gaps in the 2-D tests). It is a test-only commit: no file under `app/` changed. Start: `main` at `f9e69ee` (commit 5), tree clean, and that commit is the latest on `backend/` and `docs/app/`. Baseline in `backend/.venv`: 1732 passed, 27 skipped, 1 warning (the Starlette `httpx` one), in 185.3 s. The start `ruff check` ran after I had written the first new tests, and its only finding was a docstring of mine over 100 characters (since fixed), so the rest of the tree was clean. `ruff format --check` 62 files already formatted. Nothing in `ml/`, `docs/ml/` or `frontend/` changed, no dependency changed, and parser output is unchanged (parser 1.4.0).
+
+### Which gaps
+
+Step 1 found 12 gaps: A05, A08, A18, J09, J13, J18, J19, R05, R10, R13, R14 and S02. Its jury cut J09, J19 and R14 as low value, and they stay as they are. This commit adds nine tests (eleven cases) for the other nine, and changes the numbers of one timing test for R8.
+
+### The red run of a test-only commit
+
+No behaviour changes, so the new tests pass on today's code: the four 2-D test files went from 118 to 129 passed. The red run is the mutants of step 1, each applied to a copy of `app/` in the session scratchpad and run against the four files (`test_analysis_adapter`, `test_store_analysis`, `test_analysis_jobs`, `test_analyses_api`) twice, once with the files as they are at `HEAD` and once with the new ones. A gap is real when the old files let the mutant survive. One pytest process each, `-x`.
+
+| Mutant | What it breaks | Old tests | New tests | The test that kills it |
+|---|---|---|---|---|
+| A05 | the document id is not compared | survived | killed | `test_a_result_for_another_document_is_refused_when_no_span_gives_it_away` |
+| A08 | only the number of categories is compared | survived | killed | `test_a_result_must_answer_the_categories_asked_for_and_not_just_as_many` |
+| A18 | the sample subset test is reversed | survived | killed | `test_sample_mode_takes_any_subset_of_the_sample_categories_and_no_stranger` |
+| J13 | the timer is not cancelled | survived | killed | `test_a_finished_job_leaves_no_timer_thread_sleeping_behind` |
+| J18 | a stopped job keeps its text | killed | killed | `test_a_stopped_job_that_still_waits_drops_its_text_at_once` |
+| R05 | the core's warnings are dropped | survived | killed | `test_the_cores_warnings_reach_the_analysis_as_they_are` |
+| R10 | a parse job can be cancelled | survived | killed | `test_a_parse_job_cannot_be_cancelled_while_it_waits_or_runs` |
+| R13 | the analysis carries the wrong hash | survived | killed | `test_the_analysis_names_the_document_and_the_text_it_read` |
+| S02 | a parse job counts as an active analysis | survived | killed | `test_a_parse_that_waits_or_runs_does_not_count_as_an_active_analysis` |
+
+J18 is killed by the old files too, because commit 4 added a test whose delete path needs `_halt` to drop the text. The new test earns its place by the cancel path, which no other test checks. Proof: J18b, a mutant in which `cancel` sets the stop reason and keeps the text, survives the old files and dies on the new one.
+
+Both unmutated copies passed first (118 and 129 tests). One more mutant checks R8: T08 starts the time limit's clock at the submit and not at the start of the run. The old and the new timing test both kill it, so the new numbers keep the power of the old ones.
+
+### R8: the timing test
+
+`test_the_time_limit_counts_from_the_start_of_the_run_not_from_the_wait` ran two jobs of 0.7 s against a limit of 1.0 s, so a stall of 0.3 s failed it. It now runs two jobs of 1.2 s against 2.0 s, so a stall of 0.8 s fails neither job. The second job is 2.4 s old when it ends, which is 0.4 s over the limit, and it still has to succeed. Runs: 10 of 10 passed as the machine was, and 10 of 10 passed under 12 busy loops on 12 logical CPUs (the slowest process, with interpreter start-up, took 5.9 s and 13.8 s). The test now takes 2.4 s and not 1.4 s. The 12 busy loops were started by PID from one script, recorded, and stopped by PID: 12 started, 12 stopped.
+
+### What changed
+
+- `test_analysis_adapter.py`: two tests (A05, A08). The A05 test uses a result with no finding, because a finding would carry the other document id and the core's own `validate_result` would refuse it first. It matches the message, so only the id check can satisfy it. The A08 test first shows that the same ids in another order pass, and then that the same number of other ids is refused.
+- `test_store_analysis.py`: one test over two cases (S02), a parse that waits and a parse that runs, each beside a document whose analysis starts.
+- `test_analysis_jobs.py`: the R8 numbers, and two tests (J13, J18). The J13 test counts only the timer threads that are new since it began, so a thread from an earlier test cannot fail it, and waits up to 5 s for them to go. The J18 test runs a cancel and a delete against a job that waits behind a gated first job.
+- `test_analyses_api.py`: four tests (A18, R05, R13, R10). The A18 test starts a sample analysis for one id and for two, and refuses all four ids plus a stranger. The R10 test makes a waiting and then a running parse job at the store and cancels each.
+- Docs: `Architecture.md` (four test-list lines) and `Phases.md` (2-R item 6).
+
+### Differences from the step 1 fix
+
+None. Step 1 said: nine tests, in one test-only commit, with J09, J19 and R14 left as they are, and the numbers of the R8 test changed to a limit of 2.0 s and 1.2 s of work.
+
+### Reviews in this session, with no outside tool
+
+- Mutation check: the table above, plus T08 and J18b. 11 mutants, each run on the old and the new files. All 11 die on the new files. 9 survive the old ones (A05, A08, A18, J13, R05, R10, R13, S02 and J18b), and J18 and T08 die on both.
+- Jury review of the diff. Five readings, then one verdict.
+  - Correctness: each test pins one behaviour and has a control where a passing path exists (the reversed order is accepted, the text is held while the job waits, a subset starts, a parse is queued and then running). The A05 test is the one that could pass for the wrong reason, and the message match prevents it: the mode is right in that case, so only the id can raise.
+  - Flakiness: the R8 runs above. The J13 test waits for a thread that wakes at once on a cancel, with a 5 s bound. The J18 test reads the queue's items without its lock, as `test_a_document_deleted_while_its_job_waits_is_skipped` does, and the gated first job keeps the worker away from them. The A18 test starts the stub three times and takes 0.04 s, and the R8 test is the only slow one (2.4 s).
+  - Honesty: J18 was already killed by commit 4's race test, and this entry says so instead of counting it as a closed gap. What the new test adds is the cancel path.
+  - Scope: nothing under `app/`, `ml/`, `docs/ml/` or `frontend/` changed, and the tests use the same private names as the existing ones (`_items`, `_db`).
+  - Docs: the four test-list lines and the 2-R item moved with the tests.
+  - Verdict: no defect. One change applied while building: a docstring over the line limit.
+- Ponytail review of the diff. Kept: the J18 test (the cancel path, shown by J18b), and every test reusing the fixtures and helpers that were there (`rig`, `real`, `stub`, `store`, `new_doc`, `accepted`). Cut or not added: J09, J19 and R14 (step 1), a second unit test of `sample_refusal` for A18 (the API test kills it), a retry or skip marker for the timing test (the margin is the fix), a repeat plugin for the 20 timing runs (a scratch script ran them), and a new helper for the made-up result (`real_result` already takes `unavailable`).
+
+### Checks
+
+- `pytest` in `backend/.venv`, full suite, after the last edit to `Architecture.md` and `Phases.md`: 1743 passed, 27 skipped, 1 warning, in 276.0 s. That is 11 more than the baseline: one case each for A05, A08, A18, J13, R05, R10 and R13, and two each for J18 and S02. `ruff check` clean and `ruff format --check` 62 files already formatted.
+- Rules section 1 attribution scrub, with the command in `Rules.md`, over `backend/`, `frontend/` and `docs/app/`: no output.
+- Tool-name grep, both forms: no output from either.
+- Dash scan for U+2014 and U+2013 over the added lines of the changed files: no hit, with a control string that holds both dashes matching.
+- 2-0A contract-word scan, same method as the earlier entries (245 distinct words), searched over every added line of the changed files. It printed positions only. A control line holding a chosen word was found and a neutral line was not. Hits: 0. The scan ran again after the last edit to this entry.
+- Docs prose: the three writing passes run in commit 8 over all the prose that 2-R added, as decision 7 says. This entry and the doc edits were checked by hand against the plain-language rules.
+- Git: `status`, `diff`, `log` and `show` only. Nothing staged, committed, branched or pushed. `git status --short` lists the four test files, `Architecture.md`, `BuildLog.md` and `Phases.md`, and no path under `app/`, `ml/`, `docs/ml/` or `frontend/`.
+
+### Not verified
+
+- The new tests under load. Only the R8 test ran 10 times and under load. The others ran in the full suite and in the mutation runs.
+- The gap mutants against a changed `app/`. They are the one-line mutants of step 1, and a different kind of fault in the same code is not shown.
+- The J18 test reads the queue's private `_items`, as older tests do, so it changes if that name does.
+
+Held `[CONTRACT]` item for Tanishq: none. Parser output did not move.
+
+Processes. Python-family processes of my own, counted by hand from my calls, so the figure is approximate: about 76 started, and none was left running. They were `pytest` (50: the baseline, the green run of the four files, 22 in the first mutation run, 4 in the J18b run, 20 for the timing test, one timing run for the durations, and the final suite), `ruff` (6 runs), 4 scripts (three runs of the mutation driver, one of which stopped on a syntax error in my patch of it, and the timing script), 4 small scripts (the patch of the driver, the A05 probe, the entry and the scans) and the 12 busy loops of the load runs. The busy loops were recorded by PID and stopped by PID: 12 started, 12 stopped. The mutation driver writes its pytest PIDs to a ledger, and a later run overwrote the first run's ledger, so the 22 PIDs of the first run were not checked one by one. A process-list check after the last scan is reported in chat. The tests start their own capped parse children inside `pytest`, and the `spawned` fixture checks that none outlives its test. No browser and no server ran, and nothing was killed by image name.
+
+Suggested commit message for this commit: `test(jobs): close the gaps the mutation check found`.
+
+Next action: Aryan commits this step and replies "committed, next". Commit 7 is `build(backend): bump pillow and certifi, drop unused pyyaml` (R11, R26). It bumps Pillow from 12.3.0 to 13.0.0, a major version, and it needs the network for `pip-audit` in the throwaway venv, so I will explain the installs before I run them.
