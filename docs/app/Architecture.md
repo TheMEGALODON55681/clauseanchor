@@ -207,7 +207,7 @@ Findings pass through unchanged. The adapter in `routes.py` and `schemas.py` add
 
 ## 6. Backend tech stack
 
-Python 3.12, pdfplumber (with pdfminer.six), python-docx (with lxml), FastAPI with plain uvicorn (`uvloop` has no Windows build), Pydantic v2, SQLite through the standard library, ReportLab, PyYAML, pytest, httpx, ruff.
+Python 3.12, pdfplumber (with pdfminer.six), python-docx (with lxml), FastAPI with plain uvicorn (`uvloop` has no Windows build), Pydantic v2, SQLite through the standard library, ReportLab, pytest, httpx, ruff. PyYAML is not installed until 3-A, which reads the polarity policy file.
 
 ## 7. Frontend
 

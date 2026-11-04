@@ -1,12 +1,13 @@
 # Every package a clean install resolves, the transitive ones too (Python 3.12, Windows).
 # Install: pip install -r requirements-dev.txt -c constraints.txt. colorama is Windows only.
-# To refresh: install requirements-dev.txt into a new venv without this file, run ruff and
-# pytest, then replace the pins below with the output of pip freeze. Leave out the freeze's
-# "-e" line for clauseanchor-core: pip refuses an editable entry in a constraints file.
+# To refresh: install the pins of requirements.txt and requirements-dev.txt, without the -e line,
+# into a new venv with a copy of this file as -c, edited for the package you bump, so that nothing
+# else moves. Run ruff and pytest with ml/ on PYTHONPATH, then replace the pins below with the
+# output of pip freeze. Rules.md section 4 says why the core stays out of this file.
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
-certifi==2026.7.22
+certifi==2026.10.18
 cffi==2.1.1
 charset-normalizer==3.5.2
 click==8.5.0
@@ -23,7 +24,7 @@ opentelemetry-api==1.45.1
 packaging==26.3
 pdfminer.six==20260107
 pdfplumber==0.11.10
-pillow==12.3.0
+pillow==13.0.0
 pluggy==1.7.0
 pycparser==3.11
 pydantic==2.14.1
@@ -32,7 +33,6 @@ Pygments==2.21.0
 pypdfium2==5.14.0
 pytest==9.1.1
 python-docx==1.2.0
-PyYAML==6.0.3
 reportlab==5.0.1
 ruff==0.16.10
 starlette==1.8.0

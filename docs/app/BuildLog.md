@@ -3796,3 +3796,89 @@ Processes. Python-family processes of my own, counted by hand from my calls, so 
 Suggested commit message for this commit: `test(jobs): close the gaps the mutation check found`.
 
 Next action: Aryan commits this step and replies "committed, next". Commit 7 is `build(backend): bump pillow and certifi, drop unused pyyaml` (R11, R26). It bumps Pillow from 12.3.0 to 13.0.0, a major version, and it needs the network for `pip-audit` in the throwaway venv, so I will explain the installs before I run them.
+
+## 2026-11-04: Part 2-R, step 2, commit 7 of 8 (R11 and R26)
+
+Part: 2-R, step 2, commit 7. It closes R11 (Pillow 12.3.0 had 39 advisory records and certifi 2026.7.22 had one, listed twice) and R26 (`pyyaml` was pinned and nothing imports it). No code under `app/` or `tests/` changed. Start: `main` at `f67bd83` (commit 6), tree clean, and that commit is the latest on `backend/` and `docs/app/`. Baseline in `backend/.venv`: 1743 passed, 27 skipped, 1 warning (the Starlette `httpx` one), in 231.6 s. `ruff check` clean, `ruff format --check` 62 files already formatted. Nothing in `ml/`, `docs/ml/` or `frontend/` changed, and parser output is unchanged (parser 1.4.0).
+
+### What the packages touch, read before any change
+
+- Pillow: the code imports it once, in `tests/fixtures/build.py` (line 16), and calls it once (`Image.linear_gradient("L").resize((64, 80))`, line 295) to draw the picture on scanned pages. At run time it arrives with `pdfplumber` (`Pillow>=12.2.0`), and `reportlab` asks for `pillow>=9.0.0`. `pypdfium2` lists no Pillow requirement. The step 2 note said it depends on Pillow, and the installed metadata says it does not.
+- certifi has no line in either requirements file. `httpx` and `httpcore` bring it, so only `constraints.txt` pins it.
+- PyYAML: nothing under `backend/` has an `import yaml` or a `from yaml` line. The `Rules.md` section 4 table keeps its row, because 3-A reads the polarity policy file with it.
+- `backend/.venv` before the change: its freeze equals `constraints.txt` (36 pins), so the baseline run is a run of the committed pins.
+
+### Red run, before the change
+
+No behaviour changes, so no unit test goes red, and a test that read the pins would need the network. The failing check is the dependency audit. `pip-audit` 2.10.1 ran in a throwaway venv at `C:\dev\clauseanchor-model\audit-venv`, outside the repository, with `-r backend/constraints.txt --no-deps --disable-pip`. It sent package names and versions only. Result, exit code 1: 36 packages audited and 41 records in 2 packages, the same as step 1. Pillow 12.3.0 has 39 records (fix 13.0.0). certifi 2026.7.22 has 2 rows for PYSEC-2026-4320 (fix 2026.10.18).
+
+### What changed
+
+- `requirements.txt`: the `pyyaml==6.0.3` line is gone.
+- `requirements-dev.txt`: `pillow==12.3.0` became `pillow==13.0.0`.
+- `constraints.txt`: certifi 2026.7.22 became 2026.10.18, Pillow 12.3.0 became 13.0.0, and the PyYAML line is gone. That leaves 35 pins. The header's refresh recipe changed (see the next section). No other pin moved.
+- `Architecture.md` section 6: PyYAML leaves the stack list, with a line saying 3-A brings it back.
+- `Rules.md` section 4: the rule for bumping one package, the refresh recipe for the core, and a note on the PyYAML row. `Phases.md`: the built note on 2-R item 7.
+
+### How the pins were made, and three things that went wrong
+
+1. **A clean resolve moved more than asked.** The first clean venv installed the 12 direct pins with no constraints file. It put Pillow at 13.0.0 and left out PyYAML, as intended, and it also moved certifi to 2026.10.23 (not the 2026.10.18 of the decision), Starlette from 1.8.0 to 1.10.0, anyio from 4.15.1 to 4.16.0, opentelemetry-api from 1.45.1 to 1.45.2 and pycparser from 3.11 to 3.12. I did not ship that set: a commit titled "bump pillow and certifi" would carry an unreviewed Starlette change, and R25 waits for the Starlette pin to move. I deleted that venv and built a new one with a copy of the committed `constraints.txt` as `-c`, edited for the three changes. The freeze of the new venv differs from the old file in exactly those three lines. The suite was not run on the drifted set. `Rules.md` section 4 now says to install a one-package bump this way.
+2. **pip wrote into `ml/`.** The metadata step for the `-e ../ml` line builds the core in place, and it wrote `ml/clauseanchor_core.egg-info/` (four setuptools files; `ml/.gitignore` line 10 ignores it, and no file in it is tracked) during an install that then failed. I checked its time stamp against my own run, deleted that one folder, and compared `git status --short --ignored -- ml` with the snapshot taken before the step: the same, with only the ignored `__pycache__` left. The clean venv then installed the 12 direct pins without the `-e` line, and the tests ran with `ml/` on `PYTHONPATH`. The core has no dependencies, so the other pins resolve the same without it. The `constraints.txt` header and `Rules.md` section 4 say so.
+3. **The connection failed in odd ways.** Four installs stopped with "Could not find a version that satisfies the requirement" and "(from versions: none)", for ruff, pillow, reportlab and pillow again, and one stopped with a read timeout from `files.pythonhosted.org`. pip printed no warning before the first kind. A `pip index versions` query for the same package worked at once afterwards and listed the version, Pillow 13.0.0 among them with its Windows wheel for CPython 3.12. So the cause was not Pillow 13 or a missing release. I first suspected a stale pip cache, and a run with the cache off failed the same way on another package. The cause is not established. The installs that counted used a dedicated cache folder in the scratchpad, a 120 s timeout, 5 retries and up to 3 passes. The final venv installed on its first pass.
+
+The clean venv lives at `C:\dev\clauseanchor-model\fresh-venv`, outside the repository, on Python 3.12.10, with 35 pinned packages besides pip. `pip check` reports no broken requirement, and `pip install --dry-run` of the 12 pins under the new `constraints.txt` would change nothing. It is deleted at the end of the step.
+
+### Results
+
+- Full suite in the clean venv, smoke set included, with `ml/` on `PYTHONPATH`: 1743 passed, 27 skipped, 1 warning, in 278.7 s. The counts equal the baseline's. The warning is the Starlette `httpx` one, and the output names Pillow nowhere. The 27 skips are one parametrised skip at `test_parties.py:609`. The 21 smoke tests passed with none skipped: 8 round trips, 5 PDF cuts and 8 party steps. 79 passing tests have `scan`, `image` or `picture` in their id, and the scanned and image fixtures they build call the one Pillow function, so that call ran under 13.0.0. `ruff check` clean and `ruff format --check` 62 files already formatted in the same venv.
+- Parser output under both versions. A throwaway script parsed every input in `backend/.venv` (Pillow 12.3.0) and in the clean venv (Pillow 13.0.0). It kept SHA-256 hashes and counts only: of the whole JSON form without the version stamp and of `source_text`, and the counts of characters, blocks, nodes and warnings. Refused inputs were compared by error code.
+
+| Inputs | Count | Parsed | Same result under 13.0.0 |
+|---|---|---|---|
+| Contracts 001 to 025 | 25 | 25 | 25 |
+| The real-file smoke set | 8 | 8 | 8 |
+| Fixtures | 96 | 69 | 96 (the 27 refused ones give the same code) |
+
+  The input bytes are identical for the 25 contracts, the 8 smoke files and all 50 PDF fixtures, so Pillow 13 draws the same scan pictures as 12.3.0. None of the 46 DOCX fixtures is byte-identical between the two builds, and they parse to the same result. I did not look into why their bytes differ. The two capture files hold hashes and counts and stay in the session scratchpad.
+- `pip-audit` after, same command, same tool, on the new `constraints.txt`: 35 packages audited, 0 skipped, no known vulnerabilities, exit code 0. Pillow 13.0.0 and certifi 2026.10.18 are in the list and PyYAML is not.
+
+### Differences from the step 1 fix
+
+Step 1 said: pin Pillow 13.0.0 and certifi 2026.10.18 in `requirements-dev.txt` and `constraints.txt`. certifi has no line in `requirements-dev.txt`, because `httpx` brings it, so it moved in `constraints.txt` alone. The step 1 fix also left the refresh recipe as it stood, and this commit changed it, for the two reasons above (a one-package bump must not move other pins, and the editable core writes into `ml/`).
+
+### Reviews in this session, with no outside tool
+
+- Jury review of the diff. Five readings, then one verdict.
+  - Correctness: the diff is two lines in the requirements files, the header and three pins in `constraints.txt`, and the doc lines. The suite, the smoke set, `pip check`, the dry run, the audit and the parse comparison all agree.
+  - Scope: only the three decided changes moved. The unconstrained resolve was rejected because it moved five more pins, certifi's among them, and the pin stays at the decided 2026.10.18 even though 2026.10.23 exists and is newer.
+  - Security: 41 records in 2 packages became none. Only names and versions went to the advisory service. The `torch` and `transformers` records of `ml/requirements-inference.txt` (R12) were not run again, because nothing there changed and the pins belong to `ml/`.
+  - Procedure: the next bump would hit the same two traps, so the header and `Rules.md` section 4 now describe the way that worked. The statement about the `egg-info` folder is limited to what happened here: it appeared during a failed install.
+  - Docs: `Architecture.md`, `Rules.md` and `Phases.md` moved with the change. BuildLog entries that name PyYAML 6.0.3 or Pillow 12.3.0 are history and stay as written.
+  - Verdict: no defect. Three changes applied while building: the venv rebuilt under a constraints copy, the `egg-info` folder removed, and the recipe text.
+- Ponytail review of the diff. Kept: the removal of a dependency (PyYAML), the two bumps, and the recipe text in the `constraints.txt` header and in `Rules.md`. Cut or not added: a certifi line in `requirements.txt` (it is a test tool's dependency, and `constraints.txt` already pins it), a test that reads the pins (it would need the network, and the audit is the check), `pip-audit` in `requirements-dev.txt` (it would add 28 packages to every install, and a throwaway venv does the job), the `httpx2` swap (R25 stays as decided), moving Starlette, anyio or any other transitive pin, and a refresh script.
+
+### Checks
+
+- Suite and `ruff`: see Results. The full suite ran before the last edits to `Phases.md` and this entry, and the three test files that read docs (`test_catalogue.py`, `test_docs.py`, `test_openapi_export.py`) ran again after them: 37 passed. `git status --short` lists `requirements.txt`, `requirements-dev.txt`, `constraints.txt`, `Architecture.md`, `Rules.md`, `Phases.md` and `BuildLog.md`.
+- Rules section 1 attribution scrub, with the command in `Rules.md`, over `backend/`, `frontend/` and `docs/app/`: no output.
+- Tool-name grep, both forms: no output from either. I also ran the pattern over `constraints.txt` and the added lines of `Rules.md`, which the rule leaves out: no hit.
+- Dash scan for U+2014 and U+2013 over the added lines of the changed files: no hit, with a control string that holds both dashes matching.
+- 2-0A contract-word scan, same method as the earlier entries, with a new script because the old ones were deleted. It took capitalised words of five letters or more from the first page of each of the 25 contracts (the first three pages when the first held under 1,500 characters, or the first 3,000 characters of a Word file), kept those in 8 files or fewer and in no doc at `HEAD`, up to 20 per contract (371 distinct words), and searched every added line of the changed files. It printed positions only. A control line holding a chosen word was found and a neutral line was not. Hits: 0. The scan ran again after the last edit to this entry.
+- Docs prose: the three writing passes run in commit 8 over all the prose that 2-R added, as decision 7 says. This entry and the doc edits were checked by hand against the plain-language rules.
+- Git: `status`, `diff`, `log` and `show` only. Nothing staged, committed, branched or pushed. No path under `ml/`, `docs/ml/` or `frontend/` changed, and `ml/` matches its snapshot from before the step.
+
+### Not verified
+
+- `backend/.venv` itself. It still holds Pillow 12.3.0, certifi 2026.7.22 and PyYAML, because I changed nothing in it. All the runs above used the clean venv. To bring it in line without rebuilding the core, run `pip install pillow==13.0.0 certifi==2026.10.18 -c constraints.txt` and then `pip uninstall -y pyyaml`, from `backend/`.
+- The Starlette 1.10.0 set that the unconstrained resolve picked. The suite did not run on it.
+- The `torch` and `transformers` advisories of `ml/requirements-inference.txt` (R12), and real mode under Pillow 13. Real mode loads no image code, and it needs the artifacts, which this commit does not use.
+- Another platform. `constraints.txt` is a freeze for Python 3.12 on Windows, and the Linux pins for the deploy host belong to 4-B.
+- Why the index reads failed, and why 46 DOCX fixtures differ in bytes between two builds.
+
+Held `[CONTRACT]` item for Tanishq: none. Parser output did not move.
+
+Processes. Python-family processes of my own, counted by hand from my calls, so the figure is approximate: about 45 started, and none was left running. They were `ruff` (4 runs), `pytest` (2: the baseline and the clean venv), the installs and checks of the two throwaway venvs (the audit venv, and the clean venv built twice, with 7 `pip install` runs, 5 `pip index` queries, a freeze, `pip check`, `pip show` and a dry run), `pip-audit` (2 runs and 2 summaries), the parse comparison (2 runs and a compare script) and the scans. One `curl` hung on the network, and I stopped it by its task id; the process list showed no `curl` or `pip` left over. The tests start their own capped parse children inside `pytest`, and the `spawned` fixture checks that none outlives its test. The last process-list check is reported in chat. No browser and no server ran, and nothing was killed by image name.
+
+Suggested commit message for this commit: `build(backend): bump pillow and certifi, drop unused pyyaml`.
+
+Next action: Aryan commits this step and replies "committed, next". Commit 8 is `docs: close phase 2 and correct the sizing claims` (R13, R21 and the host RAM minimum of R22 under 4-B). It runs the three writing passes over the 2-R prose, with the token check, ticks 2-R and writes the plan-deviation list into `Phases.md`.

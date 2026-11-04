@@ -78,9 +78,9 @@ Commit message rules: Conventional Commits (`feat`, `fix`, `test`, `refactor`, `
 
 Pin exact versions in `requirements.txt` / `requirements-dev.txt` as resolved at install time, and record them in `docs/app/BuildLog.md`.
 
-`backend/constraints.txt` pins every installed package, the ones those files pull in included. Install with `pip install -r requirements-dev.txt -c constraints.txt`, or with `requirements.txt` in place of the dev file for the runtime packages alone. A dependency change regenerates `constraints.txt` from a freeze of a clean venv in the same commit.
+`backend/constraints.txt` pins every installed package, the ones those files pull in included. Install with `pip install -r requirements-dev.txt -c constraints.txt`, or with `requirements.txt` in place of the dev file for the runtime packages alone. A dependency change regenerates `constraints.txt` from a freeze of a clean venv in the same commit. A bump of one package installs that venv with a copy of the current file as `-c`, edited for that package, so that no other pin moves: a clean resolve with no constraints moves every transitive package that has a newer release.
 
-The one local package is the analysis core. `requirements.txt` ends with `-e ../ml`, an editable install of Tanishq's `ml/` (`clauseanchor-core`, no runtime dependencies, so nothing else comes with it). Run `pip` from `backend/`, where `../ml` resolves. On a normal machine pip fetches `setuptools` for an isolated build. pip refuses an editable entry in a constraints file ("Editable requirements are not allowed as constraints"), so `constraints.txt` leaves the core out, and a refresh drops the `-e` line from the freeze before it saves the pins. Stub mode imports none of torch, transformers or numpy, and a test checks that in a fresh interpreter.
+The one local package is the analysis core. `requirements.txt` ends with `-e ../ml`, an editable install of Tanishq's `ml/` (`clauseanchor-core`, no runtime dependencies, so nothing else comes with it). Run `pip` from `backend/`, where `../ml` resolves. On a normal machine pip fetches `setuptools` for an isolated build. pip refuses an editable entry in a constraints file ("Editable requirements are not allowed as constraints"), so `constraints.txt` leaves the core out. A refresh installs the pins of both files without the `-e` line into a clean venv and runs the tests with `ml/` on `PYTHONPATH`, because pip builds the editable core in place and writes `ml/clauseanchor_core.egg-info/` (ignored by Git), and backend parts never change `ml/`. Stub mode imports none of torch, transformers or numpy, and a test checks that in a fresh interpreter.
 
 | Purpose | Allowed | Notes |
 |---|---|---|
@@ -90,7 +90,7 @@ The one local package is the analysis core. `requirements.txt` ends with `-e ../
 | DOCX XML | `lxml` | `python-docx` brings it in. `docx.py` walks its elements and catches `etree.LxmlError`, so it is pinned |
 | API (from Phase 2) | `fastapi`, `uvicorn` (plain, because `uvloop` has no Windows build), `pydantic` v2, `python-multipart` | `pydantic` is pinned because `schemas.py` imports it directly |
 | Database (from Phase 2) | `sqlalchemy` 2.x, stdlib `sqlite3` | No migrations tool. Part 2-B uses `sqlite3` alone, with the tables created in code at start |
-| Config files | `pyyaml` | `yaml.safe_load` only |
+| Config files | `pyyaml` | `yaml.safe_load` only. Not installed since 2-R (R26): 3-A adds it with the policy file |
 | PDF reports (Phase 3) | `reportlab` | Also used in tests to generate PDF fixtures |
 | Tests | `pytest`, `httpx`, `pillow` | Pillow only to draw fixture images |
 | Lint/format | `ruff` | |
