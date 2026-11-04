@@ -3652,3 +3652,66 @@ Processes. Python-family processes of my own, counted by hand from my calls, so 
 Suggested commit message for this commit: `fix(api): drop queued text when a document is deleted mid-start`.
 
 Next action: Aryan commits this step and replies "committed, next". Commit 5 is `refactor(store): drop the unused created_at columns` (R10).
+
+
+## 2026-11-04: Part 2-R, step 2, commit 5 of 8 (R10)
+
+Part: 2-R, step 2, commit 5. It closes R10: `sessions.created_at` and `documents.created_at` were written and never read. Start: `main` at `acb1338` (commit 4), tree clean, and that commit is the latest on `backend/` and `docs/app/`. Baseline in `backend/.venv`: 1730 passed, 27 skipped, 1 warning (the Starlette `httpx` one), in 153.2 s. `ruff check` clean, `ruff format --check` 62 files already formatted. Nothing in `ml/`, `docs/ml/` or `frontend/` changed, no dependency changed, and parser output is unchanged (parser 1.4.0).
+
+### The columns, read before any code
+
+`created_at` appears in `store.py` in the schema of all three tables and in three inserts. Nothing selects it for `sessions` or `documents`: expiry reads `expires_at`, and the document copies its session's. `jobs.created_at` is read: `_JOB_COLUMNS` selects it, `JobRecord` carries it, and the analysis response shows it as its own `created_at` (`routes.py`, and `test_store_analysis.py` pins the value). So the change is two schema lines and two insert values. The other `created_at` hits in the repository are the `jobs` one, the analysis field in `schemas.py`, `openapi.json` and the frontend mock (both the analysis field), and BuildLog history.
+
+D4 empties the tables at every start (`DROP TABLE IF EXISTS`, then `CREATE`), so a file database from an earlier run loses the old columns with its rows and no migration is needed. The change reverses 2-B decision 8, which kept the column for a queue order that the plain FIFO never needed (2-C decision 11 flagged it for Aryan). Step 1 listed it as R10 and Aryan approved the order.
+
+### Red run, before the change
+
+One new test in `test_store.py`, `test_sessions_and_documents_store_no_creation_time`, over the two tables. Run before any change to `store.py`: 2 failed and 29 passed in the file.
+- Failed, sessions: `assert 'created_at' not in ['id', 'token_hash', 'created_at', 'expires_at']`.
+- Failed, documents: `assert 'created_at' not in ['id', 'session_id', 'media_type', 'byte_count', 'created_at', 'expires_at']`.
+- The other 29 store tests passed on purpose, among them the `jobs` check in `test_store_analysis.py` (`job.created_at == clock() - 42`), which keeps guarding the column that stays.
+
+### What changed
+
+- `store.py`: `created_at REAL NOT NULL` leaves the `sessions` and `documents` schema, and the two inserts lose the column and its value. `now` stays in both methods, where it feeds the expiry arithmetic and the expiry check.
+- `test_store.py`: the one test above. It reads `PRAGMA table_info` under the store's lock and checks that the table exists, so the check cannot pass on a missing table.
+- `Phases.md`: the 2-C decision line that said `created_at` stays now says where it went, and 2-R item 5 carries the built note. No other doc named the columns.
+
+### Differences from the step 1 fix
+
+None. Step 1 said: drop both columns and their two insert values.
+
+### Reviews in this session, with no outside tool
+
+- Mutation check on the new code. 5 mutants on copies of `app/` and `tests/` in the session scratchpad, run against the four store and session test files (96 tests), one pytest process each. The unmutated copy passed first. 5 killed and 0 survived. Killed: a nullable `created_at` back in `sessions` (M1) and in `documents` (M2), which only the new test catches, since the inserts still work; `jobs` losing its `created_at` (M3); a document row that takes the wrong expiry (M4); and a session row that takes the wrong expiry (M5). The two inserts that changed are covered by M4, M5 and every test that reads an expiry back.
+- Jury review of the diff. Five readings, then one verdict.
+  - Correctness: no query reads either column, `grep` finds no other use, and `now` is still used in both methods (Ruff would flag an unused name). The foreign keys, the two indexes and the `ON DELETE CASCADE` lines are untouched.
+  - Privacy: nothing leaves the process differently. The row now holds no creation time, but `expires_at` minus the TTL gives the same value, so this is a cleanup and not a privacy gain, and the docs make no such claim.
+  - Compatibility: no route, field, reply or parser output changes. `openapi.json` is unchanged and `test_openapi_export.py` passes. The `created_at` that clients see is the analysis's, from `jobs`.
+  - Tests: the mutation check above. The one test names the two tables and checks the absence, as the finding asked. It does not pin the full column lists, because every later part adds columns.
+  - Docs: the only stale line was the 2-C decision in `Phases.md`. BuildLog entries that mention the column are history and stay as written.
+  - Verdict: no defect, no change.
+- Ponytail review of the diff. Kept: the plain deletion (net minus four lines in `store.py`), and the one parametrized test. Cut or not added: a migration (D4 empties the tables at every start), a test that pins exact column lists for all three tables (it would fail for every later part), a separate `jobs` test (the existing analysis test reads the column), and keeping the columns "for later" (a later part adds the one it needs).
+
+### Checks
+
+- `pytest` in `backend/.venv`, full suite, after the last edit to `Phases.md`: 1732 passed, 27 skipped, 1 warning, in 138.0 s. That is 2 more than the baseline, the two cases of the new test. `ruff check` clean and `ruff format --check` 62 files already formatted.
+- Rules section 1 attribution scrub, with the command in `Rules.md`, over `backend/`, `frontend/` and `docs/app/`: no output.
+- Tool-name grep, both forms: no output from either.
+- Dash scan for U+2014 and U+2013 over the added lines of the changed files: no hit, with a control string that holds both dashes matching.
+- 2-0A contract-word scan, same method as the earlier entries (245 distinct words), searched over every added line of the changed files. It printed positions only. A control line holding a chosen word was found and a neutral line was not. Hits: 0. The scan ran again after the last edit to this entry.
+- Docs prose: the three writing passes run in commit 8 over all the prose that 2-R added, as decision 7 says. This entry and the doc edits were checked by hand against the plain-language rules.
+- Git: `status`, `diff`, `log` and `show` only. Nothing staged, committed, branched or pushed. `git status --short` lists `store.py`, `test_store.py`, `Phases.md` and `BuildLog.md`, and no path under `ml/`, `docs/ml/` or `frontend/`.
+
+### Not verified
+
+- A database file left by an earlier run, opened by this build. The schema is dropped and created at every start, and the existing file-path test in `test_store.py` passes, but no file from a build with the old columns was opened.
+- Behaviour under a real server, as in the earlier commits.
+
+Held `[CONTRACT]` item for Tanishq: none. Parser output did not move.
+
+Processes. Python-family processes of my own, counted by hand from my calls, so the figure is approximate: about 19 started, and none was left running. They were `pytest` (10: the baseline, the red run, the green run of the store files, the 6 of the mutation check and the final suite), `ruff` (6 runs), the mutation driver (1) and 2 small scripts for the entry and the scans. The 6 `pytest` processes of the mutation check were started by the driver, which wrote each PID to a ledger in the scratchpad. The tests start their own capped parse children inside `pytest`, and the `spawned` fixture checks that none outlives its test. A last process-list check, after the final scans, is reported in chat. No browser and no server ran, and nothing was killed by image name.
+
+Suggested commit message for this commit: `refactor(store): drop the unused created_at columns`.
+
+Next action: Aryan commits this step and replies "committed, next". Commit 6 is `test(jobs): close the gaps the mutation check found` (R8, R9).

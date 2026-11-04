@@ -109,6 +109,16 @@ def test_the_documents_expires_at_is_the_sessions(store: Store, clock: FakeClock
     assert column(store, "documents", "expires_at") == [session.expires_at]
 
 
+@pytest.mark.parametrize("table", ["sessions", "documents"])
+def test_sessions_and_documents_store_no_creation_time(store: Store, table: str) -> None:
+    """Nothing reads it (R10), and expiry is the only time a row needs. `jobs` keeps its
+    `created_at`, which the analysis reads (test_store_analysis.py)."""
+    with store._lock:
+        names = [row[1] for row in store._db.execute(f"PRAGMA table_info({table})")]
+    assert names  # the table exists, so the check below can fail
+    assert "created_at" not in names
+
+
 def test_a_document_is_found_by_its_owner_and_not_by_another_session(store: Store) -> None:
     _, mine = store.create_session()
     _, other = store.create_session()

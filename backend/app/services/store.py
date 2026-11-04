@@ -37,7 +37,6 @@ DROP TABLE IF EXISTS sessions;
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY,
     token_hash TEXT NOT NULL UNIQUE,
-    created_at REAL NOT NULL,
     expires_at REAL NOT NULL
 );
 CREATE INDEX sessions_expiry ON sessions (expires_at);
@@ -46,7 +45,6 @@ CREATE TABLE documents (
     session_id TEXT NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
     media_type TEXT NOT NULL,
     byte_count INTEGER NOT NULL,
-    created_at REAL NOT NULL,
     expires_at REAL NOT NULL
 );
 CREATE INDEX documents_session ON documents (session_id);
@@ -184,9 +182,8 @@ class Store:
             session = Session(str(uuid.uuid4()), now + self._ttl)
             with self._db:
                 self._db.execute(
-                    "INSERT INTO sessions (id, token_hash, created_at, expires_at)"
-                    " VALUES (?, ?, ?, ?)",
-                    (session.id, _digest(token), now, session.expires_at),
+                    "INSERT INTO sessions (id, token_hash, expires_at) VALUES (?, ?, ?)",
+                    (session.id, _digest(token), session.expires_at),
                 )
         return token, session
 
@@ -233,9 +230,9 @@ class Store:
             with self._db:
                 self._db.execute(
                     "INSERT INTO documents"
-                    " (id, session_id, media_type, byte_count, created_at, expires_at)"
-                    " VALUES (?, ?, ?, ?, ?, ?)",
-                    (doc.id, session_id, media_type, byte_count, now, doc.expires_at),
+                    " (id, session_id, media_type, byte_count, expires_at)"
+                    " VALUES (?, ?, ?, ?, ?)",
+                    (doc.id, session_id, media_type, byte_count, doc.expires_at),
                 )
             self._documents[doc.id] = doc
             return doc
