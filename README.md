@@ -40,7 +40,7 @@ The API listens on `http://127.0.0.1:8000`, and `GET /api/v1/health` should answ
 curl -X POST http://127.0.0.1:8000/api/v1/documents -H "Authorization: Bearer $TOKEN" -H "Content-Disposition: attachment; filename*=UTF-8''contract.pdf" --data-binary @contract.pdf
 ```
 
-Poll `GET /api/v1/jobs/{job_id}` until the job has succeeded or failed. Then `GET /api/v1/documents/{document_id}` returns the parsed text, and `DELETE /api/v1/documents/{document_id}` removes the document at once. The API parses each file in a child process with a time limit and a memory cap, so a bad file cannot take the server down. The file and its text stay in memory and are never written to disk. `docs/app/API.md` has the request and reply shapes, and section 9 describes the child process.
+Poll `GET /api/v1/jobs/{job_id}` until the job has succeeded or failed. Then `GET /api/v1/documents/{document_id}` returns the parsed text, and `DELETE /api/v1/documents/{document_id}` removes the document at once. The API parses each file in a child process with a time limit and a memory cap, so a bad file costs time and memory inside that process, apart from a few small costs in the server that section 9 of `docs/app/API.md` bounds. The file and its text stay in memory and are never written to disk. `docs/app/API.md` has the request and reply shapes, and section 9 describes the child process.
 
 Once a document has parsed, `POST /api/v1/documents/{document_id}/analyses` queues an analysis. The body names the categories and the jurisdiction scope, and the reply is 202 with an analysis id and a job id.
 

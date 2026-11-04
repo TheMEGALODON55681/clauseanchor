@@ -44,7 +44,7 @@ Every error response has this body, with the status code in the table below:
 | Code | Status | Retryable | When |
 |---|---|---|---|
 | `VALIDATION_ERROR` | 422 | no | A path, query or body value fails validation. For an analysis request that includes a body over 64 KiB, a list over 100 ids, an id over 64 characters, an unknown or repeated category id, and in sample mode an id the sample does not hold. FastAPI's own 422 body repeats the submitted input, so the envelope replaces it and names no field |
-| `NOT_FOUND` | 404 | no | No route matches |
+| `NOT_FOUND` | 404 | no | No route matches, or the id is unknown or belongs to another session |
 | `METHOD_NOT_ALLOWED` | 405 | no | The route exists but not for this method. The `Allow` header lists the methods that work |
 | `INTERNAL_ERROR` | 500 | no | An unhandled exception. The body has no exception text, and the server logs only the exception class name |
 | `NOT_READY` | 503 | yes | `GET /api/v1/ready` found a failed check, and `details.checks` lists the results. An analysis start gets it too while the analyzer is `loading` or `failed`, with `details.checks.analyzer` alone |
@@ -167,7 +167,7 @@ Uploads one file and queues its parse. The body is the raw file, not multipart: 
 | `Content-Disposition` | Optional. `attachment; filename*=UTF-8''NAME` names the file |
 | `Content-Type` | Ignored. The type comes from the bytes |
 
-The name comes from `filename*` (RFC 5987) alone. A plain `filename=` has no defined encoding, so the API does not read it. It decodes the value as UTF-8, keeps the text after the last `/` or `\`, removes every Unicode "other" character (controls such as NUL and U+0085, format characters such as U+202E and U+200B, private use and unassigned code points) and the line and paragraph separators U+2028 and U+2029, cuts the result to 255 characters and trims it. Letters, marks, symbols and ordinary spaces stay. The zero-width joiners and directional marks that some Indic, Persian and Arabic names use go with the format characters. A name that is missing, is not valid UTF-8 or has nothing left (empty, or only dots) becomes `document.pdf` or `document.docx`, to match the detected type. The name is for display. It lives in RAM and never reaches SQLite.
+The name comes from `filename*` (RFC 5987) alone. A plain `filename=` has no defined encoding, so the API does not read it. It decodes the value as UTF-8, keeps the text after the last `/` or `\`, removes every Unicode "other" character (controls such as NUL and U+0085, format characters such as U+202E and U+200B, private use and unassigned code points) and the line and paragraph separators U+2028 and U+2029, cuts the result to 255 characters and trims it. Letters, marks, symbols and ordinary spaces stay. The format characters include the zero-width joiners and directional marks that some Indic, Persian and Arabic names use, so a name loses them. A name that is missing, is not valid UTF-8 or has nothing left (empty, or only dots) becomes `document.pdf` or `document.docx`, to match the detected type. The name is for display. It lives in RAM and never reaches SQLite.
 
 The API runs these checks in order and stops at the first that fails:
 
@@ -228,7 +228,7 @@ The document's metadata and, once the parse has succeeded, the full parser outpu
 
 ### `DELETE /api/v1/documents/{document_id}`
 
-Deletes the document and its jobs from memory and from SQLite. A parse that is still running loses its child first, and the reply comes after the child has exited. The delete frees a slot under `MAX_DOCUMENTS_PER_SESSION`, so a client that replaces its upload deletes the old one first.
+Deletes the document and its jobs from memory and from SQLite. A parse that is still running loses its child first, and the reply waits up to 5 s for the child to exit. The delete frees a slot under `MAX_DOCUMENTS_PER_SESSION`, so a client that replaces its upload deletes the old one first.
 
 204 with no body. 404 `NOT_FOUND` for an unknown id, another session's document, or a second delete. 401 `SESSION_INVALID` for a bad token.
 
@@ -399,7 +399,7 @@ The example is the sample run, cut to its first category. It asked for four, and
 
 A clause carries the core's `ClauseFinding` unchanged: `id`, `category_id`, `span`, `status` (`accepted` or `review_candidate`), `confidence` (a number or `null`), `confidence_band`, `calibration_scope`, `origin` (`model` or `fixture`), `rule_flags`, `passages` and `retrieval_status`. A span is `{doc_id, text_sha256, start, end, text}` with `source_text[start:end] == text`, in Unicode code points with an exclusive end. `polarity` and `actor_evidence` come with the party binding (3-A).
 
-404 `NOT_FOUND` for an unknown id, another session's analysis and one a newer analysis replaced. 401 `SESSION_INVALID` for a bad token.
+404 `NOT_FOUND` for an unknown id, another session's analysis and one a newer analysis replaced. 401 `SESSION_INVALID` for a bad token. 503 `CATALOGUE_UNAVAILABLE` if the catalogue is missing. That cannot happen once an analysis exists, because the start needs the catalogue, so the route keeps the check as a guard.
 
 ## 4. Configuration
 
@@ -416,7 +416,7 @@ The API reads the process environment once, at start. It does not read a `.env` 
 | `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait while one runs (plan 9.3). A further upload gets 429 `QUEUE_FULL` |
 | `CLAUSEANCHOR_PARSE_MEMORY_MIB` | `1536` | Memory cap of the parse child, in MiB (section 9) |
 
-The four numbers must be whole numbers of at least 1. The parser's own limits (file size, page count, text length) are not settings. They stay in the parser. The limits in section 8 are constants and not settings.
+The four numbers must be whole numbers of at least 1. The parser's own limits (file size, page count, text length) are not settings. They stay in the parser. No environment variable sets the limits in section 8.
 
 ## 5. Catalogue `[CONTRACT]`
 
@@ -494,7 +494,7 @@ One code covers unknown and expired, for two reasons. The frontend mock raises o
 
 ## 8. Limits
 
-These eight are constants in `app/config.py`, not settings. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so those values are proposals for Aryan to confirm. Plan 9.3 gives the analysis queue and the time, and 2-D.1 checked the time against the real model. The last three came with the 2-R review.
+These eight are fixed limits in `app/config.py`, and no environment variable sets any of them. `ANALYSIS_QUEUE_LENGTH` and `ANALYSIS_TIMEOUT_SECONDS` are also fields of `Settings`, so a test can change them. Plan 9.2 names a 429 for the session limit and gives no number, and neither plan section gives a document limit, so those values are proposals for Aryan to confirm. Plan 9.3 gives the analysis queue and the time, and 2-D.1 checked the time against the real model. The last three came with the 2-R review.
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -509,11 +509,11 @@ These eight are constants in `app/config.py`, not settings. Plan 9.2 names a 429
 
 2-D.1 timed the real model on a laptop with torch's default 8 threads and a batch size of 1. A window took 0.34 to 0.51 s through the API (0.37 and 0.51 s in two runs of the 33-page contract below) and 0.68 s in the receiver check, which times the whole call. A 33-page contract (74,821 characters, 17,350 tokens) plans 50 to 55 windows for each category, so 2,185 for all 41 CUAD categories. That run takes 804 to 1,123 s at the two contract rates and 1,486 s at the receiver-check rate. All three fit in 1,800 s, so the limit stays. The same contract with every category stops fitting when a window costs more than 0.82 s. The plan's ceiling of 15,000 category-window pairs would take 1.5 to 2.8 hours at these rates, so the limit still ends the largest documents the parser accepts. The deploy host is unmeasured, and 4-C times it there.
 
-2-C measured what a stored document costs (`BuildLog.md`). The largest document in the smoke set takes 1.9 MiB, which is about 12 bytes for each character of text. A document at the 500,000-character limit would take about 6.5 MiB at that ratio. So 25 sessions of 5 documents take 241 MiB at the smoke-set size and about 0.8 GiB at the limit. The ratio holds for text-heavy files only. A block or node costs about 550 bytes whatever its length, so a file of many short blocks costs far more for each character: 94 bytes at 6 characters a block. `MAX_BLOCKS_AND_NODES` bounds that. Made-up DOCX files at the limit stored as 10.3 MiB (9,990 blocks and 9,990 nodes), 10.8 MiB (20,000 blocks of 5 characters) and 11.5 MiB (20,000 blocks of 24 characters, 499,999 in all). So 125 documents at both limits take 1.4 GiB. The stored documents fit in 1 GiB for ordinary files, and a store full of the densest files does not. A parse child at its 1,536 MiB cap does not fit beside them on a 1 GiB host, and 4-B decides what to do about that. With the real model loaded, the API process alone peaks at 1,281 MiB (`Architecture.md` section 5), so real mode needs a larger host than that.
+2-C measured what a stored document costs (`BuildLog.md`). The largest document in the smoke set takes 1.9 MiB, which is about 12 bytes for each character of text. A document at the 500,000-character limit would take about 6.5 MiB at that ratio. So 25 sessions of 5 documents take 241 MiB at the smoke-set size and about 0.8 GiB at the limit. The ratio holds for text-heavy files only. A block or node costs about 550 bytes whatever its length, so a file of many short blocks costs far more for each character: 94 bytes at 6 characters a block. `MAX_BLOCKS_AND_NODES` bounds that. Made-up DOCX files at the limit stored as 10.3 MiB (9,990 blocks and 9,990 nodes), 10.8 MiB (20,000 blocks of 5 characters) and 11.5 MiB (20,000 blocks of 24 characters, 499,999 in all). So 125 documents that sit at both limits take 1.4 GiB. The stored documents fit in 1 GiB for ordinary files, and a store full of the densest files does not. A parse child at its 1,536 MiB cap does not fit beside them on a 1 GiB host, and 4-B decides what to do about that. With the real model loaded, the API process alone peaks at 1,281 MiB (`Architecture.md` section 5), so real mode needs a larger host than that.
 
 ## 9. Parse jobs
 
-The API parses each upload in a child process, so a hostile file can cost time and memory only inside a process that the API can end.
+The API parses each upload in a child process, so a hostile file can cost parse time and parse memory only inside a process that the API can end. Three costs stay in the API process, each with a bound. The type check lists the members of a ZIP (a made-up 9.0 MiB ZIP with 200,000 entries took 0.87 s and 75 MiB), which the 10 MiB limit and the 4 uploads in flight bound. The child's reply is JSON that the API reads, and the API stores the parsed document. `MAX_BLOCKS_AND_NODES` bounds both (section 8).
 
 - **One child per parse.** The child runs `python -m app.parse_worker`, parses one file and exits. A new child for each parse keeps the DOCX reader's process-wide settings out of the next parse.
 - **One at a time.** A single worker thread takes jobs from a queue. One parse runs, and up to `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` wait. A further upload gets 429 `QUEUE_FULL`. The bytes of a waiting upload stay in RAM, up to 10 MiB each.
@@ -521,7 +521,7 @@ The API parses each upload in a child process, so a hostile file can cost time a
 - **Wall-clock kill.** After `CLAUSEANCHOR_PARSE_KILL_SECONDS` the API ends the child, and the job fails with `PARSE_TIMEOUT`. The slowest case measured took 23 s: a dense 8 MiB PDF, which is the most decoded content the parser accepts.
 - **Memory cap.** Each child runs under `CLAUSEANCHOR_PARSE_MEMORY_MIB`. On Windows the cap is a job object, and the child joins it before its first instruction. On Linux it is `RLIMIT_AS`. The default of 1,536 MiB leaves room for a PDF at the 500,000-character limit (about 1.2 GiB, extrapolated) and ends a 100 MiB DOCX of empty paragraphs (about 2.5 GiB, extrapolated) before it reaches that size.
 - **What counts as a memory kill.** A library can turn a refused allocation into another error, so the API does not trust a child that came within 5 percent of its cap. On Windows the API reads the child's peak, and a peak of 95 percent of the cap or more fails the job with `PARSE_MEMORY_LIMIT` whatever the child said. On Linux the peak is not available, so only a `MemoryError` that the child itself catches gives that code. The Linux cap is untested, and 4-B measures it on the deploy host.
-- **Delete and expiry.** `DELETE /api/v1/documents/{document_id}`, `DELETE /api/v1/sessions/current` and the expiry of a session each end the child of every document they remove. A delete returns after the child has exited. A waiting job loses its bytes. A delete that lands after the upload stored the document and before the queue took it is caught too: the route reads the job back once the queue accepts it, and the queue drops the bytes at once if the job is gone. The upload still answers 202, and the job reads 404. A shutdown ends the running child too.
+- **Delete and expiry.** `DELETE /api/v1/documents/{document_id}`, `DELETE /api/v1/sessions/current` and the expiry of a session each end the child of every document they remove. A delete waits up to 5 s for the child to exit, then returns. A waiting job loses its bytes. The API also catches a delete that lands after the upload stored the document and before the queue took it: once the queue accepts the job, the route reads it back and, if it is gone, tells the queue to drop the bytes. The upload still answers 202, and the job reads 404. A shutdown ends the running child too.
 
 ## 10. Analyses
 
@@ -533,7 +533,7 @@ An analysis runs a parsed document through Tanishq's core (`clauseanchor_core`).
 - **Progress.** The core reports a progress event between units of work, and the API copies `stage`, `completed_units` and `total_units` into the job each time. The numbers count work done. They do not measure risk.
 - **Cancel.** A cancel sets a flag, and the core reads it between units. A waiting job ends `cancelled` before the cancel reply returns. A running job ends at the next check. The core cannot interrupt a unit already under way, so with the real model a stop waits for the window in progress.
 - **Time limit.** The clock starts when the job starts running, not when it was queued. At `ANALYSIS_TIMEOUT_SECONDS` the API sets the same flag, and the job ends `timed_out`.
-- **Delete and expiry.** Deleting a document, deleting a session and the expiry of a session each stop the analysis of every document they remove, by the same flag. The job goes with its document, so no status is left to read. A delete that lands after the start stored the job and before the queue took it is caught the same way: the route reads the job back once the queue accepts it, and the queue drops the text at once if the job is gone. The start still answers 202, and the job reads 404. A shutdown stops the running analysis and waits up to 30 s for the worker.
+- **Delete and expiry.** Deleting a document, deleting a session and the expiry of a session each stop the analysis of every document they remove, by the same flag. The job goes with its document, so no status is left to read. The API catches a delete that lands after the start stored the job and before the queue took it the same way: once the queue accepts the job, the route reads it back and, if it is gone, tells the queue to drop the text. The start still answers 202, and the job reads 404. A shutdown stops the running analysis and waits up to 30 s for the worker.
 - **Stopped means no result.** The core returns a result whole or not at all. A cancelled, timed-out or deleted analysis stores nothing, even if the analyzer finished first, and its `categories` stay empty.
 - **Failures.** An analyzer exception ends the job `failed` with `ANALYSIS_FAILED`. The log holds the exception class and nothing else, because exception text can hold document text.
 
