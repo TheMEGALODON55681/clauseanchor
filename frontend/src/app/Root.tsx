@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useMatch } from "react-router";
 import AppHeader from "../components/AppHeader";
 import AppFooter from "../components/AppFooter";
@@ -10,9 +10,6 @@ import { useTheme } from "./theme";
 import { useSession } from "./session";
 import { useMedia } from "../lib/useMedia";
 
-/* Development only. In a production build this is null and the import is removed. */
-const PreviewControls = import.meta.env.DEV ? lazy(() => import("../components/PreviewControls")) : null;
-
 const LINKS = [
   { label: "How it works", href: "#/how-it-works", path: "/how-it-works" },
   { label: "Accuracy", href: "#/accuracy", path: "/accuracy" },
@@ -20,7 +17,7 @@ const LINKS = [
 
 export default function Root() {
   const { theme, toggle } = useTheme();
-  const { toasts, dismissToast, mock } = useSession();
+  const { toasts, dismissToast } = useSession();
   const location = useLocation();
   const inReader = !!useMatch("/review/:documentId");
   const wide = useMedia("(min-width: 768px)");
@@ -65,7 +62,6 @@ export default function Root() {
     />
   );
 
-  const sample = !!mock?.sampleMode;
   const links = LINKS.map((l) => ({
     label: l.label,
     href: l.href,
@@ -89,7 +85,7 @@ export default function Root() {
       </a>
       <div style={{ position: "relative", zIndex: 30 }}>
         <AppHeader
-          variant={!wide ? "mobile" : sample ? "sample-mode" : "default"}
+          variant={!wide ? "mobile" : "default"}
           links={links}
           homeHref="#/"
           trailing={
@@ -135,13 +131,7 @@ export default function Root() {
         <Outlet />
       </main>
 
-      {!inReader && <AppFooter sampleMode={sample} creditsHref="#/how-it-works?at=credits" />}
-
-      {PreviewControls && (
-        <Suspense fallback={null}>
-          <PreviewControls />
-        </Suspense>
-      )}
+      {!inReader && <AppFooter creditsHref="#/how-it-works?at=credits" />}
 
       <div
         aria-live="polite"

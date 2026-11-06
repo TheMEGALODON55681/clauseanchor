@@ -1,32 +1,52 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { client } from "../../api/client";
-import { SAMPLE_FILENAME } from "../../api/contract";
-import { ApiError, type Document, type UploadInput } from "../../api/types";
+import { available, client } from "../../api/client";
+import { errorInfo } from "../../api/errors";
+import { ApiError, type Document, type Job, type UploadInput } from "../../api/types";
 import { useSession } from "../../app/session";
 import type { PartyChoice } from "../../components/PartyBindingField";
 import { buildOffsetIndex, sliceCp } from "../../lib/offsets";
-import { flowReducer, initialFlow, partyName, type UploadErrorCode } from "../../lib/startFlow";
+import { flowReducer, initialFlow, partyName, type FlowError, type UploadErrorCode } from "../../lib/startFlow";
 
 /* The side effects of the /start flow: the upload, the parse polling and the calls to
    `client`. The reducer in lib/startFlow.ts holds the state and this hook reports to it.
    Each upload takes a new `seq`, so an answer for a replaced file changes nothing. */
 
-const REFUSALS: UploadErrorCode[] = ["unsupported_type", "too_large", "scanned", "protected"];
+const CODES: UploadErrorCode[] = ["unsupported_type", "too_large", "scanned", "protected", "network"];
 
 const formatSize = (bytes: number) => (bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
+/** What the screen shows for a failed request. */
+function flowError(e: unknown): FlowError {
+  if (!(e instanceof ApiError)) return { code: "network", message: errorInfo(null).message, apiCode: null, retryable: true };
+  const code = CODES.find((c) => c === e.code) ?? "other";
+  return { code, message: e.message, apiCode: e.apiCode, retryable: e.retryable };
+}
+
+/** What the screen shows for a parse job that failed. The words come from our table and not from the server's sentence. */
+function jobError(job: Job): FlowError {
+  const apiCode = job.error?.code ?? null;
+  const info = errorInfo(apiCode);
+  return { code: CODES.find((c) => c === info.ui) ?? "other", message: info.message, apiCode, retryable: job.error?.retryable ?? false };
+}
+
+/** The session is gone, or the document is: both end on the Expired page. */
+const isGone = (e: unknown) => e instanceof ApiError && (e.code === "expired" || e.code === "not_found");
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export function useStartFlow() {
   const navigate = useNavigate();
-  const { ensureToken, setDoc } = useSession();
+  const { ensureToken, endSession, setDoc } = useSession();
   const [flow, dispatch] = useReducer(flowReducer, initialFlow);
   const [docId, setDocId] = useState<string | null>(null);
   const [doc, setDocument] = useState<Document | null>(null);
   const [size, setSize] = useState("");
   const [starting, setStarting] = useState(false);
-  const [startFailed, setStartFailed] = useState(false);
+  const [startError, setStartError] = useState<FlowError | null>(null);
   const seq = useRef(0);
-  const last = useRef<{ input: UploadInput; onAccepted?: () => void } | null>(null);
+  const last = useRef<UploadInput | null>(null);
+  const current = useRef<string | null>(null);
   const alive = useRef(true);
 
   // Leaving the page ends any polling still running. A flag and not a counter, so StrictMode's test unmount in development does not drop an upload that has just started.
@@ -46,69 +66,89 @@ export function useStartFlow() {
       });
   }, [doc]);
 
-  /** `onAccepted` runs as soon as the upload is accepted, while parsing goes on. The sample link uses it to move to step 2. */
+  const gone = useCallback(() => {
+    endSession();
+    navigate("/expired?reason=expired", { replace: true, viewTransition: true });
+  }, [endSession, navigate]);
+
   const upload = useCallback(
-    async (input: UploadInput, onAccepted?: () => void) => {
+    async (input: UploadInput, retry = false) => {
       const mine = ++seq.current;
-      last.current = { input, onAccepted };
+      last.current = input;
+      // A replaced upload is deleted first, so a session keeps one document and the slot is free for the next (API.md section 8).
+      // The old one stays current until that delete has worked, so a delete that fails (a 503, say) shows its error and Try again deletes it again.
+      const replaced = current.current;
       setDocId(null);
       setDocument(null);
-      setSize("file" in input ? formatSize(input.file.size) : "");
-      dispatch({ type: "upload-started", seq: mine, fileName: "file" in input ? input.file.name : input.sampleId === "secondment" ? SAMPLE_FILENAME : `${input.sampleId}.pdf` });
+      setSize(formatSize(input.file.size));
+      dispatch({ type: "upload-started", seq: mine, fileName: input.file.name, retry });
       let uploaded = false;
       try {
         const token = await ensureToken();
-        const { document, job } = await client.uploadDocument(token, input);
-        if (!alive.current || mine !== seq.current) return;
+        if (replaced) await client.deleteDocument(token, replaced);
+        current.current = null;
+        const { document_id, parse_job_id } = await client.uploadDocument(token, input);
+        if (mine !== seq.current) {
+          // The user chose another file while this one was on its way. Nothing refers to it, so it goes.
+          void client.deleteDocument(token, document_id).catch(() => undefined);
+          return;
+        }
+        if (!alive.current) return;
         uploaded = true;
-        setDocId(document.id);
-        setDoc(document.id, { parseJobId: job.id });
+        current.current = document_id;
+        setDocId(document_id);
+        setDoc(document_id, { parseJobId: parse_job_id });
         dispatch({ type: "upload-done", seq: mine });
-        onAccepted?.();
         for (;;) {
-          const j = await client.getJob(token, job.id);
+          const j = await client.getJob(token, parse_job_id);
           if (!alive.current || mine !== seq.current) return;
           if (j.status === "succeeded") break;
-          if (j.status === "failed" || j.status === "cancelled") throw new ApiError("network", "Reading the document did not finish.");
-          await new Promise((r) => setTimeout(r, 450));
+          if (j.status === "failed" || j.status === "cancelled" || j.status === "timed_out") {
+            dispatch({ type: "parse-failed", seq: mine, error: jobError(j) });
+            return;
+          }
+          await sleep(450);
         }
-        const parsed = await client.getDocument(token, document.id);
+        const parsed = await client.getDocument(token, document_id);
         if (!alive.current || mine !== seq.current) return;
         setDocument(parsed);
         dispatch({ type: "parse-done", seq: mine, parties: parsed.nodes.filter((n) => n.kind === "party").length });
       } catch (e) {
-        if (uploaded) dispatch({ type: "parse-failed", seq: mine });
-        else dispatch({ type: "upload-failed", seq: mine, code: REFUSALS.find((c) => e instanceof ApiError && e.code === c) ?? "network" });
+        if (!alive.current || mine !== seq.current) return;
+        if (isGone(e)) return gone();
+        dispatch({ type: uploaded ? "parse-failed" : "upload-failed", seq: mine, error: flowError(e) });
       }
     },
-    [ensureToken, setDoc],
+    [ensureToken, setDoc, gone],
   );
 
-  /** Uploads the same file or sample again, after a failed upload or a failed parse. */
+  /** Uploads the same file again, after a failed upload or a failed read. */
   const retry = useCallback(() => {
-    if (last.current) void upload(last.current.input, last.current.onAccepted);
+    if (last.current) void upload(last.current, true);
   }, [upload]);
 
   const start = useCallback(async () => {
-    if (!docId || flow.role === null) return;
+    if (!docId || flow.role === null || flow.categories.length === 0) return;
     setStarting(true);
-    setStartFailed(false);
+    setStartError(null);
     try {
       const token = await ensureToken();
       const role = flow.role;
       const partyNodeId = flow.partyNone ? null : flow.party;
-      await client.setParty(token, docId, { role, party_node_id: partyNodeId });
-      const job = await client.startAnalysis(token, docId, { jurisdiction_scope: flow.india ? "india_review" : "unspecified" });
-      setDoc(docId, { analysisJobId: job.id, role, partyNodeId });
+      // The binding has no endpoint until 3-A. The step stays, and until then it sends nothing.
+      if (available.partyBinding) await client.setParty(token, docId, { role, party_node_id: partyNodeId });
+      const started = await client.startAnalysis(token, docId, { category_ids: flow.categories, jurisdiction_scope: flow.india ? "india_review" : "unspecified" });
+      setDoc(docId, { analysisJobId: started.job_id, analysisId: started.analysis_id, categoryIds: flow.categories, role, partyNodeId });
       navigate(`/review/${docId}`, { viewTransition: true });
-    } catch {
+    } catch (e) {
       setStarting(false);
-      setStartFailed(true);
+      if (isGone(e)) return gone();
+      setStartError(flowError(e));
     }
-  }, [docId, flow.role, flow.party, flow.partyNone, flow.india, ensureToken, setDoc, navigate]);
+  }, [docId, flow.role, flow.party, flow.partyNone, flow.india, flow.categories, ensureToken, setDoc, navigate, gone]);
 
-  const pages = doc ? Math.max(...doc.nodes.map((n) => n.page), 1) : 0;
+  const pages = doc?.page_count ?? 0;
   const fileMeta = [size, pages ? `${pages} ${pages === 1 ? "page" : "pages"}` : ""].filter(Boolean).join(", ");
 
-  return { flow, dispatch, parties, fileMeta, upload, retry, start, starting, startFailed };
+  return { flow, dispatch, parties, fileMeta, upload, retry, start, starting, startError };
 }

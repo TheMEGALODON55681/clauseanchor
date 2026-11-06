@@ -11,7 +11,9 @@ export type DropzoneState =
   | "error-type"
   | "error-size"
   | "error-scanned"
-  | "error-protected";
+  | "error-protected"
+  /** Any other refusal. The sentence comes in `message`. */
+  | "error-other";
 
 const ERROR_MESSAGE: Record<string, string> = {
   "error-type": "This file type is not supported. Upload a PDF or DOCX.",
@@ -25,12 +27,15 @@ export default function UploadDropzone({
   state = "idle",
   fileName,
   fileMeta,
+  message,
   onChoose,
   onReplace,
 }: {
   state?: DropzoneState;
   fileName?: string;
   fileMeta?: string;
+  /** The sentence to show for an error state. It replaces the component's own, and `error-other` has none of its own. */
+  message?: string;
   onChoose?: () => void;
   onReplace?: () => void;
 }) {
@@ -72,7 +77,7 @@ export default function UploadDropzone({
       </div>
       {isError ? (
         <p role="alert" style={{ marginTop: 4, fontSize: 14, lineHeight: "20px", color: "var(--status-unavailable-fg)", maxWidth: 380 }}>
-          {ERROR_MESSAGE[state]}
+          {message ?? ERROR_MESSAGE[state]}
         </p>
       ) : (
         <p style={{ marginTop: 4, fontSize: 14, color: "var(--ink-secondary)" }}>

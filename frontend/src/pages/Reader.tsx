@@ -1,23 +1,25 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FocusEvent, ReactNode } from "react";
 import { useNavigate, useParams } from "react-router";
-import { client } from "../api/client";
-import { ApiError, type Analysis, type Category, type Clause, type Document, type Job, type ManualReview, type Role } from "../api/types";
-import { CATALOGUE, CATALOGUE_VERSION, CATEGORY_BY_ID, GROUP_ORDER } from "../api/catalogue";
+import { available, client } from "../api/client";
+import { errorInfo } from "../api/errors";
+import { ApiError, type Analysis, type Clause, type Document, type Job, type ManualReview, type Role } from "../api/types";
+import { CATALOGUE, CATEGORY_BY_ID, GROUP_ORDER } from "../api/catalogue";
 import { buildOffsetIndex, sliceCp, toUtf16, type OffsetIndex } from "../lib/offsets";
 import { authorityOf } from "../lib/authority";
-import { freshDelays, sessionEndsIn } from "../lib/reader";
+import { categoryStatus, freshDelays, listRows, sessionEndsIn, unfinishedList } from "../lib/reader";
 import { suggestedParty } from "../lib/startFlow";
 import { panelTransition } from "../lib/panelTransition";
 import { useMedia, useReducedMotion } from "../lib/useMedia";
 import { useSession } from "../app/session";
 import ReaderToolbar, { type ToolbarVariant } from "../components/ReaderToolbar";
 import { ROLES } from "../components/RoleSelector";
-import StageProgress, { type Step, type StepState } from "../components/StageProgress";
+import StageProgress, { type Step } from "../components/StageProgress";
 import CategorySidebar, { type SidebarGroup, type SidebarRow } from "../components/CategorySidebar";
 import ClauseDetailPanel, { REVIEW_CANDIDATE_NOTE, type PanelData } from "../components/ClauseDetailPanel";
 import MarginRuler, { type RulerMark } from "../components/MarginRuler";
 import ScopePanel from "../components/ScopePanel";
+import EmptyState from "../components/EmptyState";
 import ManualReviewList, { type ManualItem } from "../components/ManualReviewList";
 import NoticeBanner from "../components/NoticeBanner";
 import ErrorCard from "../components/ErrorCard";
@@ -36,16 +38,7 @@ import { ChevronIcon, EmptyBracketIcon, ListIcon, PilcrowIcon, TrashIcon } from 
 
 const POLL_MS = 700;
 
-const STAGES: { key: string; label: string }[] = [
-  { key: "reading", label: "Reading document" },
-  { key: "finding_clauses", label: "Finding clauses" },
-  { key: "checking_confidence", label: "Checking confidence" },
-  { key: "law_review", label: "Indian law review" },
-  { key: "case_law", label: "Finding case law" },
-  { key: "final_checks", label: "Final checks" },
-];
-
-const TERMINAL = new Set(["succeeded", "partial", "failed", "cancelled"]);
+const TERMINAL = new Set(["succeeded", "partial", "failed", "cancelled", "timed_out"]);
 /* Height of the open bottom sheet. */
 const SHEET_OPEN = "78dvh";
 
@@ -64,12 +57,6 @@ function clauseStatus(c: Clause): StatusKind {
   return c.confidence_band === "unvalidated" ? "unvalidated" : "found";
 }
 
-function categoryStatus(c: Category): StatusKind {
-  if (c.status === "found") return c.clauses.some((k) => k.status === "accepted" && k.confidence_band !== "unvalidated") ? "found" : "unvalidated";
-  if (c.status === "abstained") return "review";
-  return c.status;
-}
-
 function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
 }
@@ -77,7 +64,7 @@ function plural(n: number, one: string, many: string) {
 export default function Reader() {
   const { documentId = "" } = useParams();
   const navigate = useNavigate();
-  const { token, docs, setDoc, forgetDoc, toast } = useSession();
+  const { token, docs, setDoc, forgetDoc, endSession, toast } = useSession();
   const meta = docs[documentId];
   const reduced = useReducedMotion();
   const wide = useMedia("(min-width: 1440px)");
@@ -109,15 +96,17 @@ export default function Reader() {
 
   const handleError = useCallback(
     (e: unknown) => {
-      if (e instanceof ApiError && (e.code === "not_found" || e.code === "expired")) goExpired();
-      else setNetError(true);
+      if (e instanceof ApiError && (e.code === "not_found" || e.code === "expired")) {
+        if (e.code === "expired") endSession();
+        goExpired();
+      } else setNetError(true);
     },
-    [goExpired]
+    [goExpired, endSession]
   );
 
   /* Contract text is fetched once and kept in memory only. */
   useEffect(() => {
-    if (!token || !meta?.analysisJobId) {
+    if (!token || !meta?.analysisJobId || !meta.analysisId) {
       goExpired();
       return;
     }
@@ -140,20 +129,23 @@ export default function Reader() {
 
   /* Poll the job and the analysis until the job reaches a terminal state. */
   useEffect(() => {
-    if (!token || !meta?.analysisJobId) return;
+    if (!token || !meta?.analysisJobId || !meta.analysisId) return;
     const jobId = meta.analysisJobId;
+    const analysisId = meta.analysisId;
     let live = true;
     let timer = 0;
     const tick = async () => {
       try {
-        const [j, a] = await Promise.all([client.getJob(token, jobId), client.getAnalysis(token, documentId)]);
+        const [j, a] = await Promise.all([client.getJob(token, jobId), client.getAnalysis(token, analysisId)]);
         if (!live) return;
         setNetError(false);
         setJob(j);
         setAnalysis(a);
         if (TERMINAL.has(j.status)) {
-          const m = await client.getManualReview(token, documentId);
-          if (live) setManual(m);
+          if (available.manualReview) {
+            const m = await client.getManualReview(token, documentId);
+            if (live) setManual(m);
+          }
           return;
         }
         timer = window.setTimeout(tick, POLL_MS);
@@ -167,7 +159,7 @@ export default function Reader() {
       window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documentId, token, meta?.analysisJobId, pollKey]);
+  }, [documentId, token, meta?.analysisJobId, meta?.analysisId, pollKey]);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 30000);
@@ -176,7 +168,11 @@ export default function Reader() {
 
   const text = doc?.source_text ?? "";
   const finished = !!job && TERMINAL.has(job.status);
+  const requested = meta?.categoryIds ?? [];
   const catMap = useMemo(() => new Map((analysis?.categories ?? []).map((c) => [c.category_id, c])), [analysis]);
+  // The API answers only the ids it was sent and the switch adds none, so the five India-specific rows come from the scope the analysis carries.
+  const india = analysis?.jurisdiction_scope === "india_review";
+  const rows = useMemo(() => listRows(requested, india, catMap, finished), [requested, india, catMap, finished]);
 
   const findings: Finding[] = useMemo(() => {
     if (!index) return [];
@@ -350,38 +346,43 @@ export default function Reader() {
   /* Sidebar groups, with skeleton rows for categories still being checked. */
   const groups: SidebarGroup[] = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const byId = new Map(rows.map((r) => [r.id, r]));
     return GROUP_ORDER.map((g) => {
-      const rows: SidebarRow[] = CATALOGUE.filter((c) => c.group === g).map((c) => {
-        const cat = catMap.get(c.id);
-        if (!cat) return { id: c.id, name: c.label, status: finished ? "unavailable" : "absent", pending: !finished };
-        const status = categoryStatus(cat);
-        return { id: c.id, name: c.label, status, count: cat.clauses.length || undefined, enterStep: fresh.get(c.id) };
+      const sidebarRows: SidebarRow[] = CATALOGUE.filter((c) => c.group === g && byId.has(c.id)).map((c) => {
+        const r = byId.get(c.id)!;
+        return { id: c.id, name: c.label, status: r.status, count: r.count, note: r.note, pending: r.pending, enterStep: r.pending ? undefined : fresh.get(c.id) };
       });
-      const shown = rows.filter((r) => {
+      const shown = sidebarRows.filter((r) => {
         if (q && !r.name.toLowerCase().includes(q)) return false;
         if (filter === "Found") return r.status === "found" || r.status === "unvalidated";
         if (filter === "Needs a lawyer") return r.status === "review";
         if (filter === "Not found") return r.status === "absent" && !r.pending;
         return true;
       });
-      const f = rows.filter((r) => !r.pending && (r.status === "found" || r.status === "unvalidated")).length;
-      const rv = rows.filter((r) => !r.pending && r.status === "review").length;
+      const f = sidebarRows.filter((r) => !r.pending && (r.status === "found" || r.status === "unvalidated")).length;
+      const rv = sidebarRows.filter((r) => !r.pending && r.status === "review").length;
       const parts = [`${f} found`];
       if (rv) parts.push(`${rv} ${rv === 1 ? "needs" : "need"} a lawyer`);
-      const pend = rows.filter((r) => r.pending).length;
+      const un = sidebarRows.filter((r) => !r.pending && r.status === "unavailable").length;
+      if (un) parts.push(`${un} unavailable`);
+      const pend = sidebarRows.filter((r) => r.pending).length;
       if (pend) parts.push(`${pend} in progress`);
       return { label: g, summary: parts.join(", "), rows: shown };
     }).filter((g) => g.rows.length > 0);
-  }, [catMap, query, filter, finished, fresh]);
+  }, [rows, query, filter, fresh]);
 
   const counts = useMemo(() => {
     const c = { found: 0, review: 0, absent: 0, unvalidated: 0, unavailable: 0 };
-    for (const cat of analysis?.categories ?? []) c[categoryStatus(cat)]++;
+    for (const r of rows) if (!r.pending) c[r.status]++;
     return c;
-  }, [analysis]);
-  const summary = `${CATALOGUE.length} categories: ${counts.found} found, ${counts.review} need a lawyer, ${counts.absent} not found, ${counts.unvalidated} not validated${counts.unavailable ? `, ${counts.unavailable} unavailable` : ""}`;
+  }, [rows]);
+  const summary = `${plural(rows.length, "category", "categories")}: ${counts.found} found, ${counts.review} need a lawyer, ${counts.absent} not found, ${counts.unvalidated} not validated${counts.unavailable ? `, ${counts.unavailable} unavailable` : ""}`;
 
+  // The categories that were, or are being, checked. An Unavailable one is listed but not reviewed.
+  const reviewedCount = rows.filter((r) => r.status !== "unavailable").length;
   const unavailableNames = (analysis?.categories ?? []).filter((c) => c.status === "unavailable").map((c) => labelOf(c.category_id));
+  // What View list opens: the categories and the pages that were not finished.
+  const unfinished = useMemo(() => unfinishedList(rows, catMap, doc), [rows, catMap, doc]);
 
   /* Manual review items, with partial highlights mapped into each preview. */
   const manualItems: ManualItem[] = useMemo(() => {
@@ -412,7 +413,7 @@ export default function Reader() {
   );
 
   async function changeRole(role: Role) {
-    if (!token) return;
+    if (!token || !available.partyBinding) return;
     const mine = ++roleSeq.current;
     try {
       // The party the role usually is, by position among the named parties. Otherwise the one already chosen.
@@ -432,7 +433,7 @@ export default function Reader() {
   }
 
   async function download() {
-    if (!token) return;
+    if (!token || !available.report) return;
     try {
       const blob = await client.downloadReport(token, documentId);
       const url = URL.createObjectURL(blob);
@@ -453,9 +454,11 @@ export default function Reader() {
       await client.deleteDocument(token, documentId);
       forgetDoc(documentId);
       navigate("/expired?reason=deleted", { replace: true, viewTransition: true });
-    } catch {
+    } catch (e) {
       setConfirmDelete(false);
-      toast("error", "The contract could not be deleted. Try again.");
+      // A session that ended leads to the Expired page, and retrying would only fail again. A document that is already gone counts as deleted (the adapter takes the 404). Any other failure leaves it in place.
+      if (e instanceof ApiError && e.code === "expired") handleError(e);
+      else toast("error", "The contract could not be deleted. Try again.");
     }
   }
 
@@ -472,19 +475,20 @@ export default function Reader() {
   async function retryAnalysis() {
     if (!token) return;
     try {
-      const j = await client.startAnalysis(token, documentId, { jurisdiction_scope: analysis?.jurisdiction_scope ?? "india_review" });
+      const started = await client.startAnalysis(token, documentId, { category_ids: requested, jurisdiction_scope: analysis?.jurisdiction_scope ?? "india_review" });
       setManual(null);
-      setDoc(documentId, { analysisJobId: j.id });
+      setDoc(documentId, { analysisJobId: started.job_id, analysisId: started.analysis_id });
       setPollKey((k) => k + 1);
     } catch (e) {
-      handleError(e);
+      if (e instanceof ApiError && (e.code === "expired" || e.code === "not_found")) handleError(e);
+      else toast("error", e instanceof ApiError ? e.message : errorInfo(null).message);
     }
   }
 
   /* The band above the sheet: progress while the review runs, then a notice that stays. A partial read
      never shows the zero-findings line, because nothing found in text that was not read is no finding. */
-  const parserWarning = !!doc && doc.warnings.length > 0;
-  const noFindings = !!index && finished && job?.status === "succeeded" && !!analysis?.processing_complete && findings.length === 0 && !parserWarning;
+  const partialRead = !!doc?.partial;
+  const noFindings = !!index && finished && job?.status === "succeeded" && !!analysis?.processing_complete && findings.length === 0 && !partialRead;
 
   /* Detail panel content for the current selection. */
   const panel: ReactNode = (() => {
@@ -496,7 +500,9 @@ export default function Reader() {
           onClose={() => setSelection(null)}
           custom={{
             title: "Manual review",
-            content: (
+            content: !available.manualReview ? (
+              <EmptyState variant="not-available" heading="Manual review is not available in this build yet" line="The list of text without findings needs a service that is not built yet. Read the full contract text beside it." />
+            ) : (
               <ManualReviewList
                 state={!manual ? "loading" : manual.status === "processing_incomplete" ? "processing-incomplete" : manualItems.length ? "populated" : "empty"}
                 items={manualItems}
@@ -514,6 +520,17 @@ export default function Reader() {
     if (selection?.type === "category") {
       const cat = catMap.get(selection.id);
       const title = labelOf(selection.id);
+      // A row with a note is an India-specific category with no model yet. The panel says what the row says.
+      const note = rows.find((r) => r.id === selection.id)?.note;
+      if (note) {
+        return (
+          <ClauseDetailPanel
+            fill={fill}
+            onClose={() => setSelection(null)}
+            data={{ title, status: "unavailable", emptyTitle: note, emptyBody: "ClauseAnchor did not check for this category. Read the agreement for it yourself, or ask a lawyer." }}
+          />
+        );
+      }
       if (!cat) {
         if (finished) {
           return <ClauseDetailPanel fill={fill} onClose={() => setSelection(null)} data={{ title, status: "unavailable", emptyTitle: "This part of the review did not finish", emptyBody: "This category was not reached before the review stopped." }} />;
@@ -548,7 +565,6 @@ export default function Reader() {
           sectionPath: sectionFor(clause.span.start),
           offsets: { start: clause.span.start, end: clause.span.end },
           quote,
-          polarity: clause.polarity,
           confidence: clause.confidence_band,
           calibration: clause.calibration_scope === "category" || clause.calibration_scope === "pooled" ? clause.calibration_scope : undefined,
           reviewNote: clause.status === "review_candidate" ? REVIEW_CANDIDATE_NOTE : undefined,
@@ -594,8 +610,8 @@ export default function Reader() {
           title: "Nothing selected",
           content: (
             <div className="flex flex-col gap-3 text-[14px] leading-[22px]" style={{ color: "var(--ink-secondary)" }}>
-              <p>Choose a highlighted passage or a category to see the exact wording, which side it favours, and any case law.</p>
-              {noFindings ? (
+              <p>Choose a highlighted passage or a category to see the exact wording.</p>
+              {noFindings && available.manualReview ? (
                 <div>
                   <Button variant="secondary" size="s" onClick={openManual}>
                     Open the manual review list
@@ -633,10 +649,9 @@ export default function Reader() {
       top={
         <ScopePanel
           variant={analysis?.mode === "sample" ? "sample-mode" : finished && analysis && !analysis.processing_complete ? "processing-incomplete" : "complete"}
-          categoryCount={CATALOGUE.length}
-          catalogueVersion={analysis?.catalogue_version ?? CATALOGUE_VERSION}
-          limitations={unavailableNames.length ? [`Unavailable: ${unavailableNames.join(", ")}`] : []}
-          onViewList={() => setFilter("All")}
+          categoryCount={reviewedCount}
+          catalogueVersion={analysis?.catalogue_version ?? ""}
+          unfinished={unfinished}
         />
       }
       footer={
@@ -658,28 +673,23 @@ export default function Reader() {
         >
           <PilcrowIcon size={16} />
           <span className="flex-1">Manual review</span>
-          {manual ? <CountBadge count={manualItems.length} /> : <span className="font-mono text-[12px]" style={{ color: "var(--ink-tertiary)" }}>after review</span>}
+          {manual ? <CountBadge count={manualItems.length} /> : <span className="font-mono text-[12px]" style={{ color: "var(--ink-tertiary)" }}>{available.manualReview ? "after review" : "not available yet"}</span>}
         </button>
       }
     />
   );
 
-  /* Steps for the compact progress readout. */
-  const steps: Step[] = STAGES.map((s, i) => {
-    const cur = job?.stage ? STAGES.findIndex((x) => x.key === job.stage) : job && TERMINAL.has(job.status) ? STAGES.length : 0;
-    let state: StepState = i < cur ? "done" : i === cur ? "active" : "pending";
-    if (job?.status === "failed" && i === cur) state = "failed";
-    const detail =
-      i === cur && job?.total_units
-        ? s.key === "finding_clauses"
-          ? `${analysis?.categories.length ?? 0} of ${CATALOGUE.length} categories`
-          : `${job.completed_units} of ${job.total_units}`
-        : undefined;
-    return { label: s.label, state, detail };
-  });
+  /* One step: the API's own stage is a word of the core's, and its units are a count of work done, never a share of risk found. */
+  const steps: Step[] = [
+    {
+      label: job?.status === "queued" ? "Waiting in the queue" : "Checking categories",
+      state: "active",
+      detail: job?.total_units ? `${job.completed_units} of ${job.total_units} steps` : undefined,
+    },
+  ];
 
   const variant: ToolbarVariant =
-    finished && (job?.status === "partial" || job?.status === "cancelled" || job?.status === "failed")
+    finished && (job?.status === "partial" || job?.status === "cancelled" || job?.status === "failed" || job?.status === "timed_out")
       ? "partial"
       : finished && analysis?.mode === "sample"
         ? "sample-mode"
@@ -688,16 +698,21 @@ export default function Reader() {
   const partialNote =
     job?.status === "cancelled"
       ? "You stopped the review. Categories not reached are listed as Unavailable."
-      : job?.status === "failed"
-        ? "The review stopped early. Categories not reached are listed as Unavailable."
+      : job?.status === "timed_out"
+        ? "The review took too long, so ClauseAnchor stopped it. Categories not reached show as Unavailable."
+        : job?.status === "failed"
+          ? "The review stopped early. Categories not reached are listed as Unavailable."
         : unavailableNames.length
           ? `Partial result. Not finished: ${unavailableNames.join(", ")}.`
           : "Some categories could not be finished. They are listed as Unavailable.";
 
-  const roleItems: MenuItem[] = ROLES.map((r) => ({ label: r.title, checked: meta?.role === r.role, onSelect: () => void changeRole(r.role) }));
+  // Your side has no endpoint until 3-A. The menu says so in place of the roles.
+  const roleItems: MenuItem[] = available.partyBinding
+    ? ROLES.map((r) => ({ label: r.title, checked: meta?.role === r.role, onSelect: () => void changeRole(r.role) }))
+    : [{ label: "Changing your role is not available in this build yet", disabled: true }];
   // On a phone Delete leaves the toolbar, so Download report keeps its line, and joins the role list.
   if (!md) roleItems.push({ label: "Delete document", icon: <TrashIcon size={16} />, onSelect: () => setConfirmDelete(true) });
-  const pages = doc ? Math.max(1, ...doc.nodes.map((n) => n.page)) : 0;
+  const pages = doc?.page_count ?? 0;
   const minutesLeft = doc ? (new Date(doc.expires_at).getTime() - now) / 60000 : Infinity;
 
   /* The bottom sheet stays mounted, so it can slide out. While it leaves it still holds the panel it showed. */
@@ -728,7 +743,8 @@ export default function Reader() {
         <ReaderToolbar
           variant={variant}
           filename={doc?.filename ?? "Loading"}
-          meta={doc ? `${plural(pages, "page", "pages")}, ${CATALOGUE.length} categories` : ""}
+          meta={doc ? [pages ? plural(pages, "page", "pages") : "", plural(requested.length, "category", "categories")].filter(Boolean).join(", ") : ""}
+          reportUnavailable={!available.report}
           partialNote={partialNote}
           showDelete={md}
           leading={
@@ -752,7 +768,7 @@ export default function Reader() {
 
         {(minutesLeft <= 10 || netError || job?.status === "failed") && (
           <div className="flex flex-col gap-2 px-4 py-3" style={{ borderBottom: "1px solid var(--rule-default)", background: "var(--paper-base)" }}>
-            {minutesLeft <= 10 && <NoticeBanner variant="session-expiry" text={sessionEndsIn(minutesLeft)} onAction={download} />}
+            {minutesLeft <= 10 && <NoticeBanner variant="session-expiry" text={sessionEndsIn(minutesLeft, available.report)} onAction={available.report ? download : undefined} />}
             {netError && (
               <ErrorCard
                 message="Could not reach the server. Your contract is still open here."
@@ -766,9 +782,9 @@ export default function Reader() {
             {job?.status === "failed" && (
               <ErrorCard
                 title="The analysis did not finish"
-                message="The review stopped partway. Findings already checked are shown. Run it again to check the rest."
-                code="ANALYSIS_FAILED"
-                onRetry={retryAnalysis}
+                message={errorInfo(job.error?.code).message}
+                code={job.error?.code ?? "ANALYSIS_FAILED"}
+                onRetry={job.error?.retryable ? retryAnalysis : undefined}
               />
             )}
           </div>
@@ -810,7 +826,7 @@ export default function Reader() {
           >
             <div ref={content} className="mx-auto flex w-full flex-col items-center px-3 py-6 md:px-4 md:py-10">
               {/* Above the sheet. The progress band goes when the review ends, and scroll anchoring keeps the text still. */}
-              {(!finished || parserWarning || noFindings) && (
+              {(!finished || partialRead || noFindings) && (
                 <div className="mb-3 flex w-full justify-center gap-3">
                   <div className="reader-sheet flex min-w-0 flex-col gap-2">
                     {!finished && (
@@ -821,11 +837,11 @@ export default function Reader() {
                         <StageProgress compact steps={steps} onCancel={cancel} />
                       </div>
                     )}
-                    {parserWarning && <NoticeBanner variant="read-partial" />}
+                    {partialRead && <NoticeBanner variant="read-partial" />}
                     {noFindings && (
                       <p className="flex items-center gap-2 px-1 text-[14px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
                         <EmptyBracketIcon size={16} />
-                        {CATALOGUE.length} categories reviewed. No clause found at the validated threshold.
+                        {plural(reviewedCount, "category", "categories")} reviewed. No clause found at the validated threshold.
                       </p>
                     )}
                   </div>
@@ -964,7 +980,7 @@ function Pager({ index, total, onGo }: { index: number; total: number; onGo: (i:
 }
 
 type TextBlockProps = {
-  blk: { id: string; kind: string; a: number; b: number };
+  blk: { id: string; heading: boolean; a: number; b: number };
   bi: number;
   text: string;
   /** The findings that touch this block. */
@@ -995,14 +1011,11 @@ const DocumentText = memo(function DocumentText({
   onPick: (f: Finding, how: Pick) => void;
 }) {
   const text = doc.source_text ?? "";
-  const blocks = useMemo(
-    () =>
-      doc.nodes
-        .filter((n) => n.kind !== "party")
-        .sort((a, b) => a.start - b.start)
-        .map((n) => ({ id: n.id.replace(/^n_/, ""), kind: n.kind, a: toUtf16(index, n.start), b: toUtf16(index, n.end) })),
-    [doc, index]
-  );
+  const blocks = useMemo(() => {
+    // A block that opens a heading node is a heading.
+    const headings = new Set(doc.nodes.filter((n) => n.kind === "heading").map((n) => n.start));
+    return doc.blocks.map((blk) => ({ id: blk.id, heading: headings.has(blk.start), a: toUtf16(index, blk.start), b: toUtf16(index, blk.end) }));
+  }, [doc, index]);
   /* Which findings touch each block, worked out once per set of findings. A selection then renders
      only the blocks it touches, not every paragraph of a long contract. */
   const plan = useMemo(() => {
@@ -1109,19 +1122,17 @@ const TextBlock = memo(function TextBlock({ blk, bi, text, inside, first, inkSte
       </span>
     );
   }
-  const heading = blk.kind === "heading" || bi === 0;
+  const heading = blk.heading;
   return (
     <p
       id={`unit-${blk.id}`}
       tabIndex={-1}
       style={{
-        whiteSpace: "pre-wrap",
+        // A PDF breaks its lines where the page ends, so a block reflows to the column. The text itself is not changed, and offsets count the same characters.
         overflowWrap: "anywhere",
         margin: heading ? "28px 0 10px" : "0 0 16px",
         fontWeight: heading ? 600 : 400,
-        fontSize: bi === 0 ? 22 : heading ? 18 : undefined,
-        textAlign: bi === 0 ? "center" : undefined,
-        letterSpacing: bi === 0 ? "0.04em" : undefined,
+        fontSize: heading ? 18 : undefined,
         marginTop: bi === 0 ? 0 : undefined,
       }}
     >

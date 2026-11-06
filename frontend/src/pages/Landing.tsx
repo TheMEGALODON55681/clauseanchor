@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { available } from "../api/client";
 import { CATALOGUE, GROUP_ORDER } from "../api/catalogue";
 import Button from "../components/Button";
 import Disclosure from "../components/Disclosure";
@@ -26,7 +27,7 @@ const PRIVACY_LINE = "Your contract is processed in memory and deleted within 60
 const DOES = [
   "Finds clauses in 46 listed categories",
   "Quotes your contract word for word and shows where each quote sits",
-  "Shows passages from published Indian judgments where it has them",
+  "Adds statute notes and judgment passages in a later build",
   "Shows how confident it is, and says so when it is unsure",
 ];
 const DOES_NOT = [
@@ -41,7 +42,7 @@ const QUESTIONS: [string, string][] = [
   ["What happens to my file?", "Your contract is processed in memory and deleted within 60 minutes. Choose Delete document in the reader to remove it sooner."],
   ["What if it misses something?", "It can. This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment."],
   ["Which files work?", "PDF or DOCX with selectable text, up to 10 MB and 100 pages. A file that is scanned throughout, or password protected, is refused."],
-  ["Which law does it cover?", "Indian law review adds notes that cite Indian statutes and passages from Indian judgments. Turn it off for a contract under another country's law."],
+  ["Which law does it cover?", "ClauseAnchor finds listed clause categories and does not apply any country's law. The five India-specific categories show as not available in this build yet. Statute notes and judgment passages come in a later build."],
 ];
 
 const GROUPS = GROUP_ORDER.map((group) => ({ group, names: CATALOGUE.filter((c) => c.group === group).map((c) => c.label) }));
@@ -74,8 +75,8 @@ function FindingFragment() {
 
 const STEPS: { title: string; body: string; fragment: ReactNode }[] = [
   { title: "Upload the contract", body: "Upload a PDF or DOCX with selectable text, up to 10 MB and 100 pages.", fragment: <UploadDropzone state="idle" /> },
-  { title: "Say which side you are", body: "Pick your role and the party you are. That decides whether a clause reads as a burden or a benefit for you.", fragment: <RoleFragment /> },
-  { title: "Check each finding", body: "Every finding points to exact text. Select one to see the quoted wording, the confidence band and any case law.", fragment: <FindingFragment /> },
+  { title: "Say which side you are", body: "Pick your role and the party you are. This build does not use your choice yet, so findings carry no burden or benefit label.", fragment: <RoleFragment /> },
+  { title: "Check each finding", body: "Every finding points to exact text. Select one to see the quoted wording and its confidence band. Statute notes and judgment passages come in a later build.", fragment: <FindingFragment /> },
 ];
 
 function Mark({ children }: { children: string }) {
@@ -84,10 +85,15 @@ function Mark({ children }: { children: string }) {
 
 function Ctas() {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row">
-      <Button to="/start" size="l">Review a contract</Button>
-      <Button to="/start?sample=secondment" variant="secondary" size="l">Try the sample contract</Button>
-    </div>
+    <>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button to="/start" size="l">Review a contract</Button>
+      </div>
+      {/* The prepared sample needs the sample endpoint of 3-C. */}
+      {!available.samples && (
+        <p className="mt-3 text-[14px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>The sample contract is not available in this build yet.</p>
+      )}
+    </>
   );
 }
 
@@ -107,7 +113,7 @@ export default function Landing() {
               Know which clauses to ask a lawyer about.
             </h1>
             <p className="mt-4 max-w-[66ch] font-serif text-[17px] leading-[28px] md:text-[19px] md:leading-[32px]" style={{ color: "var(--ink-secondary)" }}>
-              ClauseAnchor checks your contract against 46 listed clause categories and marks each match in the margin. Every finding quotes your text, and some add a passage from a published Indian judgment. Where it is unsure, it says Needs a lawyer.
+              ClauseAnchor checks your contract against 46 listed clause categories and marks each match in the margin. Every finding quotes your text. Where it is unsure, it says Needs a lawyer.
             </p>
             <div className="mt-6">
               <Ctas />
@@ -200,7 +206,7 @@ export default function Landing() {
       <Section id="privacy" labelledBy="privacy-title" mark={mark()}>
         <h2 id="privacy-title" className="t-display-md">Your contract is deleted within 60 minutes.</h2>
         <p className="t-prose-lg mt-4">
-          {PRIVACY_LINE} Reloading the page ends your session, and nothing is written to your browser's storage. The Accuracy page lists the measured figures for each category once the evaluation is complete. Until then it shows labelled example numbers.
+          {PRIVACY_LINE} Reloading the page ends your session, and nothing is written to your browser's storage. The Accuracy page lists the measured figures for each category. It is not available in this build yet.
         </p>
         <p className="-ml-4 mt-4">
           <Button to="/accuracy" variant="tertiary">See the Accuracy page</Button>

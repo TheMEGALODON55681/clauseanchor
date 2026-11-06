@@ -9,7 +9,10 @@ export type CategoryRowState = "default" | "hover" | "selected" | "focus";
 type CategoryRowProps = {
   name: string;
   status: StatusKind;
+  /** A count of 0 is drawn: a category that abstained with no passage says so. Leave it out for a row that has nothing to count. */
   count?: number;
+  /** A short reason under the status, such as why a category is Unavailable. */
+  note?: string;
   state?: CategoryRowState;
   /** Stagger step, 0 to 5, for a row that resolved while the review ran. Absent means no entry motion. */
   enterStep?: number;
@@ -18,7 +21,7 @@ type CategoryRowProps = {
 
 /* The name wraps and never truncates. The status icon and its words sit on a second line,
    so a long name keeps the whole row width. */
-export default function CategoryRow({ name, status, count, state, enterStep, onClick }: CategoryRowProps) {
+export default function CategoryRow({ name, status, count, note, state, enterStep, onClick }: CategoryRowProps) {
   const [hovered, setHovered] = useState(false);
   const resolved = state ?? (hovered ? "hover" : "default");
   const selected = resolved === "selected";
@@ -55,8 +58,9 @@ export default function CategoryRow({ name, status, count, state, enterStep, onC
       <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
         <span style={{ fontSize: 14, lineHeight: "20px", color: "var(--ink-primary)", overflowWrap: "anywhere" }}>{name}</span>
         <StatusChip status={status} size="s" plain />
+        {note && <span style={{ fontSize: 12, lineHeight: "16px", color: "var(--ink-secondary)" }}>{note}</span>}
       </span>
-      {count && count > 0 ? <CountBadge count={count} /> : null}
+      {count !== undefined ? <CountBadge count={count} /> : null}
       <span style={{ color: "var(--ink-tertiary)" }}>
         <ChevronIcon size={16} />
       </span>

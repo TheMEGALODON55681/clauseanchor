@@ -125,7 +125,7 @@ pytest
 
 ## Frontend
 
-The frontend is a React app that shows a contract, marks findings in the margin and quotes the passages behind them. Its code lives in `frontend/`. It runs on mock data until the backend API is connected.
+The frontend is a React app that shows a contract, marks findings in the margin and quotes the passages behind them. Its code lives in `frontend/`. It reads and writes through the backend API at `/api/v1`. Five features have no endpoint yet and show a "Not available in this build yet" state: your side in the contract, the PDF report, the accuracy figures, the sample contract and the manual review list. Phase 3 adds them.
 
 ### Prerequisites
 
@@ -147,7 +147,29 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open http://localhost:5173. In development the app adds a Preview controls drawer (the mock adapter's switches and a component gallery at `#/gallery`). A production build contains neither.
+`pnpm dev` serves the app at http://127.0.0.1:5173 on the loopback address only, and proxies `/api` to the backend at `http://127.0.0.1:8000`. The page and the API share one origin, so the backend needs no CORS settings. The app needs the backend running (next section). In development the component gallery is at `#/gallery`. A production build holds no gallery.
+
+### Run it with the backend
+
+Use two terminals.
+
+1. Start the API from `backend/`, with its virtual environment active:
+
+   ```bash
+   uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
+   ```
+
+2. Start the app from `frontend/`:
+
+   ```bash
+   pnpm dev
+   ```
+
+3. Open http://127.0.0.1:5173, choose Review a contract, upload a PDF or DOCX, pick the categories and start the review.
+
+The command in step 1 runs the stub analyzer, the default. The stub answers every upload with 409 `SAMPLE_MODE_ONLY`, because the prepared sample it serves needs the sample route that 3-C adds. To see highlights on your own file, run real mode: set the three variables from "Real mode" above before step 1. Real mode returns review candidates with no confidence figure. The India-specific categories are Unavailable: with the switch on step 3 turned on, the Reader lists all five as "Not available in this build yet".
+
+Not available in this build yet, each with the part that adds it: your side and the party (3-A), the PDF report (3-B), the accuracy figures and the sample contract (3-C) and the manual review list (3-D).
 
 ### Build and check
 
@@ -155,9 +177,10 @@ Open http://localhost:5173. In development the app adds a Preview controls drawe
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm check:dist
 ```
 
-`pnpm test` runs the unit tests with Node's built-in runner. `pnpm build` writes the production files to `frontend/dist/`.
+`pnpm test` runs the unit tests with Node's built-in runner. `pnpm build` writes the production files to `frontend/dist/`. `pnpm check:dist` runs after the build and fails if `dist` holds a mock or contract chunk, the host `example.org` or sample contract text beyond the three paragraphs that the landing demo quotes.
 
 ### Routes
 

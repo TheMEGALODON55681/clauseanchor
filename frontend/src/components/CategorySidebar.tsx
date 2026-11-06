@@ -10,7 +10,7 @@ import type { StatusKind } from "./StatusChip";
 
 export type SidebarState = "loading" | "populated" | "filtered-empty";
 
-export type SidebarRow = { id?: string; name: string; status: StatusKind; count?: number; pending?: boolean; enterStep?: number };
+export type SidebarRow = { id?: string; name: string; status: StatusKind; count?: number; note?: string; pending?: boolean; enterStep?: number };
 export type SidebarGroup = { label: string; summary: string; rows: SidebarRow[] };
 
 export default function CategorySidebar({
@@ -113,6 +113,7 @@ export default function CategorySidebar({
                       name={r.name}
                       status={r.status}
                       count={r.count}
+                      note={r.note}
                       enterStep={r.enterStep}
                       state={selected === (r.id ?? r.name) ? "selected" : undefined}
                       onClick={() => onSelect?.(r)}

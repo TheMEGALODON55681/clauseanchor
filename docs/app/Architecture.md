@@ -219,17 +219,21 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 
 ### 7.1 Data flow
 
-1. `Start` is three steps, and the step lives in `?step=`. Step 1 creates a session, uploads a file (or a sample id in sample mode) and polls the parse job until the document is ready. Step 2 can open while parsing still runs. `lib/startFlow.ts` holds the state as a pure reducer and says which step it allows. `pages/start/useStartFlow.ts` holds the upload, the polling and the calls to `client`.
-2. In step 2 the user picks a role and a party, or "None of these". Neither is preselected. Step 3 sets the scope. `Start` then sets the party binding, starts the analysis job and navigates to `/review/:documentId`.
-3. `Reader` polls the job and fetches the analysis as categories resolve, then the manual-review list. It also handles re-binding the party, cancel, retry, report download and delete.
-4. Every call goes through `client` in `src/api/client.ts`. Nothing else imports the mock. Today `client` forwards each call to the in-memory mock adapter, which loads on the first call so that the landing page does not carry it. The swap to an HTTP adapter replaces that forwarder, planned for 4-C, and the adapter follows API.md. The mock stays in the production build until then, and that is a release gate: the build is not releasable on it, because it ignores the upload's content and always returns the one sample contract (`FrontendDesign.md` 17.7, BW). 4-C deletes the adapter and the sample contract with the swap and adds a check that `dist` holds no mock: no `mock-*` chunk, no sample contract text and no `example.org`.
+1. `Start` is three steps, and the step lives in `?step=`. Step 1 creates a session, uploads the file as a raw body and polls the parse job until the document is ready. Step 1 deletes a replaced file first with `DELETE /api/v1/documents/{id}`, so a session keeps one document. A parse that fails sends the user back to step 1 with the reason in the upload zone, and a retryable failure offers Try again (`PARSE_FAILED` twice at most, R28). Step 2 can open while parsing still runs. `lib/startFlow.ts` holds the state as a pure reducer and says which step it allows. `pages/start/useStartFlow.ts` holds the upload, the polling and the calls to `client`.
+2. In step 2 the user picks a role and a party, or "None of these". Neither is preselected. Step 3 picks the categories to check (`CategoryPicker`, sent as the API's `category_ids`) and sets the scope, and Start review stays disabled until the user chooses one. `Start` then starts the analysis and navigates to `/review/:documentId`. The party binding has no endpoint until 3-A, so step 2 stays and sends nothing.
+3. `Reader` polls the job and reads the analysis by the `analysis_id` that the start returned, until the job ends. It draws the parser's blocks, lists the categories the review asked for (and the five India-specific ones as Unavailable when the switch was on), and handles cancel, retry and delete. Re-binding the party, the report download and the manual-review list have no endpoint until Phase 3, and each shows a "not available" state.
+4. Every call goes through `client` in `src/api/client.ts`, which is `createHttpClient(fetch)` from `src/api/http.ts`. Every path sits under `API_BASE`, `/api/v1`. `src/api/errors.ts` maps each API error code to a UI code and a sentence, and a test fails when `API.md` gains a code the table lacks. `available` in `client.ts` holds one flag for each feature with no endpoint (`partyBinding`, `report`, `evaluations`, `samples`, `manualReview`), all false. The adapter refuses the four methods behind them with `not_available`, and a page checks the flag and draws its own state instead of calling. The page and the API share one origin (R17). In development the Vite server proxies `/api` to `http://127.0.0.1:8000` and listens on the loopback address only, and in 4-B one server serves `frontend/dist` and `/api/v1` together. The backend sets no CORS headers. The mock adapter and the sample contract are out of the build: `pnpm check:dist` fails when `dist` holds a `mock-*` or `contract-*` chunk, `example.org` or sample contract text beyond the three paragraphs that the landing demo quotes. `src/api/contract.ts` stays in `src` for that check and for the hero fixture test, and no page imports it.
 
 ### 7.2 Key decisions
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Data interface | `ApiClient` in `src/api/client.ts`, one exported `client` | The UI is built and reviewed before the API exists, and the swap touches one file |
-| Type names | Kept as the mock defines them where the API serves them (`scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage`). `ReviewUnit`, `ManualReview` and `getManualReview` are reserved for 3-D | 2-E fixed the names in API.md (sections 6 and 13) and the adapter follows them |
+| Data interface | `ApiClient` in `src/api/client.ts`, one exported `client` | The UI was built and reviewed before the API existed, and the swap to `http.ts` changed only the export in this file |
+| Adapter | `createHttpClient(fetch)` in `src/api/http.ts` takes `fetch` as an argument, so the tests pass a stub. It sends the token as a bearer and the upload as a raw body with `Content-Disposition` `filename*` (RFC 5987), refuses a file over 10 MiB before sending it, and maps the document from `parsed`. A cancel that meets a 409 returns the job as it stands | The tests run against synthetic responses in `fixtures.ts`. One test checks every fixture's keys against `docs/app/openapi.json` and `parser_output.schema.json`, so the fixtures cannot drift from the real API. `decision_coverage` passes through as the server counts it |
+| Errors | One table in `src/api/errors.ts` from every API.md error code to a UI code and a sentence. A failed fetch, and a reply that is not the error envelope, are retryable `network` errors. A 401 `SESSION_INVALID` calls `endSession()` and goes to the Expired page. `TOO_MUCH_TEXT` reads "This file is too large or complex to process" | The words live in one place, and a test reads `API.md` and fails when a code has no row |
+| Features with no endpoint | The `available` flags in `client.ts`, the `not-available` variants of `EmptyState` and `NoticeBanner`, a disabled report button and a note in the role menu | The API has no route for them until Phase 3. A fake result or a hidden mock would claim more than the app can do, and no screen claims a burden, a benefit or "favours you". A Phase 3 part turns its feature on by flipping its flag and filling in its adapter method |
+| Reader text | `DocumentText` draws the parser's `blocks`, which do not overlap and cover the text. A block reflows to the column | Nodes nest and do not cover all the text, so drawing them duplicated or dropped text on real documents, which the mock hid. A PDF breaks its lines where the page ends, so those breaks are not shown. Offsets count the same characters |
+| Type names | The API's own names (`scope_notice`, `catalogue_version`, `processing_complete`, `decision_coverage`). `ReviewUnit`, `ManualReview` and `getManualReview` are reserved for 3-D | 2-E fixed the names in API.md (sections 6 and 13) and the adapter follows them |
 | Client state | React memory only: session token, contract text and job ids in `session.tsx`, theme in `theme.tsx`. Nothing in localStorage, sessionStorage, IndexedDB or cookies | Matches the promise that nothing is stored after the session |
 | Offsets | `lib/offsets.ts` builds a code point to UTF-16 table once per text. Every slice of contract text goes through `sliceCp` | Backend offsets are code points and JavaScript strings index UTF-16 code units |
 | Routing | `createHashRouter`: `/`, `/start`, `/review/:documentId`, `/how-it-works`, `/accuracy`, `/expired` and a catch-all that shows `NotFound`. Every page except `/` loads on demand. A failing page shows `RootError` inside the shell. `/gallery` is registered only in development, outside the shell | Works on any static host with no rewrite rules. The landing page does not carry the reader, and a bad address is not an expired session. A production build holds no gallery and no preview controls |
@@ -243,18 +247,20 @@ Stack: React 19, Vite 8, Tailwind CSS v4, react-router 8, TypeScript (strict), p
 | Plain pages | `PlainPage` in `components/Layout.tsx` for Expired, NotFound and the error page | One column and one heading style for the three pages that carry no warning colour (17.6, BF) |
 | Structure that changes with the width | Both layouts are rendered and CSS shows one (`hidden md:block` and `md:hidden`). `/accuracy` does this: a flat table from 768 px, and the same rows under seven `details` groups below it | The two are sorted differently (across all rows, and inside each group), so they are different DOM. A `useMedia` call in a second lazy page made the bundler split the hook out and pull `StatuteTag` into the entry, 0.64 KB gzipped on every route. The hidden layout is `display: none`, out of the accessibility tree and the tab order (17.7, CL and CM) |
 | Links that leave the app | `httpsUrl` in `lib/reader.ts` lets only an `https:` address through to `window.open`, which carries `noopener,noreferrer`. External anchors carry `rel="noreferrer"`, which implies `noopener`. `index.html` sets `<meta name="referrer" content="no-referrer">`, and `public/` has no `robots.txt` | A source address comes from a judgment record, so a `javascript:` or `data:` value must not reach `window.open`. No request leaves the origin, so the policy changes nothing on the wire today and covers the links to come (`FrontendDesign.md` 17.7, BT to BV) |
-| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 68 tests: 9 reveal, 16 tokens (11 colour, 2 reading measure, 2 overlay motion, 1 declared custom properties), 1 font loading, 5 hero fixture, 19 start flow, 3 authority, 11 reader helpers, 2 accuracy (grouping, Weak count), 1 menu (the source sets no inline outline but the forced-state ring), 1 sheet (focus below the peek line opens it) | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, `lib/accuracy.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
+| Tests | `node --test` over `src/**/*.test.ts`, with type stripping and no new dependency. 133 tests: 9 reveal, 16 tokens (11 colour, 2 reading measure, 2 overlay motion, 1 declared custom properties), 1 font loading, 6 hero fixture, 30 start flow, 3 authority, 23 reader helpers (the list rows and the unfinished list included), 2 accuracy (grouping, Weak count), 1 menu (the source sets no inline outline but the forced-state ring), 4 Reader page (focus below the peek line opens the sheet, a failed delete leaves the document in place, View list, and the India rows), 27 adapter (the requests, the error table against `API.md` and the fixtures against `openapi.json`), 3 catalogue (the ids against `ml/configs/catalogue.json`), 1 availability (no page calls a method behind a false flag without reading it), 5 copy (the public copy against the old promises) and 2 start-flow hook (a failed delete of a replaced upload is not swallowed) | The pure logic (`lib/reveal.ts`, `lib/offsets.ts`, `lib/startFlow.ts`, `lib/accuracy.ts`, the hero fixture in `pages/landing/heroExamples.ts`) and the colour tokens are testable without a DOM. `tokens.test.ts` reads `index.css` and asserts the contrast pairs |
 
 ### 7.3 Folder structure
 
 ```text
 frontend/
-  package.json              # scripts: dev, build, preview, typecheck, test, format
+  package.json              # scripts: dev, build, preview, check:dist, typecheck, test, format
   pnpm-lock.yaml
   tsconfig.json             # strict; the @ alias points to src
-  vite.config.ts            # react(), tailwindcss(), the @ alias; Vite defaults (port 5173)
+  vite.config.ts            # react(), tailwindcss(), the @ alias; the dev server on 127.0.0.1:5173 with /api proxied to 127.0.0.1:8000
   index.html                # shell: lang, title, meta description, referrer policy, favicon, font preloads, noscript line
   .gitignore                # node_modules, dist, .vite, .screens
+  scripts/
+    check-dist.mjs          # run after the build: fails when dist holds a mock or contract chunk, example.org or sample contract text outside the landing demo
   public/
     favicon.svg             # the logomark, with a dark-mode variant
     fonts/                  # twelve woff2 files and the three OFL licence texts
@@ -266,16 +272,21 @@ frontend/
     tokens.test.ts          # asserts the contrast pairs of DesignSystem.md 3.1 and the reading measure token against index.css, and that every var() in src names a declared custom property
     fonts.test.ts           # asserts index.css declares only the preloaded Latin faces and fonts-late.css the rest
     api/
-      client.ts             # ApiClient interface and the exported client (forwards to the mock adapter, which loads on the first call) and the six mock switches
+      client.ts             # ApiClient interface, the available flags and the exported client (createHttpClient over fetch)
+      http.ts               # the HTTP adapter: API_BASE, the bearer token, the raw upload, the document mapped from parsed, the errors
+      errors.ts             # every API error code mapped to a UI code and a sentence
       types.ts              # API types; offsets are code points
-      mock.ts               # in-memory adapter: sessions, job timeline, analysis
-      contract.ts           # fictional sample agreement text for the mock
-      catalogue.ts          # 46 categories with group, support status and catalogue version
+      fixtures.ts           # synthetic API responses, for the adapter tests only
+      http.test.ts          # the adapter against a stubbed fetch, the error table against API.md, the fixtures against openapi.json
+      available.test.ts     # no page calls a method behind a false flag without reading the flag
+      catalogue.test.ts     # the ids against ml/configs/catalogue.json
+      contract.ts           # fictional sample agreement text, for the hero fixture test and the dist check only
+      catalogue.ts          # 46 categories with the API's ids and their group
     app/
       routes.tsx            # route table: lazy pages, error boundaries, dev-only /gallery
-      Root.tsx              # shell: header, footer, toasts, skip link, focus on route change, dev-only preview controls
+      Root.tsx              # shell: header, footer, toasts, skip link, focus on route change
       RootError.tsx         # the page shown when a page fails to load or render
-      session.tsx           # token, document metadata, toasts, mock settings (memory only)
+      session.tsx           # token, document metadata, toasts, endSession (memory only)
       theme.tsx             # light and dark
     lib/
       offsets.ts            # code point to UTF-16 table and sliceCp
@@ -294,7 +305,7 @@ frontend/
       panelTransition.ts    # runs a state update in a view transition of the detail panel only
     pages/
       Landing.tsx           # the landing page: hero, sections 1 to 6, closing call to action
-      Start.tsx             # the three-step flow: upload, role and party, scope and start
+      Start.tsx             # the three-step flow: upload, role and party, categories and scope
       start/
         useStartFlow.ts     # upload, parse polling and the client calls, reporting to the reducer
         Summary.tsx         # what the user has chosen: the rail list from 1280 px, one line below
@@ -305,7 +316,7 @@ frontend/
         Evidence.tsx        # the Evidence section, rendered only when Landing.tsx holds a verified passage (D7)
       Reader.tsx            # the reader: categories, the contract sheet with its ruler, clause detail (docked, or a bottom sheet below 1280 px)
       HowItWorks.tsx        # contents list in the margin, seven sections and Credits, fragments beside the text from 1280 px
-      Accuracy.tsx          # measured performance: a ledger table that stacks below 768 px, labelled as an example until real numbers exist
+      Accuracy.tsx          # measured performance: a ledger table that stacks below 768 px, with a "not available" state until 3-C adds the evaluations route
       Expired.tsx           # session ended or contract deleted, on PlainPage
       NotFound.tsx          # the catch-all route
       Gallery.tsx           # component gallery, development only
@@ -315,7 +326,7 @@ frontend/
       Layout.tsx            # Container, Section, SectionFrame, MarginGrid, PlainPage
       Disclosure.tsx        # native details with a 44 px summary
       Specimen.tsx          # a real component shown beside text: inert, hidden from assistive technology, rises once
-      PreviewControls.tsx   # development only: mock switches and the gallery link
+      CategoryPicker.tsx    # the categories to check: native checkboxes under the seven catalogue groups, with select all and clear
 ```
 
-The FE parts change this tree. Each part updates this section. FE-2 to FE-6 are built and FE-R is closed, and the tree above is as they left it. `FrontendDesign.md` 17.7 holds the FE-R fixes.
+The FE parts change this tree. Each part updates this section. FE-2 to FE-6 are built and FE-R is closed, and the tree above is as they left it. `FrontendDesign.md` 17.7 holds the FE-R fixes, and 17.8 holds the switch to the HTTP adapter (4-C1), which the tree above includes.

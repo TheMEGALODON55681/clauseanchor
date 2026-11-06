@@ -1,13 +1,18 @@
 import type { ReactNode } from "react";
-import { EmptyBracketIcon, IndexCardIcon } from "./icons";
+import { EmptyBracketIcon, IndexCardIcon, InfoIcon } from "./icons";
 
-export type EmptyVariant = "no-findings" | "no-evidence";
+export type EmptyVariant = "no-findings" | "no-evidence" | "not-available";
 
 const CONFIG: Record<EmptyVariant, { icon: ReactNode; heading: string; line: string }> = {
   "no-findings": {
     icon: <EmptyBracketIcon size={28} />,
     heading: "No clause found at the validated threshold",
     line: "This category was checked. Nothing was confirmed here.",
+  },
+  "not-available": {
+    icon: <InfoIcon size={28} />,
+    heading: "Not available in this build yet",
+    line: "This needs a service that is not built yet.",
   },
   "no-evidence": {
     icon: <IndexCardIcon size={28} />,

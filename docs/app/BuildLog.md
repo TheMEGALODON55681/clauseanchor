@@ -3980,3 +3980,169 @@ Processes. Python-family processes of my own, counted by hand from my calls, so 
 Suggested commit message for this commit: `docs: close phase 2 and correct the sizing claims`.
 
 Next action: Aryan commits this step. Phase 2 is closed, with 2-0B open until Tanishq sends the record fields. The next backend part is 3-A, `feat(polarity): add party binding and clause polarity`.
+
+## 2026-11-06: Part 4-C1, switch the frontend to the HTTP adapter
+
+An early slice of 4-C, taken ahead of Phase 3 (Aryan, 4 November 2026). The brief is `.handoff/4C1_prompt.md`. The work started on 4 November and was re-checked on 6 November after a long session. Only `frontend/`, `docs/app/` and `README.md` changed. The live run (step 4) has not happened yet, so `Phases.md` shows 4-C1 unticked.
+
+### What changed
+
+- `frontend/src/api/http.ts`, `errors.ts`, `fixtures.ts` and three test files are new. `mock.ts` and `components/PreviewControls.tsx` are deleted. `client.ts`, `types.ts`, `catalogue.ts` and `app/session.tsx` changed, with the start flow, the Reader, the Accuracy page, the public pages and seven components. `components/CategoryPicker.tsx` and `scripts/check-dist.mjs` are new, and `vite.config.ts` gained the loopback host and the `/api` proxy. `FrontendDesign.md` 17.8 holds the amendments (CT to DC), `Phases.md` the 4-C1 entry with ten calls for Aryan and the hand-over to Phase 3, `Architecture.md` 7.1 to 7.3, `DesignSystem.md` section 6 and `README.md` the run instructions in stub and real mode.
+- `.handoff/4C1_manual_check.md` is the click-through for Aryan (the folder is ignored by Git).
+
+### Red before green
+
+- Adapter: with empty stubs, 21 of 23 tests failed. The 2 that passed were the fixture checks against `openapi.json`. All 23 passed after the adapter.
+- Start flow: the new tests failed on missing exports (`FlowError`, `canRetry`, `MAX_PARSE_RETRIES`, the category actions) before `startFlow.ts` had them. The file-size and retry-count tests failed before their fixes.
+- `check:dist` against the old build printed FAIL for `mock-*`, `contract-*`, `example.org` and 47 of 47 sample lines. It passes on the new build.
+- Reader delete (6 November): the new test failed on the old `remove()` and passes with the fix.
+- Two small changes were made before their tests: `sessionEndsIn(minutes, report)`, and the real category ids in `accuracy.test.ts`.
+
+### Checks, on the final code
+
+- `tsc --noEmit` exit 0, and `--noUnusedLocals` clean. `pnpm test` 106 of 106 (68 before). Per file: http 24, startFlow 27, tokens 16, reader 12, reveal 9, heroExamples 5, catalogue 3, authority 3, accuracy 2, Reader page 2, available 1, DropdownMenu 1, fonts 1. `pnpm build` 173 modules (172 before), no warning. `pnpm check:dist` passed: 35 files, 47 sample lines probed, 3 found, all 3 inside the landing demo's quoted paragraphs.
+- Backend, nothing changed there: `pytest` 1743 passed, 27 skipped, 1 warning in 177.85 s. `ruff check` clean, `ruff format --check` 62 files already formatted. Both equal the baseline.
+- The `FrontendDesign.md` 1.2 greps (calibration figures, the Evidence section, the invented sample strings with `Gallery.tsx` excluded, `Preview controls` and a Gallery chunk in `dist`): no output.
+- Rules section 1 attribution scrub, over `backend/`, `frontend/` and `docs/app/`: no output. Tool-name grep, both forms (the code and `README.md`, then every doc line the part added): no output. Dash scan for U+2014 and U+2013 over the 43 changed or new files: 0 hits, with a control string holding both dashes matching. Sample-contract scan: 49 probe lines of `contract.ts` searched in every changed file except `contract.ts` and the hero fixture files: 0 hits. No new use of browser storage.
+- Nothing under `backend/`, `ml/` or `docs/ml/` changed (empty `git diff --stat`).
+
+Note on the per-file counts: the handoff written at 59 percent of the context said 25 adapter tests and 26 start-flow tests. The files hold 24 and 27, and the total of 105 was right at that time. The delete test below made it 106.
+
+### Re-check on 6 November
+
+The handoff warned that a long session may have drifted. I read the adapter, the error table, the types, the start flow, the Reader diff, the small components and the public pages against `API.md`, `openapi.json` and the brief, and re-ran every check. Findings:
+
+- No drift in the adapter, the types or the error table. The types match the OpenAPI schemas key for key (Analysis 16 keys, Job 9, Clause 11, Passage 15).
+- One gap in the code, fixed with a test: the Reader's Delete document sent every failure to a toast, so a session that had ended left the user on a "could not be deleted" message that a retry could not clear, where the brief sends a 401 to the Expired page. A 401 or a 404 on delete now leaves for the Expired page.
+- Two path helpers (`check-dist.mjs` and `available.test.ts`) built a path from `URL.pathname`, which breaks on a folder name with a space. They use `import.meta.dirname` and `fileURLToPath`.
+- The handoff's per-file counts were off by one each way (above).
+
+### Reviews in this part
+
+- Jury review of the diff. Six readings, then one verdict.
+  - Facts: each changed claim was set against its source. The five flags (`client.ts`), `API_BASE`, `MAX_PARSE_RETRIES` (2), `server.host`, the 10 MiB limit, the 32 rows of the error table against `API.md` (a test reads it), the 46 ids against `ml/configs/catalogue.json` (a test reads it), and the file and test counts above.
+  - Counts: the per-file test counts add to 106. Modules 173. Three sample paragraphs in `dist`, equal to the three paragraphs of the hero fixture.
+  - Scope: no path outside `frontend/`, `docs/app/` and `README.md` changed.
+  - Privacy: no contract text in a doc, test or fixture (the probe scan above). The fixtures hold synthetic names. Nothing is written to browser storage.
+  - Honesty: the docs list what was not run (below) and call the Reader reflow, the picker layout and the dropzone states unseen. They do not call anything verified in a browser.
+  - Wording: no production screen claims a burden, a benefit or "favours you". The one remaining sentence ("This decides whether a clause reads as a burden or a benefit for you") is the `RoleSelector` default hint, which only the Gallery shows, since `/start` passes `hint={null}`.
+  - Verdict: one defect found and fixed (the delete path above). The India switch text and the three paragraphs in `dist` stay as calls for Aryan (Phases.md, 4-C1, calls 4 and 6).
+- Ponytail review of the full diff. No P1. Two P2, kept: the `!available.x` guards inside the Reader's `changeRole` and `download` are redundant with the disabled entry points, and stay because the availability test reads the flag next to the call; the `reportUnavailable` prop on the toolbar could be derived from a missing `onDownload`, and stays because the Gallery shows an enabled button with no handler. Three P3, not changed: the tri-state `hint` of `RoleSelector` (one caller passes `null`), the default heading and line of the `not-available` empty state (only the Gallery uses them), and the third catalogue test (the group list). Kept on purpose: the 50-line schema walker in `http.test.ts` (the brief allowed no new dependency), the block copy in `toDocument` (it drops the block text, which the document holds once), and the `samples` flag, which no adapter method needs and two pages read. Net: about 10 lines possible.
+- Writing passes over the added prose of `README.md`, `Architecture.md`, `DesignSystem.md`, `FrontendDesign.md` and `Phases.md`, in order: copywriting, copy-editing, stop-slop. The prose already followed the rules for plain words and active voice. The passes changed 12 sentences, mostly passives ("is deleted", "is chosen", "are unseen") and one adverb ("Exactly"). No number, code, id, path or command changed. The strings in the UI went through the same three passes earlier in the part, with no change on the second look.
+
+### Not run
+
+- Everything in `FrontendDesign.md` 1.2 that needs a browser: the dev server render of every route with no console message, screenshots at five widths in both themes, Lighthouse, axe, a keyboard pass and a screen reader pass.
+- `pnpm install --frozen-lockfile`, because `node_modules` was present and no dependency changed.
+- The live run (step 4): see the next section.
+
+### Live run
+
+Not done. The manual check is in `.handoff/4C1_manual_check.md`. It needs Aryan's yes on one question: stub mode (no model, an upload gets 409 `SAMPLE_MODE_ONLY`, so no highlights) or real mode (loads the candidate model from `venv-real`).
+
+### Docs checked
+
+`Rules.md` section 6: `BuildLog.md`, `Phases.md` (4-C1 entry, 4-C lead line, frontend track intro), `Architecture.md` (7.1, 7.2, 7.3), `FrontendDesign.md` (status, 1.1, 1.2, 6.2, 6.5, 6.7, 17.7 BW and its Deferred row, 17.8), `DesignSystem.md` (two patterns added, Preview controls removed) and `README.md`. `API.md` and `ParserContract.md` did not change, because no endpoint or parser output moved. The 17.1 component table and the older FE sections still name the Preview controls and the mock as history.
+
+### Processes
+
+None started for the app. The checks ran short commands: `tsc`, `pnpm test`, `pnpm build` and `check:dist` several times, one `pytest` run with two `ruff` runs, and about 8 small `node` scripts for the doc edits and scans. A process-list check at the end found no `python`, `uvicorn`, `vite`, `pnpm`, `pytest` or `ruff` process and no listener on port 5173 or 8000. The two `node` processes left are the Codex MCP servers of the desktop app, which are not ours.
+
+Suggested commit message: `feat(frontend): switch to the HTTP adapter`. Body: `Replace the mock with the HTTP client, add the category picker, and mark Phase 3 features as not available.`
+
+Next action: Aryan answers which mode to run for the live run. Then the assistant starts `uvicorn` on 127.0.0.1:8000 and `pnpm dev` on 127.0.0.1:5173, records both process ids, and Aryan walks through the manual check. After his report the assistant stops both by process id, records his results here, fixes frontend-only defects, ticks 4-C1 and lists anything that needs the backend.
+
+## 2026-11-06: Part 4-C1, decisions on the ten calls, India switch text, live run started
+
+Aryan decided the ten calls under 4-C1 in `Phases.md` and chose real mode for the live run. Only `frontend/`, `docs/app/` and `README.md` changed. Nothing under `backend/`, `ml/` or `docs/ml/` changed (empty `git diff` over the three paths).
+
+### Decisions
+
+- Calls 1 to 5 and 7 to 10 are accepted as built. They stay as written in `Phases.md` under 4-C1, now marked as decided, and `FrontendDesign.md` 17.8 says the same.
+- Call 6 changed. The description of the Indian law switch on step 3 of `/start` read "Adds review flags that cite Indian statutes and passages from Indian judgments. Turn off if the contract is under another country's law." Real mode returns no flags and no passages, so it now reads "Adds the five India-specific categories. In this build they show as not yet available." (Aryan's text, used as given). One string in `frontend/src/pages/Start.tsx`. The label "Review under Indian law" and the summary line "Indian law review on" are unchanged. `FrontendDesign.md` 17.8 has the new row DD, and 8.3 points to it.
+- The design rules for the string came from the UI skill: helper text under a control says what the control does and why a result is missing, and nothing depends on colour or hover. The change adds no markup, no class and no token. The skill's search tool was not run, because the change is one sentence in an existing component.
+- The three writing passes were not run on the string, since Aryan dictated it. The doc prose I added is plain and short.
+- Left alone, because the brief for this change named the switch only: the landing FAQ answer ("Indian law review adds notes that cite Indian statutes and passages from Indian judgments"), the landing line "Shows passages from published Indian judgments where it has them", and the How it works section "Indian law review and case law". They make the same claim as the old switch text. DD lists them as waiting for a decision.
+
+### Checks, on the final code
+
+- `tsc --noEmit` exit 0. `pnpm test` 106 of 106 (no test changed, and none read the old string). `pnpm build` 173 modules, no warning. `pnpm check:dist` passed: 35 files, 47 sample lines probed, 3 found, all in the landing demo's quoted paragraphs.
+- Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`: no output. Tool-name grep over `README.md`, `frontend/src`, `frontend/scripts` and the frontend config, and over the lines added to the docs outside this file: no output. Dash scan for U+2014 and U+2013 over the 45 changed or new files: 0 hits, with a control string holding both dashes matching twice.
+- The backend suite was not run again, because nothing under `backend/` changed since the 1743 passed in the entry above.
+- Ponytail review: not run again. This change adds one string and no code, so there is nothing new to cut, and the review of the full part diff in the entry above stands.
+
+### Live run, real mode
+
+Started at 11:04 and 11:05 on 6 November 2026. No browser was opened. The ledger is a text file in the session scratchpad.
+
+- Backend: `C:\dev\clauseanchor-model\venv-real\Scripts\python.exe -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000`, working directory `backend/`, with `CLAUSEANCHOR_ANALYZER=real`, `CLAUSEANCHOR_ARTIFACTS_DIR` set to `C:\dev\clauseanchor-model\candidate-release\models\clauseanchor_candidate_v0` and `CLAUSEANCHOR_ARTIFACTS_SHA256` set to the digest in the brief. The launcher is process 26936 and the server it starts is process 17976. `GET /api/v1/ready` read `ready: true` with the analyzer, catalogue, store and database all `ok` about 10 seconds after the start (two 503 answers first, while the model loaded). `GET /api/v1/capabilities` reported `mode: real` and 46 categories, all `not_validated`.
+- Frontend: `node node_modules/vite/bin/vite.js` in `frontend/` (what `pnpm dev` runs, without the wrapper), process 15552, listening on 127.0.0.1:5173. A request to `http://127.0.0.1:5173/api/v1/ready` reached the backend through the proxy and returned the same body, so the one-origin layout works.
+- Each launch also has a console host child (14668 and 15088), and the backend launcher has the server as its child (17976). Three processes are children of the two launched ones.
+- Processes started: 2 launched (5 with their children). Closed: 0 so far. Both stop by process id (`taskkill /PID 26936 /T` and `taskkill /PID 15552 /T`) when Aryan reports back. The three `node` processes that were already running before this run are not ours.
+- Manual check: `.handoff/4C1_manual_check.md`. Step 3 there gained one line that expects the new switch text.
+
+### Docs checked
+
+`Phases.md` (4-C1 calls, call 6, the not-finished line), `FrontendDesign.md` (17.8 lead, row DD, the line in 8.3). `README.md`, `Architecture.md` and `DesignSystem.md` do not quote the switch text. `API.md` did not change.
+
+Next action: Aryan runs the manual check at http://127.0.0.1:5173 and reports. Then I stop both servers by process id, record his results here, fix frontend-only defects, tick 4-C1 and list anything that needs the backend.
+
+## 2026-11-06: Part 4-C1, live-run results and fixes
+
+The brief is `.handoff/4C1_fixes.md`. Only `frontend/`, `docs/app/` and `README.md` changed. Nothing under `backend/`, `ml/` or `docs/ml/` changed (empty `git diff` over the three paths). The 4-C1 work from the earlier entries stays in the tree, uncommitted, and `Phases.md` now shows 4-C1 ticked.
+
+### The live run
+
+- Part 1, Aryan's own check, real mode: the upload of `008.pdf` through the three steps, a real analysis, highlights on screen, and no named parties for that file, which is right.
+- Part 2, a pass in the built-in browser pane on five files (`008.pdf`, `001.docx`, `004.pdf`, `025.pdf`, `README.md`). It completed steps 2 to 14 of the check. Not run: the 40 MB upload and the 390 px resize.
+- It passed: the upload and the summary rail, the category picker, the progress band, cancel, and a full run (008, 3 categories, 160 steps, 58 to 70 s), "Confidence not validated" on every finding with no number anywhere, J and K, `004`'s party offered while the `[Name of Bidder]` placeholder is left out, `001.docx` parsed, the partial-read notice on `025`, the 415 for `README.md`, the report, role-change and Accuracy "not available" states, keyboard reach on step 3, the delete dialog staying in the page, the session limit (429), and no console error.
+
+### The seven defects
+
+1. **India categories missing, View list dead (high).** Cause, from the code: the Reader built its list from `meta.categoryIds`, the ids the review was started with. The API answers only those ids (`backend/app/services/analysis.py`, `check_result`, line 74, rejects any other set) and the switch adds none (`ml/clauseanchor_core/analyzer.py`, line 36, only validates the scope), so the switch put no India category into the analysis, and the Reader never listed one. View list called `setFilter("All")`, a filter that was already on. Fix: `listRows` in `lib/reader.ts` adds the five when the analysis carries `india_review`, each Unavailable with "Not available in this build yet", from the first poll and after the end, never pending or Not found. View list is now a disclosure inside the scope card with the categories and pages that were not finished, and is not drawn when that list is empty (`FrontendDesign.md` 17.8, DE and DF). The API does return an India category when it is asked for (`unavailable`, reason `unsupported_india_extension`), so only the switch has no effect there; that is backend follow-up B3.
+2. **503 on delete and on one job read (medium).** Evidence, in this order:
+   - The uvicorn access log of the whole run (`backend.out.log` of the earlier session, 1,548 lines) holds 775 `GET /jobs/{id}`, all 200, 707 `GET /analyses/{id}`, all 200, 3 `DELETE /documents/{id}`, all 204, and two 503s in total, both `GET /ready` while the model loaded.
+   - The delete route has no 503 path in its code (`routes.py`, `delete_document`: 204, 401 or 404). The 503 codes in the API are `NOT_READY` and `CATALOGUE_UNAVAILABLE`, on the start and read routes.
+   - Vite's proxy answers 502, not 503, when the upstream fails (`vite/dist/node/chunks/node.js`, the `proxy.on("error")` handler), and `vite.err.log` was empty.
+   - A probe script against the servers still running, with a synthetic one-page PDF: 12 deletes (3 each of file parsed and file just uploaded, direct on :8000 and through the proxy on :5173) answered 204 in 4 to 9 ms, and the repeat of each answered 404.
+   So neither server sent a 503, and it is not reproduced; it came from the layer that recorded it. A latent backend stall does exist (B1, below). What the frontend did wrong, and is fixed: the delete of a replaced upload ended in `.catch(() => undefined)`, so a failed delete read as done. `deleteDocument` now resolves on 204 and on 404 (gone either way) and rejects on anything else, `useStartFlow` lets the error show with Try again and keeps the old document as the current one until its delete has worked, and the Reader's delete forgets the document only after a success (DH).
+3. **Switch starting on (low).** `initialFlow.india` is false (DK).
+4. **Blank line offered as a party (low).** `partyName` returns "Party name left blank in the document" for a name that is only underscores, dots, hyphens, Unicode dashes, the ellipsis or spaces. The card stays selectable (DI). The fixtures are synthetic strings.
+5. **No count badge on Termination for Convenience (low).** Cause in the frontend: a category that abstained with no passage passed `clauses.length || undefined`, so the zero hid the badge, and the row sat under Needs a lawyer with no number. It now shows 0 (DJ).
+6. **Cancel needing two clicks (low).** Not reproduced. `cancel()` is a plain handler on a `Button`, and no focus or hover state can swallow a click. The access log holds two cancel requests for the whole run, both 202, which fits a first click that worked but changed nothing on screen until the next poll (700 ms) as well as it fits the automation's timing. Nothing changed. A "Stopping the review" state after the click would remove the doubt, if wanted.
+7. **Copy that over-promised (low).** The hero examples lose the confidence badge and the Section 27 note, and the hero line, the "what it does" line, the FAQ answer, step 3 of the landing page and the How it works section now say that statute notes and judgment passages come in a later build. The switch reads "Include India-specific categories" and the summary line "India-specific categories on" or "off" (DG). The copy passes ran in the order copywriting, copy-editing, stop-slop. The switch description, which Aryan dictated, is unchanged.
+
+Grep over `frontend/src` for "Higher confidence", "Indian judgment", "case law", "Review under Indian law" and "Indian law review" leaves these hits, kept on purpose: the `ConfidenceBand` word and the `RuleFlagCard` label (components that draw only when the API sends a band or a flag), the empty case-law state of the panel ("No verified case law found for this clause type yet."), the OpenNyaya credit, the gated Evidence section, the gallery specimens, and the new test that holds the old strings out. One more gap I did not touch: the fixed legal sentence in the footer and the legal-scope notice ("points to text in your contract and in published judgments"), and the How it works section "Saying how sure it is", which still describes a tested threshold while every finding reads Confidence not validated. Both are for Aryan.
+
+### Red first
+
+The new tests were written before the code. First run: 12 failures. By group: the adapter's 404 on a delete (1), the switch default (1), the blank party names (2), the hero examples (2), the public copy (3), the replaced-upload delete (2), and `lib/reader.test.ts`, which would not load for the missing `INDIA_IDS`, `listRows` and `unfinishedList` exports (1). The three Reader page tests (delete, View list, India rows) went into the test file after that run. After the adapter, the start flow and the list helpers were written, 10 failed: those three, the copy and hero tests, and the replaced-upload delete, all waiting for the Reader wiring and the copy edits. The Reader empty-panel line failed once on its own (133 of 134) and passed after its fix.
+
+### Reviews
+
+- Jury review of the diff, run in this session, five independent angles then one verdict. Correctness: the Reader order of declarations and memo inputs hold, and filters hide an Unavailable row only under the filters that name other statuses. Privacy: no contract text added, no new request, the list shows labels and page numbers only. Accessibility: the note is `ink-secondary` at 12 px, the disclosure has `aria-expanded` and `aria-controls`. Copy and claims: the later-build wording is plain, and the two gaps above were found. Tests: the source-level tests follow the existing pattern of `Reader.test.ts`. Verdict, three fixes applied: the group summary now counts Unavailable rows (the India group read "0 found"), "N categories reviewed" and the zero-findings line count only categories that were or are being checked, and the View list container stays in the page with `hidden` so `aria-controls` always points at an element.
+- Ponytail review of the delta: no P1. Two P2 cuts applied, about 10 lines: `listedIds` folded into `listRows` (its test merged into the switch-on and switch-off test), and the India panel reads the row's own note instead of repeating the India condition. Kept: the source-level tests.
+
+### Checks, on the final code
+
+- `pnpm typecheck` exit 0. `pnpm test` 133 of 133, up from 106: 27 adapter (3 new), 30 start flow (3), 23 reader helpers (11), 4 Reader page (2), 6 hero fixture (1), 5 copy (new file), 2 start-flow hook (new file), plus tokens 16, reveal 9, authority 3, catalogue 3, accuracy 2, available 1, menu 1, fonts 1. `pnpm build` 173 modules, no warning. `pnpm check:dist` passed: 35 files, 47 sample lines probed, 3 found, all in the landing demo's quoted paragraphs.
+- Backend suite in `backend/.venv`, caches off: 1743 passed, 27 skipped, 1 warning (the starlette `httpx` deprecation), 147.6 s. The diff and status over `backend/`, `ml/` and `docs/ml/` are empty.
+- Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`: no output. Tool-name grep over the backend code and config, `README.md`, `frontend/src`, `frontend/scripts` and the frontend config: no output, and none over the lines added to the docs outside this file. Dash scan for U+2014 and U+2013 over the 51 changed or new files: 0 hits, with a control string holding both dashes matching twice. The scan caught seven literal dashes in a test, written as escapes now.
+- Not run: every check of `FrontendDesign.md` 1.2 that needs a browser. The row note, the View list card and the new switch label have not been seen in a browser, and none was opened.
+
+### Processes
+
+- Started by this part: no server and no browser. The probe script, the test runs and the build exited by themselves.
+- The live run's servers were left running by the earlier session and are in its ledger: 26936 (backend launcher, venv-real python), 17976 (the server it started, on 127.0.0.1:8000), 14668 (its console host), 15552 (the Vite dev server, 127.0.0.1:5173) and 15088 (its console host). I checked each command line, then asked to stop them with `taskkill /PID 26936 /T` and `taskkill /PID 15552 /T`. The permission check refused the stop, and I did not try again or go around it. So: processes started: 0, closed: 0, five still running when this entry was written. Aryan stops them with those two commands. The three `node` processes that were running before the live run are not ours.
+
+### Docs checked
+
+`FrontendDesign.md` (17.8 rows DE to DK, the live-run block and the deferred table; the baseline lines that quoted the old hero examples, panel contents, switch label and FAQ answer), `Phases.md` (4-C1 ticked, the two parts, the seven defects, the backend follow-ups, the counts), `Architecture.md` (test count and breakdown, the Reader line), `README.md` (the real-mode note). `DesignSystem.md` and `API.md` do not quote any changed string or behaviour. The earlier `BuildLog.md` entries keep their own counts, which were true when written.
+
+### Backend follow-ups, none done here
+
+- B1. `DELETE /api/v1/documents/{id}` waits up to 5 s for a parse child while it holds the store's lock (`store.py` `delete_document`, `parse_jobs.py` `kill_documents`, `child.wait(5)`), so every other call on the store waits too. It answered 204 in the probe, so it was not the 503.
+- B2. The 503 on delete and on a job read, not reproduced. Re-check in 4-B with one server behind one origin, and record the response headers if it shows again.
+- B3. The India switch adds no category in the API. When the India categories can be reviewed, the page sends their ids with the switch on or the API adds them.
+
+Next action: Aryan stops the five processes, reads the report, and commits. Then 4-B and the rest of 4-C, and 3-A to 3-D, as in `Phases.md`.

@@ -29,9 +29,11 @@ export default function ErrorCard({
       </div>
       <p style={{ fontSize: 14, lineHeight: "20px", color: "var(--ink-secondary)", marginTop: 8 }}>{message}</p>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-tertiary)", marginTop: 6 }}>{code}</div>
-      <div style={{ marginTop: 12 }}>
-        <Button variant="primary" size="s" onClick={onRetry}>Try again</Button>
-      </div>
+      {onRetry && (
+        <div style={{ marginTop: 12 }}>
+          <Button variant="primary" size="s" onClick={onRetry}>Try again</Button>
+        </div>
+      )}
     </div>
   );
 }

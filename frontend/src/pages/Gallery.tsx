@@ -621,16 +621,16 @@ function Library({ mode }: { mode: Mode }) {
 
       <Group label="Notice banner · fixed phrases, verbatim">
         <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 460 }}>
-          {(["legal-scope", "privacy", "sample-mode", "session-expiry"] as const).map((v) => (
-            <Labeled key={v} label={v}><NoticeBanner variant={v} /></Labeled>
+          {(["legal-scope", "privacy", "sample-mode", "session-expiry", "not-available"] as const).map((v) => (
+            <Labeled key={v} label={v}><NoticeBanner variant={v} onAction={v === "session-expiry" ? () => {} : undefined} /></Labeled>
           ))}
         </div>
       </Group>
 
       <Group label="Upload dropzone · states and the four error messages">
         <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 460 }}>
-          {(["idle", "hover", "drag-over", "validating", "uploaded", "error-type", "error-size", "error-scanned", "error-protected"] as const).map((st) => (
-            <Labeled key={st} label={st} width="100%"><UploadDropzone state={st} fileName={SAMPLE_FILE} fileMeta="1.2 MB, 8 pages" /></Labeled>
+          {(["idle", "hover", "drag-over", "validating", "uploaded", "error-type", "error-size", "error-scanned", "error-protected", "error-other"] as const).map((st) => (
+            <Labeled key={st} label={st} width="100%"><UploadDropzone state={st} fileName={SAMPLE_FILE} fileMeta="1.2 MB, 8 pages" message={st === "error-other" ? "This file is empty." : undefined} /></Labeled>
           ))}
         </div>
       </Group>
@@ -710,10 +710,10 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Confirm dialog · empty state · error card">
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
           <Labeled label="confirm dialog" width={360}><ConfirmDialog inline /></Labeled>
-          {(["no-findings", "no-evidence"] as const).map((v) => (
+          {(["no-findings", "no-evidence", "not-available"] as const).map((v) => (
             <Labeled key={v} label={`empty: ${v}`} width={280}><EmptyState variant={v} /></Labeled>
           ))}
-          <Labeled label="error card" width={360}><ErrorCard /></Labeled>
+          <Labeled label="error card" width={360}><ErrorCard onRetry={() => {}} /></Labeled>
         </div>
       </Group>
 

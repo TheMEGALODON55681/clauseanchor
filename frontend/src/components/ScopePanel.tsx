@@ -1,3 +1,5 @@
+import { useId, useState } from "react";
+import type { Unfinished } from "../lib/reader";
 import Button from "./Button";
 import { InfoIcon, PersonWithDocIcon } from "./icons";
 
@@ -7,8 +9,8 @@ type ScopePanelProps = {
   variant?: ScopeVariant;
   categoryCount?: number;
   catalogueVersion?: string;
-  limitations?: string[];
-  onViewList?: () => void;
+  /** The categories and pages that were not finished. View list is drawn only when there is something in it. */
+  unfinished?: Unfinished[];
 };
 
 const SCOPE_TEXT =
@@ -19,9 +21,10 @@ export default function ScopePanel({
   variant = "complete",
   categoryCount = 46,
   catalogueVersion = "cat-2026.09-r1.1",
-  limitations = [],
-  onViewList,
+  unfinished = [],
 }: ScopePanelProps) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
   return (
     <section
       aria-label="Review scope"
@@ -48,10 +51,24 @@ export default function ScopePanel({
         <span style={{ fontSize: 12, color: "var(--ink-primary)" }}>
           <span style={{ fontFamily: "var(--font-mono)" }}>{categoryCount}</span> categories reviewed
         </span>
-        <Button variant="tertiary" size="s" onClick={onViewList}>
-          View list
-        </Button>
+        {unfinished.length > 0 && (
+          <Button variant="tertiary" size="s" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((o) => !o)}>
+            {open ? "Hide list" : "View list"}
+          </Button>
+        )}
       </div>
+      {unfinished.length > 0 && (
+        <div id={listId} hidden={!open}>
+          <p style={{ fontSize: 12, lineHeight: "17px", fontWeight: 600, color: "var(--ink-primary)" }}>Not finished</p>
+          <ul style={{ listStyle: "none", margin: "4px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+            {unfinished.map((u) => (
+              <li key={u.label} style={{ fontSize: 12, lineHeight: "17px", color: "var(--ink-secondary)", overflowWrap: "anywhere" }}>
+                <span style={{ color: "var(--ink-primary)" }}>{u.label}</span>: {u.note}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {variant === "processing-incomplete" && (
         <div
           style={{
@@ -74,14 +91,6 @@ export default function ScopePanel({
       {variant === "sample-mode" && (
         <div style={{ fontSize: 12, color: "var(--status-review-fg)" }}>Sample mode: showing a prepared example.</div>
       )}
-      {limitations.map((l) => (
-        <div
-          key={l}
-          style={{ fontSize: 12, lineHeight: "17px", color: "var(--ink-secondary)", borderTop: "1px solid var(--rule-default)", paddingTop: 6 }}
-        >
-          {l}
-        </div>
-      ))}
     </section>
   );
 }

@@ -3,7 +3,6 @@ import Button from "../../components/Button";
 import ClauseDetailPanel, { REVIEW_CANDIDATE_NOTE, type PanelData } from "../../components/ClauseDetailPanel";
 import { MarginGrid } from "../../components/Layout";
 import MarginRuler from "../../components/MarginRuler";
-import RuleFlagCard from "../../components/RuleFlagCard";
 import { markStyle } from "../../components/SpanHighlight";
 import { HERO_EXAMPLES, splitExcerpt, type HeroExample } from "./heroExamples";
 
@@ -14,9 +13,8 @@ import { HERO_EXAMPLES, splitExcerpt, type HeroExample } from "./heroExamples";
 
 const STATUS_WORD = { found: "Found", review: "Needs a lawyer" } as const;
 
-/* Only what is verified: the quote with its offsets, the category, the status,
-   the direction, the confidence band as a word and the statute note. No decimal
-   and no case law, because neither is real data yet. */
+/* Only what this build serves: the quote with its offsets, the category and the status.
+   No confidence band, no statute note and no case law, because none is real data yet. */
 function panelData(e: HeroExample): PanelData {
   return {
     title: e.category,
@@ -24,10 +22,7 @@ function panelData(e: HeroExample): PanelData {
     sectionPath: e.sectionPath,
     offsets: { start: e.start, end: e.end },
     quote: e.quote,
-    polarity: e.polarity,
-    confidence: e.band,
     reviewNote: e.status === "review" ? REVIEW_CANDIDATE_NOTE : undefined,
-    ruleFlags: e.statute && <RuleFlagCard citation={e.statute.citation} note={e.statute.note} />,
   };
 }
 
@@ -89,7 +84,7 @@ export default function HeroDemo() {
             </p>
           </div>
           <figcaption className="mt-3 text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
-            Sample contract, fictional parties. Reading as the Provider.
+            Sample contract, fictional parties.
           </figcaption>
         </figure>
       </MarginGrid>

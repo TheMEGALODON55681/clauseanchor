@@ -25,6 +25,7 @@ export default function ReaderToolbar({
   menu,
   leading,
   showDelete = true,
+  reportUnavailable = false,
   onDownload,
   onDelete,
 }: {
@@ -39,6 +40,8 @@ export default function ReaderToolbar({
   leading?: ReactNode;
   /** False leaves Delete to the menu, which is where it sits on a phone. */
   showDelete?: boolean;
+  /** There is no report to download yet: the button stays, disabled, and says so. */
+  reportUnavailable?: boolean;
   onDownload?: () => void;
   onDelete?: () => void;
 }) {
@@ -83,10 +86,10 @@ export default function ReaderToolbar({
       )}
 
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-        <Button variant="primary" size="s" icon="leading" iconNode={<DownloadIcon size={16} />} onClick={onDownload}>
-          Download report
+        <Button variant="primary" size="s" icon="leading" iconNode={<DownloadIcon size={16} />} state={reportUnavailable ? "disabled" : undefined} onClick={onDownload}>
+          {reportUnavailable ? "Report not available yet" : "Download report"}
         </Button>
-        {menu ?? <DropdownMenu />}
+        {menu === undefined ? <DropdownMenu /> : menu}
         {showDelete && (
           <Button variant="destructive" size="s" icon="leading" iconNode={<TrashIcon size={16} />} onClick={onDelete}>
             Delete document

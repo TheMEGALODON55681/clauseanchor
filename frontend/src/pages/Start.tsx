@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
-import { useSession } from "../app/session";
+import { available } from "../api/client";
 import Button from "../components/Button";
+import CategoryPicker from "../components/CategoryPicker";
 import ErrorCard from "../components/ErrorCard";
-import { FileIcon } from "../components/icons";
 import { Container, MarginGrid } from "../components/Layout";
 import NoticeBanner from "../components/NoticeBanner";
 import PartyBindingField from "../components/PartyBindingField";
-import RadioCard from "../components/RadioCard";
 import RoleSelector from "../components/RoleSelector";
 import Switch from "../components/Switch";
 import UploadDropzone, { type DropzoneState } from "../components/UploadDropzone";
-import { clampStep, nextBlocker, parseStep, suggestedParty, type Blocker, type Step, type UploadState } from "../lib/startFlow";
+import { canRetry, clampStep, nextBlocker, parseStep, suggestedParty, type Blocker, type FlowError, type FlowState, type Step } from "../lib/startFlow";
 import Summary from "./start/Summary";
 import { useStartFlow } from "./start/useStartFlow";
 
@@ -21,10 +20,6 @@ import { useStartFlow } from "./start/useStartFlow";
 
 const STEP_TITLES = ["Upload the contract", "Say which side you are", "Confirm the scope"] as const;
 
-const SAMPLES = [
-  { id: "secondment", title: "Services and secondment agreement", description: "Two Indian companies, 14 clauses, about 1,300 words." },
-];
-
 const BLOCKED: Record<Blocker, string | null> = {
   upload: "Upload a contract to begin.",
   checking: "Checking your file.",
@@ -32,36 +27,37 @@ const BLOCKED: Record<Blocker, string | null> = {
   "read-failed": null,
   role: "Choose your role to continue.",
   party: "Choose a party, or None of these, to continue.",
+  categories: "Choose at least one category to start the review.",
 };
 
-const REFUSAL_ZONE: Record<string, DropzoneState> = {
+const ZONES: Partial<Record<FlowError["code"], DropzoneState>> = {
   unsupported_type: "error-type",
   too_large: "error-size",
   scanned: "error-scanned",
   protected: "error-protected",
 };
 
-function zoneOf(u: UploadState, dragging: boolean): DropzoneState {
-  if (u.status === "validating" || u.status === "uploaded") return u.status;
-  if (u.status === "error") return REFUSAL_ZONE[u.code] ?? "idle";
+/** The error on screen: a refused upload, or a file that was taken and could not be read. */
+const failureOf = (f: FlowState): FlowError | null => (f.upload.status === "error" ? f.upload.error : f.parse === "failed" ? f.parseError : null);
+
+/* A failure the user can try again shows as a card with Try again, and the zone stays as it was. Any other failure is the zone itself, with the sentence in it. */
+function zoneOf(f: FlowState, dragging: boolean, retryable: boolean): DropzoneState {
+  const e = failureOf(f);
+  if (e && !retryable) return ZONES[e.code] ?? "error-other";
+  if (f.upload.status === "validating" || f.upload.status === "uploaded") return f.upload.status;
   return dragging ? "drag-over" : "idle";
 }
 
 export default function Start() {
-  const { mock } = useSession();
-  const sampleMode = !!mock?.sampleMode;
-  const { flow, dispatch, parties, fileMeta, upload, retry, start, starting, startFailed } = useStartFlow();
+  const { flow, dispatch, parties, fileMeta, upload, retry, start, starting, startError } = useStartFlow();
   const [params, setParams] = useSearchParams();
   const urlStep = parseStep(params.get("step"));
   const step = clampStep(flow, urlStep);
   const heading = useRef<HTMLHeadingElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const shownStep = useRef(step);
-  const sampleStarted = useRef(false);
   const [dragging, setDragging] = useState(false);
-  const [sampleChoice, setSampleChoice] = useState<string | null>(null);
 
-  // Whole objects and not updater functions: the setter keeps the parameters of the render it came from, and a callback that outlives its render would put the sample parameter back.
   const goTo = (s: Step) => setParams({ step: String(s) });
 
   // A link to a step that is out of reach is corrected with a replace, so Back does not trap the user.
@@ -76,18 +72,10 @@ export default function Start() {
     heading.current?.focus({ preventScroll: true });
   }, [step]);
 
-  /* "Try the sample contract" links here with ?sample=secondment. Read it once and drop it, so a reload does not upload again. */
-  useEffect(() => {
-    const id = params.get("sample");
-    if (!id || sampleStarted.current) return;
-    sampleStarted.current = true;
-    setParams({}, { replace: true });
-    if (SAMPLES.some((x) => x.id === id)) void upload({ sampleId: id }, () => goTo(2));
-  }, []);
-
   const blocker = nextBlocker(flow, step);
-  const hint = blocker ? (blocker === "upload" && sampleMode ? "Choose a sample contract to begin." : BLOCKED[blocker]) : null;
-  const upErr = flow.upload.status === "error" ? flow.upload.code : null;
+  const hint = blocker ? BLOCKED[blocker] : null;
+  const failure = failureOf(flow);
+  const retryable = canRetry(flow);
   const suggested = suggestedParty(flow.role, parties.length);
   const ordered = suggested === null ? parties : [parties[suggested], ...parties.filter((_, i) => i !== suggested)];
   const partyState = flow.parse === "running" ? "loading" : parties.length === 0 ? "unresolved" : "choices";
@@ -129,101 +117,78 @@ export default function Start() {
 
               {step === 1 && (
                 <>
-                  {sampleMode ? (
-                    <div role="radiogroup" aria-label="Sample contracts" className="flex flex-col gap-3">
-                      <NoticeBanner variant="sample-mode" />
-                      {SAMPLES.map((s) => (
-                        <RadioCard
-                          key={s.id}
-                          name="sample"
-                          value={s.id}
-                          title={s.title}
-                          description={s.description}
-                          icon={<FileIcon size={18} />}
-                          checked={sampleChoice === s.id}
-                          onSelect={() => {
-                            setSampleChoice(s.id);
-                            void upload({ sampleId: s.id }, () => goTo(2));
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setDragging(true);
-                        }}
-                        onDragLeave={() => setDragging(false)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setDragging(false);
-                          const file = e.dataTransfer.files[0];
-                          if (file && flow.upload.status !== "validating") void upload({ file });
-                        }}
-                      >
-                        <UploadDropzone
-                          state={zoneOf(flow.upload, dragging)}
-                          fileName={flow.upload.status === "idle" ? "" : flow.upload.fileName}
-                          fileMeta={fileMeta}
-                          onChoose={() => fileInput.current?.click()}
-                          onReplace={() => fileInput.current?.click()}
-                        />
-                        <input
-                          ref={fileInput}
-                          type="file"
-                          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                          className="sr-only"
-                          tabIndex={-1}
-                          aria-label="Choose a contract file"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) void upload({ file });
-                            e.target.value = "";
-                          }}
-                        />
-                      </div>
-                      {upErr === "network" && <ErrorCard message="Could not reach the server. Check your connection and try again." code="ERR_NETWORK" onRetry={retry} />}
-                      <p className="text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
-                        Your contract is processed in memory and deleted within 60 minutes.
-                      </p>
-                      <div>
-                        <Button variant="secondary" onClick={() => void upload({ sampleId: "secondment" }, () => goTo(2))}>
-                          Try the sample contract
-                        </Button>
-                      </div>
-                    </>
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragging(true);
+                    }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragging(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file && flow.upload.status !== "validating") void upload({ file });
+                    }}
+                  >
+                    <UploadDropzone
+                      state={zoneOf(flow, dragging, retryable)}
+                      fileName={flow.upload.status === "idle" ? "" : flow.upload.fileName}
+                      fileMeta={fileMeta}
+                      message={failure?.message}
+                      onChoose={() => fileInput.current?.click()}
+                      onReplace={() => fileInput.current?.click()}
+                    />
+                    <input
+                      ref={fileInput}
+                      type="file"
+                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="sr-only"
+                      tabIndex={-1}
+                      aria-label="Choose a contract file"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void upload({ file });
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                  {failure && retryable && <ErrorCard message={failure.message} code={failure.apiCode ?? "ERR_NETWORK"} onRetry={retry} />}
+                  <p className="text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
+                    Your contract is processed in memory and deleted within 60 minutes.
+                  </p>
+                  {/* The prepared sample needs the sample endpoint of 3-C. */}
+                  {!available.samples && (
+                    <p className="text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
+                      The sample contract is not available in this build yet.
+                    </p>
                   )}
                 </>
               )}
 
               {step === 2 && (
                 <>
-                  <RoleSelector value={flow.role} hideLegend onChange={(role) => dispatch({ type: "set-role", role })} />
-                  {flow.parse === "failed" ? (
-                    <ErrorCard title="We could not read your document" message="Try again, or go back and choose a different file." code="ERR_PARSE" onRetry={retry} />
-                  ) : (
-                    <PartyBindingField
-                      state={partyState}
-                      parties={ordered}
-                      value={flow.party}
-                      none={flow.partyNone}
-                      suggested={suggested === null ? null : parties[suggested].id}
-                      onChange={(party) => dispatch({ type: "set-party", party })}
-                      onNone={() => dispatch({ type: "set-party-none" })}
-                    />
-                  )}
+                  {!available.partyBinding && <NoticeBanner variant="not-available" text="This build does not use your side yet. Findings carry no burden or benefit label." />}
+                  <RoleSelector value={flow.role} hideLegend hint={available.partyBinding ? undefined : null} onChange={(role) => dispatch({ type: "set-role", role })} />
+                  <PartyBindingField
+                    state={partyState}
+                    parties={ordered}
+                    value={flow.party}
+                    none={flow.partyNone}
+                    suggested={suggested === null ? null : parties[suggested].id}
+                    onChange={(party) => dispatch({ type: "set-party", party })}
+                    onNone={() => dispatch({ type: "set-party-none" })}
+                  />
                 </>
               )}
 
               {step === 3 && (
                 <>
+                  <CategoryPicker selected={flow.categories} onToggle={(id) => dispatch({ type: "toggle-category", id })} onSet={(ids) => dispatch({ type: "set-categories", ids })} />
                   <Switch
                     checked={flow.india}
                     onChange={(on) => dispatch({ type: "set-india", on })}
-                    label="Review under Indian law"
-                    description="Adds review flags that cite Indian statutes and passages from Indian judgments. Turn off if the contract is under another country's law."
+                    label="Include India-specific categories"
+                    description="Adds the five India-specific categories. In this build they show as not yet available."
                   />
                   <NoticeBanner variant="review-scope" />
                   <NoticeBanner variant="legal-scope" />
@@ -232,7 +197,7 @@ export default function Start() {
               )}
             </section>
 
-            {startFailed && <ErrorCard message="Could not reach the server. Check your connection and try again." code="ERR_NETWORK" onRetry={() => void start()} />}
+            {startError && <ErrorCard message={startError.message} code={startError.apiCode ?? "ERR_NETWORK"} onRetry={startError.retryable ? () => void start() : undefined} />}
 
             <div className="flex flex-col gap-3">
               {step < 3 && (
@@ -251,7 +216,7 @@ export default function Start() {
                     Next
                   </Button>
                 ) : (
-                  <Button size="l" state={starting ? "loading" : undefined} onClick={() => void start()}>
+                  <Button size="l" state={starting ? "loading" : blocker ? "disabled" : undefined} onClick={() => void start()}>
                     Start review
                   </Button>
                 )}

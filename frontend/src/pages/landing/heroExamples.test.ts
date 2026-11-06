@@ -43,3 +43,10 @@ test("splitExcerpt counts code points, not UTF-16 units", () => {
   const parts = splitExcerpt({ excerpt, excerptStart: 100, start: 104, end: 109 });
   assert.deepEqual(parts, { before: "A \u{1F600} ", mark: "found", after: " it" });
 });
+
+test("an example holds no confidence band and no statute note, because this build serves neither", () => {
+  for (const e of HERO_EXAMPLES) {
+    assert.deepEqual(Object.keys(e).sort(), ["caption", "category", "end", "excerpt", "excerptStart", "quote", "sectionPath", "start", "status"], e.category);
+    assert.doesNotMatch(e.caption, /Section 27|India-specific|statute/i, e.category);
+  }
+});

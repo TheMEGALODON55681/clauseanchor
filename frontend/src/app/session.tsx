@@ -1,17 +1,28 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { client, mockSettings, type MockSettings } from "../api/client";
+import { client } from "../api/client";
 import type { Role } from "../api/types";
 import type { ToastVariant } from "../components/Toast";
 
 /* Session token, contract metadata and job ids live in React memory only.
    Nothing is written to localStorage, sessionStorage or IndexedDB. */
 
-export type DocMeta = { parseJobId: string | null; analysisJobId: string | null; role: Role; partyNodeId: string | null };
+export type DocMeta = {
+  parseJobId: string | null;
+  analysisJobId: string | null;
+  /** The analysis is read by this id, not by the document's (API.md section 6). */
+  analysisId: string | null;
+  /** The categories the review was started with. The analysis holds none until it ends, so the Reader lists these meanwhile. */
+  categoryIds: string[];
+  role: Role;
+  partyNodeId: string | null;
+};
 export type ToastMsg = { id: number; variant: ToastVariant; message: string };
 
 type SessionValue = {
   ensureToken: () => Promise<string>;
+  /** Drops the token and every document after the API said the session is gone, so the next upload starts a new one. */
+  endSession: () => void;
   token: string | null;
   docs: Record<string, DocMeta>;
   setDoc: (id: string, patch: Partial<DocMeta>) => void;
@@ -19,11 +30,9 @@ type SessionValue = {
   toasts: ToastMsg[];
   toast: (variant: ToastVariant, message: string) => void;
   dismissToast: (id: number) => void;
-  mock: MockSettings | null;
-  setMock: (patch: Partial<MockSettings>) => void;
 };
 
-const BLANK_DOC: DocMeta = { parseJobId: null, analysisJobId: null, role: "employer", partyNodeId: null };
+const BLANK_DOC: DocMeta = { parseJobId: null, analysisJobId: null, analysisId: null, categoryIds: [], role: "employer", partyNodeId: null };
 
 const Ctx = createContext<SessionValue | null>(null);
 
@@ -32,7 +41,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const pending = useRef<Promise<string> | null>(null);
   const [docs, setDocs] = useState<Record<string, DocMeta>>({});
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
-  const [mock, setMockState] = useState<MockSettings | null>(mockSettings ? { ...mockSettings } : null);
 
   const ensureToken = useCallback(async () => {
     if (token) return token;
@@ -45,6 +53,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     return pending.current;
   }, [token]);
+
+  const endSession = useCallback(() => {
+    pending.current = null;
+    setToken(null);
+    setDocs({});
+  }, []);
 
   const setDoc = useCallback((id: string, patch: Partial<DocMeta>) => {
     setDocs((d) => ({
@@ -69,15 +83,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const dismissToast = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
 
-  const setMock = useCallback((patch: Partial<MockSettings>) => {
-    if (!mockSettings) return;
-    Object.assign(mockSettings, patch);
-    setMockState({ ...mockSettings });
-  }, []);
-
   const value = useMemo(
-    () => ({ ensureToken, token, docs, setDoc, forgetDoc, toasts, toast, dismissToast, mock, setMock }),
-    [ensureToken, token, docs, setDoc, forgetDoc, toasts, toast, dismissToast, mock, setMock]
+    () => ({ ensureToken, endSession, token, docs, setDoc, forgetDoc, toasts, toast, dismissToast }),
+    [ensureToken, endSession, token, docs, setDoc, forgetDoc, toasts, toast, dismissToast]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

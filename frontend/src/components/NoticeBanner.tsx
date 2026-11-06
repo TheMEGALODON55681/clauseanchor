@@ -3,7 +3,7 @@ import Button from "./Button";
 import { InfoIcon, AnchorIcon, PersonWithDocIcon, CloseIcon } from "./icons";
 import { sessionEndsIn } from "../lib/reader";
 
-export type NoticeVariant = "legal-scope" | "privacy" | "sample-mode" | "session-expiry" | "review-scope" | "read-partial";
+export type NoticeVariant = "legal-scope" | "privacy" | "sample-mode" | "session-expiry" | "review-scope" | "read-partial" | "not-available";
 
 type NoticeBannerProps = {
   variant: NoticeVariant;
@@ -25,6 +25,8 @@ const FIXED: Record<NoticeVariant, string> = {
   // Interim wording. It waits for the parser warning codes in API.md (FrontendDesign.md 17.5, AQ).
   "read-partial":
     "ClauseAnchor could not read part of this document. Unread text has no marks, so you may miss a clause there.",
+  // A feature whose endpoint does not exist yet. Callers pass the sentence that names the feature as `text`.
+  "not-available": "Not available in this build yet.",
 };
 
 function config(variant: NoticeVariant, onAction?: () => void): {
@@ -60,6 +62,14 @@ function config(variant: NoticeVariant, onAction?: () => void): {
         icon: <PersonWithDocIcon size={18} />,
         dismissible: false,
       };
+    case "not-available":
+      return {
+        rule: "var(--rule-strong)",
+        bg: "var(--paper-sunken)",
+        fg: "var(--ink-secondary)",
+        icon: <InfoIcon size={18} />,
+        dismissible: false,
+      };
     case "review-scope":
       return {
         rule: "var(--anchor-600)",
@@ -83,11 +93,12 @@ function config(variant: NoticeVariant, onAction?: () => void): {
         fg: "var(--ink-secondary)",
         icon: <InfoIcon size={18} />,
         dismissible: false,
-        action: (
+        // The report button shows only when there is a report to download.
+        action: onAction ? (
           <Button variant="primary" size="s" onClick={onAction}>
             Download report
           </Button>
-        ),
+        ) : undefined,
       };
   }
 }

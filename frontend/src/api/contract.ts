@@ -1,6 +1,5 @@
-/* Fictional sample agreement used by the mock adapter. Not a real contract. */
-
-export const SAMPLE_FILENAME = "services-and-secondment-agreement.pdf";
+/* Fictional sample agreement. Not a real contract, and not part of the build: no page imports it. The landing demo's test checks
+   its three quoted paragraphs against it, and scripts/check-dist.mjs searches the build for the rest of its text. */
 
 export const SAMPLE_CONTRACT = `SERVICES AND SECONDMENT AGREEMENT
 

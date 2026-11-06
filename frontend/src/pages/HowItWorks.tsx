@@ -4,12 +4,9 @@ import { useLocation } from "react-router";
 import { Container, MarginGrid } from "../components/Layout";
 import Link from "../components/Link";
 import NoticeBanner from "../components/NoticeBanner";
-import PolarityBadge, { type PolarityKind } from "../components/PolarityBadge";
 import Specimen from "../components/Specimen";
 import StatusChip from "../components/StatusChip";
-import StatuteTag from "../components/StatuteTag";
 
-const POLARITIES: PolarityKind[] = ["exposure", "protection", "mixed", "neutral", "unresolved"];
 
 /* `fragment` is a real component that shows what the text describes. It sits in the aside from
    1280 px and under the text below that. */
@@ -37,7 +34,7 @@ const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNo
           The review checks a fixed list of clause categories: 41 drawn from the CUAD research dataset and five added for Indian agreements, such as stamping and registration. Each category is searched across the whole document in overlapping windows.
         </p>
         <p>
-          If a provision is not on the list, it is not checked. Unhighlighted text means only that no listed category was confirmed there. The Manual review list in the reader collects those passages so you can read them yourself.
+          If a provision is not on the list, it is not checked. Unhighlighted text means only that no listed category was confirmed there. A Manual review list that collects those passages is not available in this build yet, so read the full text yourself.
         </p>
       </>
     ),
@@ -57,38 +54,28 @@ const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNo
         <p>
           A clause is marked Found only when its evidence clears a threshold that was tested against labelled contracts. When the evidence is close, the category goes to Needs a lawyer instead of being guessed. A few categories have too few labelled examples to test, so their findings carry the note Confidence not validated.
         </p>
-        <p>The Accuracy page lists the measured numbers for each category, including how often a real clause is missed without a warning.</p>
+        <p>The Accuracy page lists the measured numbers for each category, including how often a real clause is missed without a warning. It is not available in this build yet.</p>
       </>
     ),
   },
   {
     id: "law",
-    fragment: <StatuteTag />,
-    title: "Indian law review and case law",
+    title: "India-specific categories",
     body: (
       <>
         <p>
-          With Indian law review on, some clauses get a short note citing the statute that a court would look at, for example Section 27 of the Indian Contract Act 1872 for restraints of trade. These notes describe what to check. They do not predict an outcome.
+          The India-specific switch adds five categories for Indian agreements, such as stamping and registration. In this build they show as not available yet.
         </p>
-        <p>
-          Case law passages are quoted word for word from published judgments, with the court, year and citation. Each shows whether it was checked against later judgments, and whether a later judgment overruled or modified it. If no verified passage exists, the panel says so.
-        </p>
+        <p>Statute notes and judgment passages come in a later build.</p>
       </>
     ),
   },
   {
     id: "role",
-    fragment: (
-      <div className="flex flex-col items-start gap-2">
-        {POLARITIES.map((p) => (
-          <PolarityBadge key={p} polarity={p} />
-        ))}
-      </div>
-    ),
     title: "Reading from your side",
     body: (
       <p>
-        You choose your role and which named party you are. Each finding is then labelled Burden on you, Benefits you, Both ways or No direction. Change your role from the reader menu and the labels update. If no party is chosen, the label reads Party unclear.
+        You choose your role and which named party you are. This build does not use your choice yet, so findings carry no burden or benefit label.
       </p>
     ),
   },
@@ -123,7 +110,7 @@ const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNo
           <Link variant="external" href="https://www.atticusprojectai.org/cuad">atticusprojectai.org</Link>
         </li>
         <li><strong>OpenNyaya</strong>. Indian judgment texts and structure.</li>
-        <li><strong>NyayaAnumana</strong>. Indian case corpus used for passage retrieval.</li>
+        <li><strong>NyayaAnumana</strong>. Indian case corpus, for passage retrieval in a later build.</li>
         <li><strong>InLegalBERT</strong>. Language model pretrained on Indian legal text.</li>
       </ul>
     ),

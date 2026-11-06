@@ -7,7 +7,7 @@ export type PartyBindingState = "loading" | "choices" | "selected" | "unresolved
 
 export type PartyChoice = { id: string; name: string; quote: string; start: number; end: number };
 
-const UNCLEAR = "We will mark party-specific clauses as Party unclear.";
+const UNCLEAR = "No named parties were found in this document.";
 
 /* The party the user is, as a radio group with "None of these" as its last option. Nothing
    is chosen until the user chooses: a wrong party flips Burden and Benefit on every finding.
@@ -84,7 +84,6 @@ export default function PartyBindingField({
             </RadioCard>
           ))}
           <RadioCard name={label} value="none" title="None of these" checked={none} onSelect={() => onNone?.()} />
-          {none && <p style={{ fontSize: 13, color: "var(--ink-secondary)" }}>{UNCLEAR}</p>}
         </div>
       )}
     </div>

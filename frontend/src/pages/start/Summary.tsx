@@ -16,7 +16,8 @@ function rowsOf(flow: FlowState, fileMeta: string, parties: PartyChoice[]): Row[
     { label: "File", value: file, note: file ? fileMeta : undefined },
     { label: "Role", value: role },
     { label: "Party", value: party },
-    { label: "Scope", value: flow.india ? "Indian law review on" : "Indian law review off" },
+    { label: "Categories", value: flow.categories.length ? `${flow.categories.length} selected` : null },
+    { label: "Scope", value: flow.india ? "India-specific categories on" : "India-specific categories off" },
   ];
 }
 

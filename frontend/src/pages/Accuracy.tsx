@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { client } from "../api/client";
+import { available, client } from "../api/client";
 import type { EvaluationRow, Evaluations } from "../api/types";
 import { CATEGORY_BY_ID } from "../api/catalogue";
 import { groupRows, rowVariant } from "../lib/accuracy";
@@ -9,6 +9,7 @@ import SegmentedFilter from "../components/SegmentedFilter";
 import { Container, MarginGrid } from "../components/Layout";
 import PerformanceTableRow, { PERF_COLUMNS } from "../components/PerformanceTableRow";
 import NoticeBanner from "../components/NoticeBanner";
+import EmptyState from "../components/EmptyState";
 import ErrorCard from "../components/ErrorCard";
 import Skeleton from "../components/Skeleton";
 
@@ -42,6 +43,8 @@ export default function Accuracy() {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    // The figures have no endpoint until 3-C. The page says so and asks for nothing.
+    if (!available.evaluations) return;
     let live = true;
     setFailed(false);
     client
@@ -78,7 +81,11 @@ export default function Accuracy() {
         <Container>
           <MarginGrid>
             <h1 id="accuracy-title" className="t-display-md">How well each category is found</h1>
-            <p className="t-prose-lg mt-4">These numbers describe the listed categories only. They do not measure how much of a contract's risk is found.</p>
+            <p className="t-prose-lg mt-4">
+              {available.evaluations
+                ? "These numbers describe the listed categories only. They do not measure how much of a contract's risk is found."
+                : "No accuracy figures are shown in this build."}
+            </p>
             <div className="mt-6">
               <NoticeBanner variant="review-scope" />
             </div>
@@ -89,6 +96,7 @@ export default function Accuracy() {
       <Container>
         <MarginGrid
           aside={
+            !available.evaluations ? undefined : (
             <section aria-labelledby="glossary-title" className="xl:sticky xl:top-8">
               <h2 id="glossary-title" className="font-serif text-[22px] font-semibold leading-[30px]" style={{ color: "var(--ink-primary)" }}>
                 What the columns mean
@@ -102,9 +110,14 @@ export default function Accuracy() {
                 ))}
               </dl>
             </section>
+            )
           }
         >
-          {failed ? (
+          {!available.evaluations ? (
+            <div className="max-w-[640px]">
+              <EmptyState variant="not-available" heading="Accuracy figures are not available in this build yet" line="Measured results for each category appear here once the service can provide them. Until then, this page shows no figure." />
+            </div>
+          ) : failed ? (
             <div className="max-w-[640px]">
               <ErrorCard message="The accuracy figures could not be loaded." code="ERR_NETWORK" onRetry={() => setAttempt((a) => a + 1)} />
             </div>

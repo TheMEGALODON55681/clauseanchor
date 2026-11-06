@@ -15,7 +15,8 @@ export const ROLES: { role: Role; title: string; desc: string; icon: React.React
 ];
 
 /** Controlled when `value` is given (null means no role yet). Without it the gallery example keeps its own choice. */
-export default function RoleSelector({ value, onChange, hideLegend = false }: { value?: Role | null; onChange?: (v: Role) => void; hideLegend?: boolean }) {
+/** `hint` is the line under the heading: undefined keeps the default, null leaves it out. */
+export default function RoleSelector({ value, onChange, hideLegend = false, hint }: { value?: Role | null; onChange?: (v: Role) => void; hideLegend?: boolean; hint?: string | null }) {
   const group = useId();
   const [internal, setInternal] = useState<Role | null>("employee");
   const selected = value !== undefined ? value : internal;
@@ -28,9 +29,11 @@ export default function RoleSelector({ value, onChange, hideLegend = false }: { 
       <legend className={hideLegend ? "sr-only" : undefined} style={{ fontSize: 18, fontWeight: 600, color: "var(--ink-primary)", marginBottom: 4 }}>
         Who are you in this contract?
       </legend>
-      <p style={{ fontSize: 13, color: "var(--ink-secondary)", marginBottom: 14 }}>
-        This decides whether a clause reads as a burden or a benefit for you.
-      </p>
+      {hint !== null && (
+        <p style={{ fontSize: 13, color: "var(--ink-secondary)", marginBottom: 14 }}>
+          {hint ?? "This decides whether a clause reads as a burden or a benefit for you."}
+        </p>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
         {ROLES.map((r) => (
           <RadioCard key={r.role} name={group} value={r.role} title={r.title} description={r.desc} icon={r.icon} checked={selected === r.role} onSelect={() => choose(r.role)} />
