@@ -12,8 +12,10 @@ const start = read("./Start.tsx");
 const summary = read("./start/Summary.tsx");
 const demo = read("./landing/HeroDemo.tsx");
 const examples = read("./landing/heroExamples.ts");
+const footer = read("../components/AppFooter.tsx");
+const notice = read("../components/NoticeBanner.tsx");
 
-const OVER_PROMISES = [/Indian judgment/i, /case law/i, /Indian law review/i, /Review under Indian law/i, /cite Indian statutes/i];
+const OVER_PROMISES = [/Indian judgment/i, /case law/i, /Indian law review/i, /Review under Indian law/i, /cite Indian statutes/i, /published judgments/i, /confidence band/i, /lists the measured/i];
 
 test("the hero examples carry no confidence badge, no statute note and no Section 27 text", () => {
   assert.doesNotMatch(examples, /\bband\b|statute|Section 27|Indian Contract Act|India-specific review/i);
@@ -36,6 +38,22 @@ test("How it works says that statute notes and judgment passages come in a later
   assert.doesNotMatch(section, /StatuteTag|Section 27/);
   assert.match(section, /later build/);
   assert.doesNotMatch(how, /used for passage retrieval/);
+});
+
+test("the legal sentence, in the footer, the notice and the FAQ, points only to the contract", () => {
+  for (const src of [footer, notice, landing]) {
+    assert.match(src, /ClauseAnchor points to text in your contract\. It does not tell you what the law requires\./);
+  }
+});
+
+test("How it works says confidence is not validated in this build and is measured in a later one", () => {
+  const section = how.match(/id: "confidence"[\s\S]*?id: "law"/)?.[0] ?? "";
+  assert.ok(section.length > 100, "the confidence section was found");
+  assert.match(section, /This build does not validate its confidence yet\./);
+  assert.match(section, /Confidence not validated/);
+  assert.match(section, /later build/);
+  assert.doesNotMatch(section, /threshold|clears|tested against/i);
+  assert.doesNotMatch(section, /status="found"/);
 });
 
 test("the switch and the summary line are named for the categories, not for a law", () => {

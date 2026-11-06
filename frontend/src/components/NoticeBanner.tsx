@@ -15,7 +15,7 @@ type NoticeBannerProps = {
 
 const FIXED: Record<NoticeVariant, string> = {
   "legal-scope":
-    "Not legal advice. ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires.",
+    "Not legal advice. ClauseAnchor points to text in your contract. It does not tell you what the law requires.",
   privacy: "Your contract is processed in memory and deleted within 60 minutes.",
   "sample-mode": "Sample mode: showing a prepared example. Uploads are turned off.",
   // The Reader passes the real minutes left as `text`. This is the sample the Gallery shows.

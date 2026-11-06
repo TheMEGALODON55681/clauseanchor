@@ -870,7 +870,7 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Fixed phrases · used verbatim wherever they appear">
         <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 560 }}>
           {[
-            "ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires.",
+            "ClauseAnchor points to text in your contract. It does not tell you what the law requires.",
             "Your contract is processed in memory and deleted within 60 minutes.",
             "ClauseAnchor could not confirm this clause with enough confidence. A lawyer should read it.",
             "This does not mean the contract has none, only that none was confirmed here.",
@@ -1022,7 +1022,7 @@ export default function Gallery() {
       <LayoutAndMotion />
 
       <footer style={{ padding: "24px 32px", borderTop: "1px solid var(--rule-default)", color: "var(--ink-tertiary)", fontSize: 13 }}>
-        Not legal advice. ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires.
+        Not legal advice. ClauseAnchor points to text in your contract. It does not tell you what the law requires.
       </footer>
     </div>
   );
@@ -1108,7 +1108,7 @@ function LayoutAndMotion() {
           </div>
           <div>
             <Disclosure summary="Is this legal advice?" open>
-              No. ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires.
+              No. ClauseAnchor points to text in your contract. It does not tell you what the law requires.
             </Disclosure>
             <Disclosure summary="What happens to my file?">
               Your contract is processed in memory and deleted within 60 minutes.

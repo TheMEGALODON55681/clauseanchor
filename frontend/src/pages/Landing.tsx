@@ -38,7 +38,7 @@ const DOES_NOT = [
 ];
 
 const QUESTIONS: [string, string][] = [
-  ["Is this legal advice?", "No. ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires."],
+  ["Is this legal advice?", "No. ClauseAnchor points to text in your contract. It does not tell you what the law requires."],
   ["What happens to my file?", "Your contract is processed in memory and deleted within 60 minutes. Choose Delete document in the reader to remove it sooner."],
   ["What if it misses something?", "It can. This review checks the listed clause categories. Other provisions and interactions between clauses may need manual review. Unhighlighted text is not a safety assessment."],
   ["Which files work?", "PDF or DOCX with selectable text, up to 10 MB and 100 pages. A file that is scanned throughout, or password protected, is refused."],
@@ -76,7 +76,7 @@ function FindingFragment() {
 const STEPS: { title: string; body: string; fragment: ReactNode }[] = [
   { title: "Upload the contract", body: "Upload a PDF or DOCX with selectable text, up to 10 MB and 100 pages.", fragment: <UploadDropzone state="idle" /> },
   { title: "Say which side you are", body: "Pick your role and the party you are. This build does not use your choice yet, so findings carry no burden or benefit label.", fragment: <RoleFragment /> },
-  { title: "Check each finding", body: "Every finding points to exact text. Select one to see the quoted wording and its confidence band. Statute notes and judgment passages come in a later build.", fragment: <FindingFragment /> },
+  { title: "Check each finding", body: "Every finding points to exact text. Select one to see the quoted wording and where it sits in your contract. Statute notes and judgment passages come in a later build.", fragment: <FindingFragment /> },
 ];
 
 function Mark({ children }: { children: string }) {
@@ -206,7 +206,7 @@ export default function Landing() {
       <Section id="privacy" labelledBy="privacy-title" mark={mark()}>
         <h2 id="privacy-title" className="t-display-md">Your contract is deleted within 60 minutes.</h2>
         <p className="t-prose-lg mt-4">
-          {PRIVACY_LINE} Reloading the page ends your session, and nothing is written to your browser's storage. The Accuracy page lists the measured figures for each category. It is not available in this build yet.
+          {PRIVACY_LINE} Reloading the page ends your session, and nothing is written to your browser's storage. The Accuracy page will list the measured figures for each category in a later build.
         </p>
         <p className="-ml-4 mt-4">
           <Button to="/accuracy" variant="tertiary">See the Accuracy page</Button>

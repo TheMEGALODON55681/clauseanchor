@@ -43,7 +43,6 @@ const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNo
     id: "confidence",
     fragment: (
       <div className="flex flex-col items-start gap-2">
-        <StatusChip status="found" />
         <StatusChip status="review" />
         <StatusChip status="unvalidated" />
       </div>
@@ -52,9 +51,11 @@ const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNo
     body: (
       <>
         <p>
-          A clause is marked Found only when its evidence clears a threshold that was tested against labelled contracts. When the evidence is close, the category goes to Needs a lawyer instead of being guessed. A few categories have too few labelled examples to test, so their findings carry the note Confidence not validated.
+          This build does not validate its confidence yet. Every finding carries the note Confidence not validated and shows no score, so read each marked passage yourself. A later build will measure how often the marks are right, against labelled contracts.
         </p>
-        <p>The Accuracy page lists the measured numbers for each category, including how often a real clause is missed without a warning. It is not available in this build yet.</p>
+        <p>
+          When the evidence for a category is close, ClauseAnchor marks the category Needs a lawyer instead of guessing. The Accuracy page will list the measured numbers for each category, including how often a real clause is missed without a warning. It is not available in this build yet.
+        </p>
       </>
     ),
   },

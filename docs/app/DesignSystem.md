@@ -201,7 +201,7 @@ Fixed phrases (use exactly, sentence case):
 - "Needs a lawyer"
 - "No clause found at the validated threshold"
 - "Confidence not validated"
-- "Not legal advice. ClauseAnchor points to text in your contract and in published judgments. It does not tell you what the law requires."
+- "Not legal advice. ClauseAnchor points to text in your contract. It does not tell you what the law requires."
 - "Your contract is processed in memory and deleted within 60 minutes."
 - "Sample mode: showing a prepared example. Uploads are turned off."
 

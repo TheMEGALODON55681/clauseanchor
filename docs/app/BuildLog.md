@@ -4146,3 +4146,62 @@ The new tests were written before the code. First run: 12 failures. By group: th
 - B3. The India switch adds no category in the API. When the India categories can be reviewed, the page sends their ids with the switch on or the API adds them.
 
 Next action: Aryan stops the five processes, reads the report, and commits. Then 4-B and the rest of 4-C, and 3-A to 3-D, as in `Phases.md`.
+
+## 2026-11-06: Part 4-C1 follow-up, the last two public over-promises
+
+Aryan's request after 4-C1 was committed and pushed (`f527708`): fix the two over-promises that the live-run entry left for him. Only `frontend/` and `docs/app/` changed. Nothing under `backend/`, `ml/` or `docs/ml/` changed, and no server or browser was started. `FrontendDesign.md` 17.8 holds the amendments (rows DL and DM). A second request the same day fixed the three lines that this entry first left alone (section "Second round").
+
+### What changed
+
+- The fixed legal sentence no longer says that ClauseAnchor points to text "in published judgments", because this build serves no judgment passage. It reads "Not legal advice. ClauseAnchor points to text in your contract. It does not tell you what the law requires." in `AppFooter.tsx` and in the `legal-scope` text of `NoticeBanner.tsx` (which the How it works page also shows). The request named the footer and the legal-scope sentence. The same words stood in the landing FAQ answer and in three places in `Gallery.tsx`, so I changed those too, and the sentence is one text everywhere. `DesignSystem.md` and the FAQ table in `FrontendDesign.md` 8.3 quote it and were changed to match.
+- How it works, "Saying how sure it is", no longer says that a clause is marked Found when its evidence clears a tested threshold, or that a few categories lack examples to test. The first paragraph now reads: "This build does not validate its confidence yet. Every finding carries the note Confidence not validated and shows no score, so read each marked passage yourself. A later build will measure how often the marks are right, against labelled contracts." The second keeps the abstain behaviour ("marks the category Needs a lawyer instead of guessing") and says the Accuracy page "will list" the measured numbers and is not available in this build yet. The Found chip beside it was removed in the second round.
+- `pages/copy.test.ts`: two new tests (the legal sentence in the footer, the notice and the landing page; the confidence section) and one phrase, "published judgments", added to the list of old promises. 135 tests, up from 133.
+- Docs: `FrontendDesign.md` (rows DL and DM, the DG row's "kept on purpose" clause, the 8.3 FAQ table, the 6.4 chip line, the 8.2 landing table, the checks paragraph, the Deferred row), `DesignSystem.md` (the fixed phrase), `Architecture.md` (the test count and the copy count) and this entry. `Phases.md` quotes 133 tests in the 4-C1 entry, which was true when that part closed, so it is left as history.
+
+### Copy passes
+
+The new strings went through copywriting, then copy-editing, then stop-slop.
+
+- Copywriting drafted both. It dropped "and in published judgments", replaced the threshold paragraph, and kept "later build" because other public copy and `copy.test.ts` use it. It did not say that Needs a lawyer "shows the text it found", because a category that abstains can have no passage (DJ).
+- Copy-editing added "so read each marked passage yourself" (the reader's consequence of an unvalidated finding), turned the passive "goes to Needs a lawyer instead of being guessed" into an active sentence, and changed "lists the measured numbers" to "will list", because the page does not exist in this build.
+- Stop-slop changed the passive "Confidence is not validated in this build" to "This build does not validate its confidence yet" (the form of "This build does not use your side yet."), gave the later-build sentence a subject ("A later build will measure"), and joined "does not guess. It marks" into "marks the category Needs a lawyer instead of guessing". It scored the result 43 of 50. No edit followed it.
+
+### Red first
+
+The tests were written after the edit, so I ran the new `copy.test.ts` against a `git archive` of `f527708`'s `frontend/src` in the scratchpad: 3 of 7 failed (the two new tests, and the landing test through the new phrase). On the edited sources all pass.
+
+### Second round: the three lines left alone
+
+Aryan asked for the three items that this entry first listed under "Noticed, not changed" to be fixed in the same uncommitted change (`FrontendDesign.md` 17.8, row DM).
+
+- The Found chip is removed from the aside of "Saying how sure it is" (`HowItWorks.tsx`). The aside holds the Needs a lawyer and Confidence not validated chips, and the text beside it names both. The Found chip in the landing page's step 3 example and in the hero demo stays: its caption says the marked words are the clause itself (DG).
+- Landing step 3 (`Landing.tsx`) reads "Every finding points to exact text. Select one to see the quoted wording and where it sits in your contract. Statute notes and judgment passages come in a later build." The panel shows the quoted wording, the section path and the character range, and nothing in this build is a confidence band.
+- The landing privacy paragraph reads "The Accuracy page will list the measured figures for each category in a later build." It lost "It is not available in this build yet.", which the later-build wording makes redundant, and it takes the "will list" form that How it works uses.
+- `pages/copy.test.ts`: "confidence band" and "lists the measured" join the list of old promises, and the confidence test holds `status="found"` out of the section. No test was added, so the count stays 135.
+- Copy passes on the two landing strings, in order: copywriting drafted them (it kept "contract", the page's own word, and "figures", the word the line and the Accuracy empty state already use), copy-editing found nothing to change, and stop-slop found nothing to change (43 of 50). The chip removal is not copy.
+- Red first: I copied `frontend/src` to the scratchpad, put the Found chip and the two old landing lines back, and ran the new `copy.test.ts`: 2 of 7 failed (the landing test and the confidence test). On the real sources all pass.
+- Docs: `FrontendDesign.md` row DM, row DL (its sentence that the chips are unchanged is gone), the 6.4 chip line, the 8.2 landing table (step 3, and the privacy sentence, which still described an evaluation that was "complete" and "labelled example numbers" that no page shows), the checks paragraph and the Deferred row.
+
+### Reviews
+
+- Ponytail review of the full diff: no P1. One P2, applied: the legal-sentence test repeated a `doesNotMatch` that the new `OVER_PROMISES` phrase and the exact-sentence `match` already cover (1 line cut).
+- Ponytail review of the full uncommitted diff, after the second round: lean already, net 0 lines. The chip removal is one deleted line, and the test change is three phrases and one assertion.
+
+### Checks, on the final code
+
+- `pnpm typecheck` exit 0. `pnpm test` 135 of 135. `pnpm build` 173 modules, no warning. All four were rerun after the second round. `pnpm check:dist` passed: 35 files, 47 sample lines probed, 3 found, all in the landing demo's quoted paragraphs.
+- Claims grep over `frontend/src` for "published judgments", "clears a threshold", "tested against labelled" and "too few labelled": only the test file's own phrase list. The grep for "judgment passage" and "statute notes" leaves the "come in a later build" sentences and the test comments. After the second round the same grep also covers "confidence band", "lists the measured" and `status="found"`: what is left is the test's own phrases, the landing hero's Found chip (kept, DG), the gallery specimens and two comments.
+- Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`: no output. Tool-name grep over the backend code and config, `README.md`, `frontend/src`, `frontend/scripts` and the frontend config: no output, and none over the lines added to the docs outside this file. Dash scan for U+2014 and U+2013 over the 10 changed files: 0 hits, with a control string holding both dashes matching twice.
+- Not run: every check of `FrontendDesign.md` 1.2 that needs a browser. The reworded passages and the two-chip aside have not been seen in a browser, and none was opened.
+
+### Processes
+
+- Started by this part: no server and no browser. The test, build and typecheck runs exited by themselves. The five processes from the live run (26936, 17976, 14668, 15552, 15088) are not ours and were not touched.
+
+### Noticed, not changed
+
+- Two Needs a lawyer lines say the review "shows you the text it found" (`Landing.tsx`, the paragraph on calling a lawyer) and "shows the text" (the third hero caption in `heroExamples.ts`). A category that abstains can have no passage (DJ), so both promise a little more than the build always does. They are outside the request.
+- Step 2 of the landing table in `FrontendDesign.md` 8.2 still quotes the old role text ("That decides whether a clause reads as a burden or a benefit for you"), which CZ replaced in the code. Left as it was.
+- The earlier Deferred row said the gated Evidence section describes "a tested threshold and a Found mark". Reading `landing/Evidence.tsx`, it describes case law as a quoted passage, and it is off while `EVIDENCE` in `Landing.tsx` is null. The row now says that, and it is the only item left in it.
+
+Next action: Aryan reads the changes, commits, and decides on the two Needs a lawyer lines.
