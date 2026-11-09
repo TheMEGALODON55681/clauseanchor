@@ -27,6 +27,9 @@ data/raw/cuad/*
 data/raw/cuad/CUAD_v1/*
 !data/raw/cuad/CUAD_v1/CUAD_v1.json
 models/
+# The deployment build's model folder (the image workflow fills it) and release archives
+/model/
+*.zip
 *.pt
 *.bin
 *.safetensors

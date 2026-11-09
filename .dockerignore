@@ -1,0 +1,36 @@
+# The build context holds only what the image needs: the three source folders, the licence and the
+# one model folder that the workflow puts in model/. Everything else is out.
+*
+!LICENSE
+!backend
+!frontend
+!ml
+!model/clauseanchor_candidate_v0
+
+# Environments, build output, caches and the generated map folders (backend/*-out), wherever they sit
+**/.venv
+**/node_modules
+**/dist
+**/__pycache__
+**/*.egg-info
+**/.pytest_cache
+**/.ruff_cache
+**/.vite
+**/.screens
+**/*-out
+
+# Model folders, weights and archives, wherever they sit
+**/models
+**/*.zip
+**/*.safetensors
+**/*.pt
+**/*.onnx
+**/*.bin
+
+# Secrets and local config
+**/.env
+**/.env.*
+
+# The one model folder the workflow places on purpose. This line stays last, so it wins over the
+# weight patterns above.
+!model/clauseanchor_candidate_v0

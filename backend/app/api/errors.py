@@ -16,6 +16,8 @@ from fastapi.responses import JSONResponse
 
 log = logging.getLogger("clauseanchor.api")
 
+IMMUTABLE = "public, max-age=31536000, immutable"
+
 # code: (status, message, retryable). API.md lists the same table.
 ERRORS: dict[str, tuple[int, str, bool]] = {
     "VALIDATION_ERROR": (422, "The request is not valid.", False),
@@ -130,5 +132,8 @@ def install_error_handling(app: FastAPI) -> None:
             log.error("unhandled %s", type(exc).__name__)
             response = error_response("INTERNAL_ERROR")
         # Session and document replies hold tokens and contract text, and none is worth caching.
-        response.headers["Cache-Control"] = "no-store"
+        # The one exception is a hashed build file of the frontend (4-B): its name changes with
+        # its content, so a copy never goes stale. index.html and an error still get no-store.
+        hashed = request.url.path.startswith("/assets/") and response.status_code in (200, 304)
+        response.headers["Cache-Control"] = IMMUTABLE if hashed else "no-store"
         return response

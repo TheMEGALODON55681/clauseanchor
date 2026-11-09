@@ -85,6 +85,8 @@ class Settings:
     artifacts_dir: Path | None = None
     artifacts_sha256: str | None = None  # the canonical manifest digest, the trust anchor (D8)
     db_path: str = ":memory:"  # D8: D4 clears the tables at start, so a file only leaves traces
+    # The built frontend, served at / (4-B). Unset in development, where the Vite server does it
+    frontend_dist: Path | None = None
     session_ttl_minutes: int = SESSION_TTL_MINUTES
     parse_kill_seconds: int = PARSE_KILL_SECONDS
     parse_queue_length: int = PARSE_QUEUE_LENGTH
@@ -113,11 +115,13 @@ class Settings:
             raise ConfigError(f"{PREFIX}ARTIFACTS_SHA256 is required when {PREFIX}ANALYZER is real")
         if digest is not None and not _DIGEST.fullmatch(digest):
             raise ConfigError(f"{PREFIX}ARTIFACTS_SHA256 must be 64 lowercase hexadecimal digits")
+        frontend = _text(env, "FRONTEND_DIST", None)
         return cls(
             analyzer=analyzer,
             artifacts_dir=Path(artifacts) if artifacts else None,
             artifacts_sha256=digest,
             db_path=_text(env, "DB_PATH", ":memory:") or ":memory:",
+            frontend_dist=Path(frontend) if frontend else None,
             session_ttl_minutes=_int(
                 env, "SESSION_TTL_MINUTES", SESSION_TTL_MINUTES, SESSION_TTL_MINUTES
             ),

@@ -20,6 +20,7 @@ def test_defaults() -> None:
     assert s.parse_kill_seconds == 120
     assert s.parse_queue_length == 2
     assert s.parse_memory_mib == 1536
+    assert s.frontend_dist is None
 
 
 def test_every_variable_is_read(tmp_path: Path) -> None:
@@ -33,6 +34,7 @@ def test_every_variable_is_read(tmp_path: Path) -> None:
             "CLAUSEANCHOR_PARSE_KILL_SECONDS": "45",
             "CLAUSEANCHOR_PARSE_QUEUE_LENGTH": "5",
             "CLAUSEANCHOR_PARSE_MEMORY_MIB": "512",
+            "CLAUSEANCHOR_FRONTEND_DIST": str(tmp_path / "dist"),
         }
     )
     assert (s.analyzer, s.mode) == ("real", "real")
@@ -40,6 +42,7 @@ def test_every_variable_is_read(tmp_path: Path) -> None:
     assert s.db_path == "sessions.db"
     assert (s.session_ttl_minutes, s.parse_kill_seconds, s.parse_queue_length) == (30, 45, 5)
     assert s.parse_memory_mib == 512
+    assert s.frontend_dist == tmp_path / "dist"
 
 
 def test_reads_the_process_environment_when_given_none(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -83,7 +86,7 @@ def test_the_stub_ignores_a_missing_digest_and_the_analysis_limits_are_not_varia
     assert (s.analysis_queue_length, s.analysis_timeout_seconds) == (2, 1800)
 
 
-@pytest.mark.parametrize("name", ["ARTIFACTS_DIR", "DB_PATH"])
+@pytest.mark.parametrize("name", ["ARTIFACTS_DIR", "DB_PATH", "FRONTEND_DIST"])
 def test_empty_text_value_is_refused(name: str) -> None:
     with pytest.raises(ConfigError, match=f"CLAUSEANCHOR_{name}"):
         Settings.from_env({f"CLAUSEANCHOR_{name}": "  "})

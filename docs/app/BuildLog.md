@@ -4205,3 +4205,84 @@ Aryan asked for the three items that this entry first listed under "Noticed, not
 - The earlier Deferred row said the gated Evidence section describes "a tested threshold and a Found mark". Reading `landing/Evidence.tsx`, it describes case law as a quoted passage, and it is off while `EVIDENCE` in `Landing.tsx` is null. The row now says that, and it is the only item left in it.
 
 Next action: Aryan reads the changes, commits, and decides on the two Needs a lawyer lines.
+
+## 2026-11-09: Part 4-B, the deployment image and its CI workflow
+
+Aryan's brief (`.handoff/4B_deploy_prompt.md`) changed the scope of 4-B from a local run script and a Dockerfile to one image that GitHub Actions builds and tests, the GitHub Container Registry stores and Azure Container Apps runs. This part adds the API setting that serves the built frontend, the `Dockerfile`, `.dockerignore`, `.github/workflows/image.yml`, the smoke script that the workflow runs, and `docs/app/Deploy.md`. It closes or accepts the eight inherited 2-R findings. Nothing was installed, built in Docker or started: no server, no browser. `ml/` and `docs/ml/` are unchanged (empty `git diff` over both).
+
+### Start
+
+- `git status` was clean on `main`, and `git log --oneline -8` began at `a2855fe` (`fix(frontend): drop the last over-promises`).
+- Baseline before any edit: backend 1743 passed, 27 skipped (311.7 s). The frontend checks ran next, with `frontend/` untouched throughout: `pnpm typecheck` exit 0, `pnpm test` 135 of 135, `pnpm build` 173 modules with no warning, `pnpm check:dist` passed (35 files, 47 lines probed, 3 found, all in the landing demo's quoted paragraphs). Node v24.16.0 and pnpm 11.20.0 on this machine. `ruff` ran at the end, not at the start.
+- Read first: `Phases.md` (4-B, 4-C1, and the 2-R findings in `BuildLog.md`), `Architecture.md` sections 5 and 7, `API.md` (health, ready, limits, configuration), `config.py`, `main.py`, `errors.py`, `README.md`, `vite.config.ts`, `package.json`, `docs/ml/ReleaseHandoff.md` section 3 and `Rules.md`. `routes.tsx` uses `createHashRouter`, so the files need no fallback to `index.html`.
+- The release zip's directory was listed (read only): 32 entries, forward slashes, the model under `models/clauseanchor_candidate_v0/`, which the workflow relies on.
+
+### What changed
+
+- `backend/app/config.py`, `backend/app/main.py`, `backend/app/api/errors.py`: the setting `CLAUSEANCHOR_FRONTEND_DIST`, `_serve_frontend` and the cache header rule (`Architecture.md` section 2, "Serving the frontend").
+- `backend/app/scripts/smoke_test.py`: the CI smoke test, standard library only.
+- `backend/tests/test_frontend.py`, `test_smoke_script.py`, and edits to `test_config.py` and `test_docs.py`.
+- `Dockerfile`, `.dockerignore`, `.github/workflows/image.yml`, and two lines in `.gitignore` (`/model/` and `*.zip`). `Rules.md` section 1 says not to touch the root config or `.github/`. The brief ordered these files, so this is a deviation by instruction, and it is in `Phases.md` 4-B.
+- `docs/app/Deploy.md` (new), and edits to `API.md`, `Architecture.md` (section 8, and the rows, tree and sentences the change made stale), `Phases.md` (4-B ticked, the D8 deviation, a line under 4-A and the 14.1 row), `FrontendDesign.md` (one Deferred row) and `README.md` (the variable, a line under Build and check, and a "Live deployment" section).
+
+### Decisions
+
+1. The frontend is the router's `default`, not a mount at `/`. A mount matches every path, and Starlette lets a full match beat an earlier partial one, so a wrong method on an API route would get the static handler's 405 with its own `Allow` list, and `/api/v1/health/` would stop redirecting. As the last resort, the files never see a request that an API route can answer. Tests pin each case.
+2. `Cache-Control`: `no-store` stays on everything except a 200 or 304 under `/assets/`, which gets `public, max-age=31536000, immutable`. Vite hashes those names. `index.html`, fonts, the favicon and every error stay `no-store`.
+3. `.woff2` is registered as `font/woff2`. Python 3.12's table has no entry for it (checked in the standard library's `mimetypes.py`), and the slim image has no `mime.types`.
+4. The smoke script picks the first CUAD category from `/capabilities` and holds no id. A review that finds nothing passes, but the analysis must show at least one window read by the model, which is what shows that inference ran. The made-up PDF is written by hand in the script, with a correct cross-reference table.
+5. The startup probe on Azure is `/api/v1/ready` with a 30 s delay, a 30 s period and a threshold of 10, about 5 minutes. I could not confirm Azure's maximum for the threshold (a search found 10 in a reference and a default of 240 in the documentation), so the guide uses a value that fits either reading. Liveness and readiness keep Azure's defaults, because a restart wipes every session.
+6. Facts that Microsoft's documentation confirmed in a search: the free monthly grant of 180,000 vCPU-seconds and 360,000 GiB-seconds per subscription, and the 240 second ingress request timeout. Not confirmed, and worded as such in the guide and in `Phases.md`: the region policy of a student subscription (it varies, and Central India is often blocked), the scale-to-zero cooldown (300 s by default for scale rules, with a third-party note that it differs for HTTP rules) and swap on a replica.
+
+### Red before green
+
+- The tests came first. `test_frontend.py`, `test_config.py` and `test_docs.py` before any code: 5 failed, 26 errors and 63 passed. The errors are `Settings` having no `frontend_dist`. The failures are the default, the variable read, the empty value, `API.md` not naming `CLAUSEANCHOR_FRONTEND_DIST`, and the dist check. `test_smoke_script.py`, with the script held aside: a collection error (`cannot import name 'smoke_test'`).
+- After the code, those files and `test_errors.py` and `test_api.py` passed (133 passed, then one test fixed: it wrote the asset in text mode, and Windows changed its newline).
+- The window check came later. With it switched off, `test_an_analysis_where_the_model_read_no_window_fails` fails (1 failed, 10 passed). With it back, 11 passed.
+- Two one-line mutants ran together against `test_frontend.py`: the `/api` guard removed (8 failures, every POST and DELETE case of the unknown-path test) and the status condition on the immutable header removed (1 failure, a missing asset). Both are restored.
+- Not testable here: the workflow and the Dockerfile build. They were read line by line against the action and Docker documentation. No YAML parser was available, and none was installed.
+
+### Reviews
+
+Jury review, five reviewers working alone on the diff and one verdict.
+
+- Build engineer. The user had no home folder, which fails a library that wants a cache folder: fixed (`--create-home`). Three extras cut: `PIP_ROOT_USER_ACTION`, the licence label and the `venv` ignore line. The tool-name grep later caught the name of the map output folder in `.dockerignore`, and the line is now `**/*-out`. The floating `node:22-slim` and `python:3.12-slim` tags stay, because the repo pins the Node major, the Python minor and pnpm exactly. The Linux resolve of `constraints.txt` is unproven.
+- CI engineer. `concurrency` cut (one person runs it). The duplicate `docker stats` line cut. The memory and log steps wait for the container to have started, so an earlier failure does not add red steps. The smoke test could pass without the model reading anything: the window check fixed that, red first. `actions/checkout` is pinned by a full version tag, as the brief says. A commit hash would be firmer, and I did not trust my memory of one.
+- API reviewer. The routing, the cache rule and the font type each have tests, and two mutants confirmed the tests bite. No finding left.
+- Security reviewer. The public package holds the model weights: `Deploy.md` says so and asks to check with Tanishq first. No CSP, `X-Content-Type-Options` or frame header: not added (R17 left the API with `Cache-Control` alone, the brief asked the static files to keep what the API sends, and a policy no browser has seen could break the page). Recorded for 4-R with the `style-src` call of R21. No secret in the image. Core dumps off.
+- Cost and operations reviewer. A day at minimum 1 uses nearly the whole free grant, and the guide says so. A failed model load would loop the startup probe and restart the replica: the guide's troubleshooting row covers it. A change of setting ends every session: the guide says not to make one during the demo.
+- Verdict: ship, with the changes above applied. Open: the workflow and the image have not run.
+
+Ponytail review of the full diff, no P1. Applied: the size check on the model zip (the hash covers it), the `chmod` after unzip (the zip's entries carry no Unix mode, so `unzip` applies the runner's umask, which leaves them readable), and the Dockerfile description in `Phases.md` 4-B (it repeated `Architecture.md` section 8). Kept: the check that fetches the app's main script and its type (a wrong JavaScript type blanks the page, and nothing else tests the Linux table), `argparse` for one argument (`parse_file.py` does the same), the `LICENSE` copy (the MIT licence asks for the notice in copies), `persist-credentials: false` and `timeout-minutes` (one line each, and they limit the token and the minutes), and the `ulimit` wrapper (R15, and Azure takes no run flags).
+
+Copy passes over the prose this part added (`Deploy.md`, `Architecture.md` section 8 and its rows, the `Phases.md` 4-B text, the `API.md` row and sentence, the `README.md` section and this entry), in order: copywriting, copy-editing, stop-slop.
+
+- Copywriting tightened the probe and cost sentences in `Deploy.md`, dropped a claim that the app scales to zero "about five minutes" after the last visit (I could not confirm it for HTTP rules), and replaced "touchy", "needs the thread count told" and "proves" in `Architecture.md` section 8 with plain statements ("restart the replica on a slow answer", "the image sets the thread count", "exercises").
+- Copy-editing gave "this part", "the list", "it" and "the one" real referents in `Deploy.md` (the changes that add the workflow, the **Region** list, the assignment that limits regions, the **Application Url**), and cut a reference to an error that a reader of the guide has never seen.
+- Stop-slop made "Nothing is built or run on your laptop" active ("Your laptop builds and runs nothing"), cut "exactly" before a literal value, and turned the estimate sentence round so the reason comes first. It scored the guide 42 of 50. No edit followed it.
+- No number, command, path, hash, URL, field label or value changed in any pass.
+
+### Checks, on the final code
+
+- `ruff format --check .`: 65 files already formatted. `ruff check .`: all checks passed. `pytest`: 1785 passed, 27 skipped in 309 s, up from 1743 passed and 27 skipped (42 new tests: 30 in `test_frontend.py`, 11 in `test_smoke_script.py` and one case in `test_config.py`). The OpenAPI export test passes, so `openapi.json` still matches the app.
+- Frontend, rerun after the last edit: `pnpm typecheck` exit 0, `pnpm test` 135 of 135, `pnpm build` 173 modules with no warning, `pnpm check:dist` passed (35 files, 47 lines probed, 3 found, all in the landing demo's quoted paragraphs). `git status` shows nothing changed under `frontend/`, `ml/` or `docs/ml/`.
+- Rules section 1 attribution scrub over `backend/`, `frontend/`, `docs/app/` and the root files this part added: no output. The tool-name grep over the backend code and config, `README.md`, `Dockerfile`, `.dockerignore`, `.github/`, `Deploy.md` and the lines added to the docs outside this file: no output, after the `.dockerignore` fix. (The older lines of `.gitignore` that name the map output folder are not this part's.) Dash scan for U+2014 and U+2013 over the 19 changed and new files: 0 hits, with a control string holding both dashes matching twice.
+
+### Not run, and unproven until the first workflow run
+
+- The workflow, the Docker build and the container. `Deploy.md` step 2 is the first run, and it is Aryan's. Two things in it can only fail there, and both fail loudly: the `.dockerignore` exception that lets the model folder in (a refused `COPY` names the folder), and the install of the pins on Linux.
+- The first load of the real bundle on Linux, the `RLIMIT_AS` cap on a Linux parse child, the Linux resolve of `constraints.txt`, the image size, the ready time, the window time and the peak memory. The workflow prints the last three, and each goes into this log after the run.
+- The built frontend served by the API in a browser. The tests use a made-up `dist`, and `pnpm check:dist` checks the real one, but no browser opened the page.
+- The Azure settings in `Deploy.md` (the probe limits, the region policy and the portal labels) come from the portal as I know it and from Microsoft's documentation as found by search. The guide tells Aryan to look for the closest label when one differs.
+
+### Docs checked
+
+`Rules.md` section 6: `BuildLog.md`, `Phases.md` (4-B and the D8 row, the 4-A and 14.1 lines), `Architecture.md` (sections 2, 3, 5, 7.1 and the new section 8), `API.md` (section 1, section 4), `FrontendDesign.md` (the Deferred row), `README.md` and the new `Deploy.md`. `ParserContract.md` and `DesignSystem.md` did not change, because no parser output and no design token moved. `openapi.json` is unchanged: the new setting adds no route, and a test compares it with the app's own schema.
+
+### Processes
+
+processes started: 0, closed: 0. No server and no browser started, and no background process stayed behind. The checks were short foreground runs that exited by themselves: `pytest` (three full runs, and about 15 partial ones), `ruff`, `pnpm typecheck`, `pnpm test`, `pnpm build` and `pnpm check:dist`, plus a few small `node` and `python -I` reads (the zip listing and a dash scan). Read-only `git` only: `status`, `diff`, `log`, `check-ignore` and `ls-files`.
+
+Suggested commit message: `build: add the deployment image and its CI workflow`. Body: `Serve the built frontend from the API, add the Dockerfile and a CI workflow that smoke tests the image and publishes it, and add the deploy guide.`
+
+Next action: Aryan reads the changes and commits. Then he follows `docs/app/Deploy.md`: upload the model as the `model-v0` release asset, run the `image` workflow, make the package public once Tanishq agrees, and create the app on Azure. After the first run he sends the log, or the numbers from its summary, so that this entry can record them and 4-A, 4-C and the unproven items above can close.

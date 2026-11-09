@@ -7,12 +7,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import mimetypes
 import sqlite3
 import time
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from starlette.staticfiles import StaticFiles
+from starlette.types import Receive, Scope, Send
 
 from app.api.errors import install_error_handling
 from app.api.routes import router
@@ -55,9 +59,36 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.store.close()
 
 
+def _serve_frontend(app: FastAPI, dist: Path) -> None:
+    """Serves the built frontend from `dist` to every request that no API route claims.
+
+    It takes the router's `default`, the handler for a request that matches nothing, so it never
+    sees a request an API route can answer: a wrong method keeps its 405 and its Allow header, a
+    trailing slash its redirect, and an unknown /api path its 404 envelope instead of index.html.
+    The app uses hash routes, so a file that does not exist is a 404 and needs no fallback.
+    """
+    # Python's table has no .woff2, and a slim Linux image has no mime.types to add it
+    mimetypes.add_type("font/woff2", ".woff2")
+    files = StaticFiles(directory=dist, html=True)
+    not_found = app.router.not_found
+
+    async def frontend(scope: Scope, receive: Receive, send: Send) -> None:
+        path = scope["path"]
+        if path == "/api" or path.startswith("/api/"):
+            await not_found(scope, receive, send)
+        else:
+            await files(scope, receive, send)
+
+    app.router.default = frontend
+
+
 def create_app(settings: Settings | None = None, clock: Callable[[], float] = time.time) -> FastAPI:
     """`clock` is the one source of time for expiry, so tests move it by hand."""
     settings = Settings.from_env() if settings is None else settings
+    dist = settings.frontend_dist
+    if dist is not None and not (dist / "index.html").is_file():
+        # Name the variable and not the path, as every other bad setting does
+        raise ConfigError(f"{PREFIX}FRONTEND_DIST must be a folder that holds index.html")
     # The interactive docs pages load their scripts from a CDN, and every route sits under /api/v1
     app = FastAPI(
         title="ClauseAnchor API",
@@ -88,4 +119,6 @@ def create_app(settings: Settings | None = None, clock: Callable[[], float] = ti
         app.state.catalogue_status = err.reason
     install_error_handling(app)
     app.include_router(router)
+    if dist is not None:
+        _serve_frontend(app, dist)
     return app

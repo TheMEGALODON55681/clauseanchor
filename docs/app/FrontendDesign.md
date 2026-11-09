@@ -1372,7 +1372,7 @@ The seven defects of that pass: (1) India categories missing, and View list dead
 | The accuracy figures, the sample route and "Try the sample contract" | 3-C |
 | The manual review list | 3-D |
 | R6, the CPU benchmark and the eight scope cases with the real model | 4-C |
-| One server for `frontend/dist` and `/api/v1` | 4-B |
+| One server for `frontend/dist` and `/api/v1`. Built in 4-B: the API serves `dist` when `CLAUSEANCHOR_FRONTEND_DIST` is set, and the image sets it (`Architecture.md` section 8). Not seen in a browser | 4-B, built |
 | The browser checks listed under Not run | Aryan |
 | The 40 MB upload and the 390 px resize, which the browser pass of the live run did not reach | Aryan |
 | The switch adds no category in the API: `check_result` accepts only the ids that were asked for, so the Reader draws the five India rows itself. When the India categories can be reviewed, either the page sends their ids with the switch on or the API adds them | Backend and the model, when India validation lands |

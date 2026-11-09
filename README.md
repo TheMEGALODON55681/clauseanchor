@@ -64,6 +64,7 @@ The API reads these environment variables once, at start, and does not read a `.
 | `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse |
 | `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait while one runs |
 | `CLAUSEANCHOR_PARSE_MEMORY_MIB` | `1536` | Memory cap for the process that parses one file, in MiB |
+| `CLAUSEANCHOR_FRONTEND_DIST` | none | The folder of the built frontend, `frontend/dist`. When set, the API serves it at `/`. Leave it unset in development, where `pnpm dev` serves the page |
 
 A bad value stops the start and the message names the variable. `docs/app/API.md` section 4 has the details.
 
@@ -182,6 +183,14 @@ pnpm check:dist
 
 `pnpm test` runs the unit tests with Node's built-in runner. `pnpm build` writes the production files to `frontend/dist/`. `pnpm check:dist` runs after the build and fails if `dist` holds a mock or contract chunk, the host `example.org` or sample contract text beyond the three paragraphs that the landing demo quotes.
 
+To see the build served by the API on one address, start the API from `backend/` with `CLAUSEANCHOR_FRONTEND_DIST=../frontend/dist` set, and open http://127.0.0.1:8000.
+
 ### Routes
 
 The app uses hash routes, so it runs on any static host: `#/` (landing), `#/start` (a three-step flow: upload the contract, choose your role and party, confirm the scope and start the review), `#/review/:documentId`, `#/how-it-works`, `#/accuracy`, `#/expired`. Any other address shows a page-not-found screen. Fonts are served from `frontend/public/fonts/`, so no page requests a third-party host.
+
+## Live deployment
+
+The whole app runs as one container on Azure Container Apps: the frontend, the API and the v0 model. GitHub Actions builds the image, tests it with a real analysis and publishes it to the GitHub Container Registry. Azure for Students pays for the run, and the app sleeps when nobody uses it. The image sets `CLAUSEANCHOR_FRONTEND_DIST`, so the API serves the built frontend from the same address as `/api/v1`.
+
+`docs/app/Deploy.md` is the step-by-step guide: upload the model, build the image, create the app and watch the cost. The model weights are a release asset and never enter git.

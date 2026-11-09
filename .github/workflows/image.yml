@@ -1,0 +1,92 @@
+name: image
+
+# Builds the deployment image, tests it with a real analysis, and publishes it to the GitHub
+# Container Registry. Run it from the Actions tab, or push a tag that starts with v. It is heavy,
+# so a plain push to main does not start it. docs/app/Deploy.md says how to use it.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/themegalodon55681/clauseanchor
+  MODEL_TAG: model-v0
+  MODEL_ASSET: clauseanchor-candidate-prototype-v0.zip
+  MODEL_SHA256: 28d43542251d8b1800b2904f3c70e03840487188971ac0bf8bde8b3b93cbe758
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+
+      # The weights live in a release asset and never in git. A wrong hash stops the run.
+      - name: Download the model and check it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          work="$RUNNER_TEMP/model"
+          mkdir -p "$work"
+          gh release download "$MODEL_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$MODEL_ASSET" --dir "$work"
+          echo "$MODEL_SHA256  $work/$MODEL_ASSET" | sha256sum --check -
+          unzip -q "$work/$MODEL_ASSET" 'models/clauseanchor_candidate_v0/*' -d "$work/unzipped"
+          mkdir model
+          mv "$work/unzipped/models/clauseanchor_candidate_v0" model/clauseanchor_candidate_v0
+          rm -rf "$work"
+
+      - name: Build the image
+        run: |
+          docker build --tag "$IMAGE:latest" --tag "$IMAGE:$GITHUB_SHA" .
+          size=$(docker image inspect "$IMAGE:latest" --format '{{.Size}}')
+          echo "Image size on disk: $((size / 1048576)) MiB" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # 4 GiB and 2 CPUs, with no swap: the size of the app on Azure
+      - name: Start the container
+        id: start
+        run: |
+          docker run --detach --name clauseanchor --memory 4g --memory-swap 4g --cpus 2 \
+            --publish 127.0.0.1:8000:8000 "$IMAGE:$GITHUB_SHA"
+
+      # Waits for the model, then reviews a made-up PDF with one CUAD category and checks the result.
+      # python3 on the runner is enough, because the script uses the standard library only.
+      - name: Smoke test
+        run: python3 backend/app/scripts/smoke_test.py http://127.0.0.1:8000
+
+      - name: Container memory
+        if: ${{ always() && steps.start.outcome == 'success' }}
+        run: |
+          peak=$(docker exec clauseanchor cat /sys/fs/cgroup/memory.peak 2>/dev/null || true)
+          if [ -n "$peak" ]; then
+            echo "Peak memory, file cache included: $((peak / 1048576)) MiB of 4096" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "memory.peak is not readable on this runner"
+          fi
+          oom=$(docker inspect clauseanchor --format '{{.State.OOMKilled}}')
+          echo "Killed for memory: $oom"
+          [ "$oom" = "false" ]
+
+      - name: Container log
+        if: ${{ failure() && steps.start.outcome == 'success' }}
+        run: docker logs --tail 200 clauseanchor
+
+      # Only after every step above has passed
+      - name: Publish the image
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:latest"
+          echo "Published $IMAGE:latest and $IMAGE:$GITHUB_SHA" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -14,7 +14,7 @@ The contract for the HTTP API. This file governs: the frontend adapter follows i
 - **No verdicts.** No response carries a safety score, a risk score, a verdict or a completeness figure (`Phases.md`, Review scope).
 - **Scope notice.** `GET /api/v1/capabilities` and every analysis response carry it.
 - **Sessions.** Health, readiness and capabilities are public. Every other route takes the bearer token from `POST /api/v1/sessions` (section 7).
-- **No caching.** Every response carries `Cache-Control: no-store`, errors included.
+- **No caching.** Every response carries `Cache-Control: no-store`, errors included. The one exception is the frontend's hashed build files under `/assets/`, when the API serves the frontend (section 4): they carry `public, max-age=31536000, immutable`, because their names change with their content. `index.html` keeps `no-store`.
 - **OpenAPI.** The app serves its OpenAPI document at `/api/v1/openapi.json`, and `docs/app/openapi.json` is the committed copy (section 14).
 
 ## 2. Error envelope
@@ -415,6 +415,7 @@ The API reads the process environment once, at start. It does not read a `.env` 
 | `CLAUSEANCHOR_PARSE_KILL_SECONDS` | `120` | Wall-clock limit for one parse. The slowest case measured in 2-C took 23 s, so 120 s stays (section 9) |
 | `CLAUSEANCHOR_PARSE_QUEUE_LENGTH` | `2` | How many parses can wait while one runs (plan 9.3). A further upload gets 429 `QUEUE_FULL` |
 | `CLAUSEANCHOR_PARSE_MEMORY_MIB` | `1536` | Memory cap of the parse child, in MiB (section 9) |
+| `CLAUSEANCHOR_FRONTEND_DIST` | none | The folder of the built frontend (`frontend/dist`). When set, the API serves it at `/` on the same origin as the API: `index.html` for the root and the hashed files under `/assets/`. A request that no API route claims goes to the frontend, and an unknown `/api` path is still the 404 envelope. The folder must hold `index.html`, or the start fails. Unset in development, where the Vite server serves the page. The Docker image sets it (`Deploy.md`) |
 
 The four numbers must be whole numbers of at least 1. The parser's own limits (file size, page count, text length) are not settings. They stay in the parser. No environment variable sets the limits in section 8.
 
