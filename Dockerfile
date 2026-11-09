@@ -56,6 +56,12 @@ ENV CLAUSEANCHOR_ANALYZER=real \
     MALLOC_ARENA_MAX=2 \
     HF_HUB_OFFLINE=1
 
+# The same bundle check the analyzer runs at startup, here at build time, so a missing file or a
+# wrong pin fails the build with its message instead of a bare ValueError in the container log
+RUN python -c "import os; from clauseanchor_core.artifacts import runtime_versions, verify_bundle; \
+verify_bundle(os.environ['CLAUSEANCHOR_ARTIFACTS_DIR'], os.environ['CLAUSEANCHOR_ARTIFACTS_SHA256']); \
+print('model bundle verified', runtime_versions())"
+
 # The API and its parse children run as a user that owns nothing under /app. It has a home folder,
 # so a library that wants a cache folder does not fail on a missing one.
 RUN useradd --system --create-home --shell /usr/sbin/nologin app

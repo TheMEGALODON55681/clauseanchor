@@ -32,5 +32,6 @@
 **/.env.*
 
 # The one model folder the workflow places on purpose. This line stays last, so it wins over the
-# weight patterns above.
-!model/clauseanchor_candidate_v0
+# weight patterns above. It names the files inside the folder: a line naming only the folder does
+# not override **/*.safetensors for those files, and the build lost the weights.
+!model/clauseanchor_candidate_v0/**
