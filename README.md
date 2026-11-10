@@ -191,6 +191,8 @@ The app uses hash routes, so it runs on any static host: `#/` (landing), `#/star
 
 ## Live deployment
 
-The whole app runs as one container on Azure Container Apps: the frontend, the API and the v0 model. GitHub Actions builds the image, tests it with a real analysis and publishes it to the GitHub Container Registry. Azure for Students pays for the run, and the app sleeps when nobody uses it. The image sets `CLAUSEANCHOR_FRONTEND_DIST`, so the API serves the built frontend from the same address as `/api/v1`.
+The app is live at https://clauseanchor.icystone-c7631062.centralindia.azurecontainerapps.io/. It runs as one container on Azure Container Apps: the frontend, the API and the v0 model. GitHub Actions builds the image, tests it with a real analysis and publishes it to the GitHub Container Registry. The image sets `CLAUSEANCHOR_FRONTEND_DIST`, so the API serves the built frontend from the same address as `/api/v1`.
 
-`docs/app/Deploy.md` is the step-by-step guide: upload the model, build the image, create the app and watch the cost. The model weights are a release asset and never enter git.
+The app sleeps when nobody uses it, so the first visit after a quiet spell takes 1 to 3 minutes. Use sample contracts there, not confidential ones.
+
+`docs/app/Deploy.md` is the step-by-step guide: upload the model, build the image, create the app from `deploy/azure-containerapp.yaml`, update it and watch the cost. The model weights are a release asset and never enter git.

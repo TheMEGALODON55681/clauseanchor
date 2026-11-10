@@ -4286,3 +4286,102 @@ processes started: 0, closed: 0. No server and no browser started, and no backgr
 Suggested commit message: `build: add the deployment image and its CI workflow`. Body: `Serve the built frontend from the API, add the Dockerfile and a CI workflow that smoke tests the image and publishes it, and add the deploy guide.`
 
 Next action: Aryan reads the changes and commits. Then he follows `docs/app/Deploy.md`: upload the model as the `model-v0` release asset, run the `image` workflow, make the package public once Tanishq agrees, and create the app on Azure. After the first run he sends the log, or the numbers from its summary, so that this entry can record them and 4-A, 4-C and the unproven items above can close.
+
+## 2026-11-09: Commit c26236b, keep the model weights in the image context (recorded 2026-11-10)
+
+Aryan made this commit outside a normal part: no tests, no review and no docs. This entry records it, with the review that the 4-B close gave it afterwards.
+
+### The change
+
+- `.dockerignore`: the last line went from `!model/clauseanchor_candidate_v0` to `!model/clauseanchor_candidate_v0/**`, with a comment that says why.
+- `Dockerfile`: one `RUN` step, after the `ENV` block and before the user is created. It calls `verify_bundle` and `runtime_versions` from the core with the image's own `CLAUSEANCHOR_ARTIFACTS_DIR` and `CLAUSEANCHOR_ARTIFACTS_SHA256`, and prints "model bundle verified" with the versions.
+
+### Root cause and evidence
+
+- CI run 1, on `620c7db`, failed. The image was 1198 MiB and the container peaked at 61 MiB, because the weights were missing from the build context. The analyzer's inventory check raised `ValueError` at start, and `/api/v1/ready` answered 503.
+- After the fix, a fresh run from Actions > image > Run workflow went green: image 1671 MiB, container peak memory 1026 MiB with the file cache included. The 473 MiB difference in image size is about the size of the 486 MB bundle.
+- The cause, as the commit message gives it: a line that names only the folder did not re-include the files inside it against `**/*.safetensors`. It rests on how BuildKit matches patterns, and only these two runs confirm it. I could not run Docker, so I did not check it myself.
+
+### Retroactive review of `c26236b`
+
+Jury review: five reviewers working alone on `git show c26236b`, then one verdict.
+
+- Build engineer. The negation is the last line, so nothing after it can undo it. It is anchored at `model/`, so it can change the inclusion of paths under that one folder and no others. Everything else stays as it was before the commit: `*` with a whitelist of `LICENSE`, `backend`, `frontend`, `ml` and the model folder, then `**/.venv`, `**/node_modules`, `**/*-out`, `**/*.zip`, the weight patterns, `**/models` and `**/.env*`. `data/`, `.handoff/` and `graphify-out/` are out because they are not in the whitelist, and `deploy/` and `docs/` are out for the same reason. What the folder holds is whatever the workflow's `unzip` of `models/clauseanchor_candidate_v0/*` put there.
+- Runtime engineer. The step runs as root, before `USER app`, so it does not prove that the `app` user can read the files. The CI smoke test runs the container as `app`, so that case is covered. A bad bundle fails the build with a Python traceback that ends in the check's own message. The step writes no file (`PYTHONDONTWRITEBYTECODE` is set), so the layer holds nothing. It is the first part of the check the analyzer runs when it loads, called with the values of the same variables, so the two agree unless a setting overrides them at run time, and the Azure spec sets none. The analyzer goes on to load the tokenizer and the torch backend, which the build step does not.
+- Comment reviewer. Both comments say what the change does, and neither holds a dash. The `.dockerignore` comment states the matcher behaviour as fact where only the two runs support it. Left as it is.
+- Security reviewer. The step prints package and Python versions and nothing else. The digest in `ENV` is the public trust anchor. The negation cannot pull a `.env` file from outside the folder.
+- CI reviewer. The step fails inside "Build the image", before the container starts, so a bad bundle no longer costs the rest of the run. No action or workflow line changed.
+- Verdict: no defect. No code changed. The commit changed no docs, and this part fixes the ones it made stale (`Architecture.md` section 8).
+
+Ponytail review: lean. One P3, kept: line 8, `!model/clauseanchor_candidate_v0`, may now repeat the last line. Without Docker I cannot test that removing it still builds, and the file works.
+
+## 2026-11-10: Part 4-B close, record the live deployment
+
+Aryan's brief (`.handoff/4B_close_prompt.md`) asked for the docs to match the as-built deployment, for the Container App spec to go into the repo, for `c26236b` to get its review, and for `actions/checkout` to move off Node 20. Docs and config only: no backend or frontend code changed, `ml/` and `docs/ml/` are unchanged, and `.handoff/Deploy_Guide.md` was not read, as the brief said.
+
+### Start
+
+- `git status` was clean on `main`, and `git log --oneline -8` began at `c26236b`.
+- Baseline before any edit: `ruff format --check` 65 files already formatted, `ruff check` all passed, `pytest` 1785 passed and 27 skipped in 268.44 s. Frontend: `pnpm typecheck` exit 0, `pnpm test` 135 of 135, `pnpm build` with no warning, `pnpm check:dist` passed (35 files, 47 lines probed, 3 found, all in the landing demo's quoted paragraphs).
+- Read first: `Rules.md`, `Phases.md` (4-B, 4-A, 4-C1 and the deviation table), `Architecture.md` section 8, `Deploy.md`, the 4-B entry above, the README section, `Dockerfile`, `.dockerignore`, `image.yml`, `4B_deploy_prompt.md`, `4C1_manual_check.md` and the plan's hosting text.
+
+### What changed
+
+- `deploy/azure-containerapp.yaml` (new): the Container App spec, rebuilt from the recorded settings. It holds `<ENV_ID>` as a placeholder and no subscription id. `.dockerignore` already keeps `deploy/` out of the image context, because `*` excludes everything that is not in its whitelist, so no line was added and the context is unchanged.
+- `docs/app/Deploy.md`: rewritten to the Cloud Shell route, in ten steps and a troubleshooting table.
+- `docs/app/Architecture.md` section 8: the layout as built, with new rows for logs, updates and the measured size, and a note of what is not yet done on the live app.
+- `docs/app/Phases.md`: the 4-B live record, the 4-A line, one line under R27, and seven new rows in the deviation table.
+- `README.md`: the "Live deployment" section.
+- `.github/workflows/image.yml`: one line, `actions/checkout@v4.2.2` to `@v7.0.1`. `Rules.md` section 1 says not to touch `.github/` or the root config. The brief ordered this change, so it is a deviation by instruction.
+
+### Decisions
+
+1. The checkout version. The brief's example was `v6.0.x`, and said to verify the latest. The latest release is `v7.0.1` (20 July 2026), so that is the pin. `gh` is not installed, so I read the public releases API with `curl`, as text, with no browser. Release notes: v6.0.0 moved credential storage to a separate file, which the workflow does not use because it sets `persist-credentials: false`. v7.0.0 made the module ESM and blocked checkout of fork pull requests for `pull_request_target` and `workflow_run`. The workflow runs on `workflow_dispatch` and on tags, so neither touches it. `action.yml` at v7.0.1 says `using: node24`, and `persist-credentials` is still an input. I did not read the minimum runner version for Node 24 actions. The change takes effect on the next workflow run and needs no redeploy. The tag's commit is `3d3c42e5aac5ba805825da76410c181273ba90b1`, a firmer pin that I did not use, because the brief said to pin the full version.
+2. The manual check. The brief says seven steps, and `4C1_manual_check.md` has eight numbered sections and one optional short-session check. All eight sections are in `Deploy.md` step 5, with the file names and the local address replaced. The short-session check needs a restart with a one-minute lifetime, which on Azure would be a new revision, so it is left out. The docs record the live check as "reported working, not confirmed one by one" without a count.
+3. The YAML. No parser was available (the venv holds no `yaml` module, and nothing was installed), so I checked its structure by an indentation walk and by reading it against the recorded settings. It has not been run through `az`.
+4. The Express and billing facts in the docs are the brief's, from Microsoft's documentation on 10 November 2026. Each is a doc claim, and the docs say so. `--min-replicas 1` is unverified on Express, and `Deploy.md` step 7 has a command to confirm it.
+5. The budget is in the docs without the email address. No subscription or tenant id is in any file.
+
+### Where the plan's deployment text no longer holds
+
+The seven new rows at the end of the deviation table in `Phases.md`: the hosted-sample fallback (sections 1, 6.6, 13, 15, 16), the GitHub Pages and Render sample host (6.6), the free CPU allocation and "do not subscribe" (6.6), `pages.yml` and the sample-only Dockerfile in the file tree (3), `app/Deployment.md` (3), the hosted sample picker with uploads disabled (10.1) and the deployment test row (12). The plan was read and not edited.
+
+### Reviews
+
+- Jury review of `c26236b`, in the entry above: no defect, no code change.
+- Ponytail review of this part's diff, four findings, all applied: the probe bullets in `Deploy.md` repeated the YAML comments (cut to one sentence), the "As built" bullet in `Phases.md` repeated every app setting the YAML holds (now points to it), the Express list in `Phases.md` was a third copy (now points to `Deploy.md`), and a "Cost" row in `Architecture.md` repeated `Deploy.md` step 9 (deleted). Nothing in the YAML or the workflow line to cut.
+- Copy passes over the prose this part added, in order: copywriting, copy-editing, stop-slop. Copywriting changed four phrases in `Deploy.md` ("reasoning, not a measurement", "the trade-off", "if the tag is the same string", "during a demo"). Copy-editing split the first step of "Verify" in two, because the text above the first code block described the second. Stop-slop cut "probably" and "is rare" from the troubleshooting table, and marked the update claim as reasoned and not tested. No number, command, path, hash, URL or label changed in any pass.
+
+### Checks, on the final code
+
+| Check | Before | After |
+|---|---|---|
+| `ruff format --check .` | 65 files already formatted | 65 files already formatted |
+| `ruff check .` | all checks passed | all checks passed |
+| `pytest` | 1785 passed, 27 skipped (268.44 s) | 1785 passed, 27 skipped (227.85 s) |
+| `pnpm typecheck` | exit 0 | exit 0 |
+| `pnpm test` | 135 of 135 | 135 of 135 |
+| `pnpm build` | no warning | 173 modules, no warning |
+| `pnpm check:dist` | passed (35 files, 47 lines, 3 found) | passed (35 files, 47 lines, 3 found) |
+
+The counts did not move, as the brief required. `pytest` ran twice after the docs were final, because `test_catalogue.py` reads `Phases.md` and `test_docs.py` reads `API.md`. The first of the two ran while the last edits to `Deploy.md` and `Phases.md` were still going in, so the table gives the second, which started after the last edit (1785 passed and 27 skipped in both). Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`, and over `README.md`, `deploy/`, `Dockerfile`, `.dockerignore` and `.github/`: no output. Tool-name grep over the backend code and config, `README.md`, `deploy/`, `Dockerfile`, `.dockerignore`, `.github/`, `Deploy.md` and the lines added to the docs outside this file: no output. Dash scan for U+2014 and U+2013 over the 7 changed and new files, this log included: 0 hits, with a control string holding both dashes matching twice.
+
+### Not run
+
+- `az`, Docker and the workflow cannot run here. The YAML, the new commands in `Deploy.md` and the `actions/checkout` bump have not been tried. The first workflow run after the commit is the test of the bump.
+- The log stream, the demo-day steps and the click-through check on the live app.
+
+### Docs checked
+
+`Rules.md` section 6: `BuildLog.md`, `Phases.md`, `Architecture.md` (section 8), `Deploy.md` and `README.md`. `API.md`, `ParserContract.md`, `DesignSystem.md` and `FrontendDesign.md` did not change: no endpoint, parser output, design token or frontend text moved. A grep for `portal`, `readiness`, `Log Analytics`, `:latest`, `10/10/30` and the old probe values found only the API's readiness endpoint, which is unrelated, and the places updated above.
+
+### Processes
+
+processes started: 0, closed: 0. No server and no browser started, and no background process stayed behind. The checks were short runs that exited by themselves: `pytest`, `ruff`, `pnpm typecheck`, `pnpm test`, `pnpm build` and `pnpm check:dist`, five `curl` reads of GitHub's public API and raw files, and small `python -I` and `grep` scans. Read-only `git` only: `status`, `diff`, `log`, `check-ignore` and `ls-files`.
+
+Suggested commits. Two, because the workflow line is CI:
+
+- `build: move actions/checkout off Node 20`, body: `Pin actions/checkout to v7.0.1, which runs on Node 24. The workflow sets persist-credentials to false and runs on dispatch and tags, so the v6 and v7 changes do not reach it.`
+- `docs: record the live deployment`, body: `Save the Container App spec, rewrite the deploy guide to the Cloud Shell route as built, and record the live URL, the CI failure and its fix, the deviations and what stays open.`
+
+Next action: Aryan reads the changes and commits. Nothing needs a redeploy. After the next workflow run he checks that the checkout step is green with no Node 20 warning. Then the open items: the click-through check, the demo-day run with `--min-replicas 1`, and the first log-stream use.

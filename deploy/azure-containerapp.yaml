@@ -1,0 +1,62 @@
+# The Azure Container App spec for the live deployment.
+#
+# The file used at create time lived only in Cloud Shell and is gone. This one was reconstructed on
+# 10 November 2026 from the settings recorded in docs/app/Phases.md (4-B) and docs/app/Deploy.md.
+# If it and the running app ever differ, the app wins: read the live spec with
+#   az containerapp show -n clauseanchor -g clauseanchor-rg -o yaml
+#
+# To use it, copy the file and replace <ENV_ID> with the environment's resource id:
+#   az containerapp env show -n clauseanchor-env -g clauseanchor-rg --query id -o tsv
+# Then run:
+#   az containerapp create -n clauseanchor -g clauseanchor-rg --yaml <the filled copy>
+# Keep the filled copy out of git: the id holds the subscription id.
+#
+# The image tag is the commit SHA of the build that was deployed. An update changes only this tag
+# (docs/app/Deploy.md, "Update after a code change"), so the tag here records the first deployment.
+location: centralindia
+type: Microsoft.App/containerApps
+properties:
+  managedEnvironmentId: <ENV_ID>
+  configuration:
+    # One revision at a time: sessions live in the memory of one replica
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 8000
+      allowInsecure: false
+  template:
+    containers:
+      - name: clauseanchor
+        image: ghcr.io/themegalodon55681/clauseanchor:c26236bae1587a1052f486b323ee62dd74708bf9
+        resources:
+          cpu: 2.0
+          memory: 4Gi
+        probes:
+          # Holds visitors back until the model is loaded: 30 s delay, then up to 10 tries 30 s
+          # apart, about 330 s, which covers the 1.7 GB image pull and the model load
+          - type: Startup
+            httpGet:
+              path: /api/v1/ready
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 10
+          # /health checks no dependency, so it answers while the model loads
+          - type: Liveness
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # No Readiness probe, on purpose: with one replica, a slow /ready during an analysis could
+          # cut traffic in the middle of a review
+    scale:
+      minReplicas: 0
+      maxReplicas: 1
+      rules:
+        - name: http-scale
+          http:
+            metadata:
+              concurrentRequests: "10"
