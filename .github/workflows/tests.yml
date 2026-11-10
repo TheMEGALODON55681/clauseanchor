@@ -1,0 +1,72 @@
+name: tests
+
+# The light checks on every push and pull request: backend lint and tests in stub mode (no torch,
+# no model), and the frontend's typecheck, tests, build and dist check. image.yml stays the heavy,
+# hand-started run with the real model. Nothing here reaches the deployed app.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+      # requirements.txt installs the core from ../ml in editable mode, so pip runs from backend/
+      - name: Install
+        run: pip install -r requirements-dev.txt -c constraints.txt
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+      # Linux runs the parse children under RLIMIT_AS, the same cap as the image
+      - name: Test
+        run: python -m pytest -q -p no:cacheprovider
+
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: "22"
+      # The same pnpm the Dockerfile installs
+      - name: Install
+        run: |
+          npm install --global pnpm@10.34.3
+          pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build and check the dist
+        run: |
+          pnpm build
+          pnpm check:dist
