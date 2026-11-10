@@ -37,7 +37,7 @@ Every error response has this body, with the status code in the table below:
 |---|---|---|
 | `code` | string | A fixed machine code from the table below |
 | `message` | string | A fixed sentence for the code. It never holds request input, document text or exception text |
-| `request_id` | string | A new UUID for each error response |
+| `request_id` | string | A new UUID for each request. Every reply, error or not, carries the same value in its `X-Request-ID` header, and the log line of a crash names it as `request_id=`, so a reported id finds its line in the log (R27). It holds nothing from the request |
 | `retryable` | boolean | Whether the same request can succeed later |
 | `details` | object | Safe, fixed fields for the code. `{}` unless the table says otherwise |
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Awaitable, Callable, Mapping
+from contextvars import ContextVar
 
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -17,6 +18,12 @@ from fastapi.responses import JSONResponse
 log = logging.getLogger("clauseanchor.api")
 
 IMMUTABLE = "public, max-age=31536000, immutable"
+REQUEST_ID_HEADER = "X-Request-ID"
+
+# One id per request, set by the middleware. An error body, the X-Request-ID header and the crash
+# log line carry the same value, so a reported id finds its log line (R27). It is random and
+# holds nothing from the request.
+_request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 # code: (status, message, retryable). API.md lists the same table.
 ERRORS: dict[str, tuple[int, str, bool]] = {
@@ -95,7 +102,7 @@ def error_response(
         "error": {
             "code": code,
             "message": message,
-            "request_id": str(uuid.uuid4()),
+            "request_id": _request_id.get() or str(uuid.uuid4()),
             "retryable": retryable,
             "details": details or {},
         }
@@ -126,11 +133,16 @@ def install_error_handling(app: FastAPI) -> None:
         # A handler for Exception runs inside Starlette's server-error layer, which sends its
         # reply and then raises again, so the server logs a traceback with the exception text.
         # Catching the crash here keeps that text out of the reply and out of the log.
+        request_id = str(uuid.uuid4())
+        token = _request_id.set(request_id)
         try:
             response = await call_next(request)
         except Exception as exc:
-            log.error("unhandled %s", type(exc).__name__)
+            log.error("unhandled %s request_id=%s", type(exc).__name__, request_id)
             response = error_response("INTERNAL_ERROR")
+        finally:
+            _request_id.reset(token)
+        response.headers[REQUEST_ID_HEADER] = request_id
         # Session and document replies hold tokens and contract text, and none is worth caching.
         # The one exception is a hashed build file of the frontend (4-B): its name changes with
         # its content, so a copy never goes stale. index.html and an error still get no-store.

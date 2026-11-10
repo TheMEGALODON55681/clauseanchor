@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -49,6 +50,7 @@ def _assert_envelope(response, status: int, code: str) -> dict:
     assert error["code"] == code
     assert error["message"] == ERRORS[code][1]
     assert error["request_id"]
+    assert error["request_id"] == response.headers["X-Request-ID"]
     assert error["retryable"] is ERRORS[code][2]
     assert error["details"] == {}
     return error
@@ -110,6 +112,14 @@ def test_500_logs_the_exception_type_and_not_its_text(
     probe: TestClient, caplog: pytest.LogCaptureFixture
 ) -> None:
     with caplog.at_level(logging.ERROR):
-        probe.get(BOOM)
+        response = probe.get(BOOM)
     assert "RuntimeError" in caplog.text
     assert SECRET not in caplog.text
+    # The id a user reports from the error finds this log line (R27)
+    assert f"request_id={response.json()['error']['request_id']}" in caplog.text
+
+
+def test_every_reply_carries_a_fresh_request_id_header(probe: TestClient) -> None:
+    ids = {probe.get(NUMBER + "/1").headers["X-Request-ID"] for _ in range(3)}
+    assert len(ids) == 3
+    assert all(uuid.UUID(i) for i in ids)
