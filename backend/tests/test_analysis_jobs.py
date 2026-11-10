@@ -391,8 +391,11 @@ def test_the_worker_goes_on_to_the_next_job_after_a_failure(rig: Rig) -> None:
 
 def test_jobs_run_one_at_a_time_in_the_order_they_came(rig: Rig) -> None:
     rig.core.behave = rig.core.gated
-    first, second, third = rig.start(), rig.start(), rig.start()
+    # Two may wait while one runs, so the third goes in once the worker holds the first.
+    # Three back-to-back submits raced the worker and were refused when it had not taken one yet.
+    first, second = rig.start(), rig.start()
     wait_until(rig.core.running.is_set)
+    third = rig.start()
     assert [rig.job(s).status for s in (first, second, third)] == ["running", "queued", "queued"]
     rig.core.release.set()
     for started in (first, second, third):

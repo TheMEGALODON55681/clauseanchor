@@ -90,6 +90,31 @@ if sys.platform == "win32":
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]  # where `python -m app...` finds the package
 
+# A child that came this close to its cap may have had an allocation refused
+CAP_HIT_SHARE = 0.95
+
+
+def own_cap_reached() -> bool:
+    """For the child itself, on Linux: True when its peak address space (VmPeak) reached
+    CAP_HIT_SHARE of its RLIMIT_AS. Windows reads the peak from the job in the parent, and POSIX
+    has no such counter there, so the child applies the same rule to itself. False where there is
+    no cap or no /proc."""
+    if sys.platform == "win32":
+        return False
+    import resource
+
+    limit = resource.getrlimit(resource.RLIMIT_AS)[0]
+    if limit == resource.RLIM_INFINITY:
+        return False
+    try:
+        with open("/proc/self/status", encoding="ascii") as status:
+            for line in status:
+                if line.startswith("VmPeak:"):
+                    return int(line.split()[1]) * 1024 >= CAP_HIT_SHARE * limit
+    except (OSError, ValueError, IndexError):
+        pass
+    return False
+
 
 class CappedProcess:
     """A child process that starts inside a memory cap. `popen` is an ordinary Popen with stdin

@@ -23,7 +23,7 @@ from app.config import Settings
 from app.parsing.errors import ErrorCode
 from app.parsing.model import ParsedDocument
 from app.parsing.schema import from_json
-from app.services.memcap import CappedProcess
+from app.services.memcap import CAP_HIT_SHARE, CappedProcess
 from app.services.store import Store
 
 log = logging.getLogger("clauseanchor.api")
@@ -33,8 +33,6 @@ WORKER_ARGS = [sys.executable, "-m", "app.parse_worker"]  # tests swap this for 
 # reads the same bytes the upload checked), and the one a MemoryError gives
 _UPLOAD_CODES = {"EMPTY_FILE", "FILE_TOO_LARGE", "UNSUPPORTED_TYPE"}
 CHILD_CODES = frozenset(code.value for code in ErrorCode) - _UPLOAD_CODES | {"PARSE_MEMORY_LIMIT"}
-# A child that came this close to its cap may have had an allocation refused
-CAP_HIT_SHARE = 0.95
 
 
 @dataclass(slots=True)

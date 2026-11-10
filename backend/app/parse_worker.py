@@ -16,6 +16,7 @@ import sys
 from app.config import MAX_BLOCKS_AND_NODES
 from app.parsing import ErrorCode, ParseError, parse_document
 from app.parsing.schema import to_json
+from app.services.memcap import own_cap_reached
 
 
 def run(data: bytes) -> dict[str, object]:
@@ -34,7 +35,13 @@ def run(data: bytes) -> dict[str, object]:
 def main() -> int:
     data = sys.stdin.buffer.read()
     # json.dumps escapes every non-ASCII character, so the bytes need no encoding agreement
-    sys.stdout.buffer.write(json.dumps(run(data)).encode("ascii"))
+    out = json.dumps(run(data)).encode("ascii")
+    # On Linux lxml turns a refused allocation into a read error (MALFORMED_FILE) and the parent
+    # has no peak to read, so the child applies the parent's 95 percent rule to itself, after the
+    # output is built, whatever the parse reported
+    if own_cap_reached():
+        out = b'{"error": "PARSE_MEMORY_LIMIT"}'
+    sys.stdout.buffer.write(out)
     return 0
 
 

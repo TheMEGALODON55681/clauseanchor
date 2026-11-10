@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -90,3 +91,36 @@ def test_a_child_that_cannot_start_inside_its_cap_is_killed_and_never_runs(
         CappedProcess([sys.executable, "-c", "import time; time.sleep(600)"], 256 * MIB)
     assert len(made) == 1
     assert made[0].poll() is not None
+
+
+linux_only = pytest.mark.skipif(not sys.platform.startswith("linux"), reason="reads /proc")
+# The child sets its own cap from its own VmPeak, then reports what own_cap_reached says
+_SELF_CAP = """
+import resource
+from app.services.memcap import own_cap_reached
+peak = next(int(l.split()[1]) * 1024 for l in open('/proc/self/status') if l.startswith('VmPeak:'))
+cap = int(peak * {factor})
+resource.setrlimit(resource.RLIMIT_AS, (cap, cap))
+print(own_cap_reached())
+"""
+
+
+def test_a_child_with_no_cap_has_not_reached_it() -> None:
+    from app.services.memcap import own_cap_reached
+
+    assert own_cap_reached() is False
+
+
+@linux_only
+@pytest.mark.parametrize(("factor", "reached"), [(1.02, b"True"), (3.0, b"False")])
+def test_a_linux_child_knows_when_it_came_near_its_cap(factor: float, reached: bytes) -> None:
+    # Windows reads the peak from the job in the parent. Linux has no such counter, so the parse
+    # child checks its own VmPeak against RLIMIT_AS, and lxml's MALFORMED_FILE at the cap still
+    # becomes PARSE_MEMORY_LIMIT
+    done = subprocess.run(
+        [sys.executable, "-c", _SELF_CAP.format(factor=factor)],
+        capture_output=True,
+        timeout=60,
+        cwd=Path(__file__).resolve().parents[1],
+    )
+    assert done.stdout.strip() == reached
