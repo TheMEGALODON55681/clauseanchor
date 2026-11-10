@@ -4385,3 +4385,112 @@ Suggested commits. Two, because the workflow line is CI:
 - `docs: record the live deployment`, body: `Save the Container App spec, rewrite the deploy guide to the Cloud Shell route as built, and record the live URL, the CI failure and its fix, the deviations and what stays open.`
 
 Next action: Aryan reads the changes and commits. Nothing needs a redeploy. After the next workflow run he checks that the checkout step is green with no Node 20 warning. Then the open items: the click-through check, the demo-day run with `--min-replicas 1`, and the first log-stream use.
+
+## 2026-11-10: Part 4-B.1, a portfolio README with live screenshots
+
+A docs part after the 4-B close. `README.md` is rewritten as a portfolio README with real screenshots of the live app, and the setup notes it held moved to `docs/app/Development.md`. No code changed. `backend/`, `frontend/`, `ml/` and `docs/ml/` are untouched, and no server ran.
+
+### Start
+
+- Order check: `git log --oneline` began at `9ccbe80` (the 4-B close, not `c26236b`) and the tree was clean, so the 4-B close part had run.
+- Baseline counts, before any edit: `ruff format` 65 files formatted, `ruff check` all passed, `pytest` 1785 passed and 27 skipped (234 s, Python 3.12.10). Frontend on Node 24.16.0 and pnpm 11.20.0: `pnpm typecheck` clean, `pnpm test` 135 of 135, `pnpm build` ok, `pnpm check:dist` passed. These counts are in the README badges.
+- Read first: `Rules.md`, `Architecture.md`, `DesignSystem.md`, `Phases.md`, `API.md` (limits), `docs/ml/CUAD_FinalEvaluation.md`, `CandidateRelease.md`, `RealAnalyzer.md`, `ReleaseHandoff.md`, `CategoryCatalogue.md`, `README_ML.md`, `data/raw/cuad/README.md`, `LICENSE`, the landing, start, reader and accuracy pages, `heroExamples.ts` and the old README.
+
+### What changed
+
+- `README.md`: rewritten in the fifteen sections of `README_prompt.md`, with four shots in light and dark, a Mermaid diagram and an annotated tree. Versions in the badges and the tech table come from `backend/requirements*.txt`, `frontend/pnpm-lock.yaml` and `ml/requirements-inference.txt`.
+- `docs/app/Development.md` (new): the old README's Backend, Frontend and Live deployment sections, with a new title and two intro sentences. The body is the old README byte for byte.
+- `docs/assets/readme/` (new): `landing`, `start`, `reader` and `reader-review`, each as `-light` and `-dark`, plus `social-preview.png`. 9 files, 3,987,703 bytes in all. Sizes in bytes: landing 324,911 and 331,119; start 309,196 and 312,236; reader 704,919 and 708,483; reader-review 599,677 and 600,681; social preview 96,481. The first run also made an `accuracy` pair (165,980 and 168,297 bytes), dropped in the follow-up fixes below.
+- `docs/app/Phases.md`: the new part `4-B.1` before 4-C, and the deviation row for `app/Deployment.md` now says "Local setup is in `docs/app/Development.md`". Both edits kept the file's CRLF line ends.
+- `docs/app/BuildLog.md`: this entry.
+- Not changed: `Architecture.md` (no link to a README section), `API.md`, `DesignSystem.md`, `.dockerignore`. `.dockerignore` starts with `*` and re-includes only `LICENSE`, `backend`, `frontend`, `ml` and the model folder, so `docs/` and `docs/assets/` are already out of the image context and no line was added. `git check-ignore` says `docs/assets/readme/` is not ignored (exit 1).
+
+### The demo contract
+
+`.handoff/readme_demo/build_demo_docx.py` (standard library only) builds `demo-services-agreement.docx`. Both stay in `.handoff/`, which git ignores. Two invented parties, Juniper Anvil Private Limited and Saffron Lattice Private Limited. A web search found no exact match for either name, but only the first page of results was read, so that is not conclusive. The CLI parse (`python -m app.scripts.parse_file`, no server): 56 blocks, 52 nodes, 0 warnings, `partial` false, 6,996 characters, parser 1.4.0, 2 party nodes. A DOCX has no page count, so the length (about 1,170 words, likely 2 to 3 A4 pages) is unmeasured.
+
+### The capture run
+
+- Headless Edge 157.0.4341.42 (`--headless=new`, `--disable-extensions`, `--disable-sync`), a throwaway profile under `.handoff/readme_demo/`, driven over the Chrome DevTools Protocol with Node's built-in `WebSocket` (Node 24.16.0). Nothing was installed and no local server started.
+- Viewport 1440 by 900 at scale factor 2 for `landing`, `accuracy`, `reader` and `reader-review`. `start` uses 1440 by 1200, because step 2 is about 1,080 px tall. `social-preview.png` is 1280 by 640 at scale factor 1, dark. Reduced motion and a light colour scheme were emulated. The dark shots use the app's own theme toggle.
+- Before each capture the script waited for the document fonts and for the page's ready condition. The app scales to zero, so it polled `/api/v1/ready` first (6 minutes at most).
+- The live review: 24 categories chosen, about 60 s the first time and 4 s for the one category on the retake. All 24 came back Needs a lawyer and none Found, and the band said "Processing incomplete" (status partial). `reader` selects Non-Compete (passage 1 of 2, characters 3124 to 3336) and `reader-review` selects Governing Law (characters 5804 to 5852).
+- `DELETE` answered 204 for both uploaded documents. The attached run logged 0 console errors.
+- Every file was opened and checked: no loading state, no error toast, no cursor and no real contract text. None needed the scale factor 1.5 fallback. Two known looks: the landing hero panel is cut at the fold, and the Reader sheet shows a half-clipped first line at the top (a normal scroll clip).
+- Two node runs. The first stopped by PID 7488 after its wait loop stalled on a wrong selector (`mark` instead of `.ca-mark`). The second ran to the end and then attached to the same Edge for the second upload and the `start` retake, which was an extension of the one approved launch and not a second launch.
+- A bug found in `capture.mjs`: the process query matched its own PowerShell, so it printed "still running: 1" and did not delete the profile. It now filters on the name `msedge.exe`. The fix has not been re-run, because a run needs a new browser approval. The profile folder was removed by hand, and a query at the end of this part found no `msedge.exe` with `readme_demo` on its command line.
+- Retake: `node .handoff/readme_demo/capture.mjs` from the repository root. Each run launches one headless Edge and needs Aryan's approval for it.
+
+### Findings in the live app
+
+1. `/accuracy` says "Accuracy figures are not available in this build yet" (`available.evaluations` is false), so no table or Weak markers exist to photograph.
+2. The live analyzer returns review candidates only, so no finding is Found.
+3. The landing hero is a fixture from the fictional sample and shows a Found Non-Compete. This conflicts with the live build.
+4. The app's Credits section and the footer of the Accuracy page list OpenNyaya, NyayaAnumana and InLegalBERT. The current model is RoBERTa-base and uses none of them.
+
+### Decisions
+
+1. The shots are captioned for what they show. The Reader shots show Needs a lawyer, and the landing caption says the hero is a prepared example. The Accuracy shot, which showed only the "not available" state, is dropped (see the follow-up fixes).
+2. The "weakest categories" section cannot name categories, because the per-category breakdown is in the frozen report outside git. The README names the measured weakness instead (false highlights, unfinished questions, silent misses, thin support, no per-category figures).
+3. The roadmap lines on DeBERTa-v3-base, hard negatives, per-category thresholds and ONNX int8 are worded as candidates. `docs/app` and `docs/ml` record only that the retrain was deferred (`Phases.md`, 4-B). The retrain and ONNX lines come from `ClauseAnchor_Plan.md` and the brief. The follow-up fixes keep them and record them in `Phases.md` as planned by Aryan, not started.
+4. CUAD is cited by its arXiv number and authors, as `data/raw/cuad/README.md` does. The brief's "NeurIPS Datasets and Benchmarks 2021" is not in the repo.
+5. The tagline says "a fixed list of clause categories". The numbers (41 CUAD plus 5 India, 46 listed) sit in the table, because the five India categories are unavailable and a headline of 46 would over-promise.
+6. The README credits Aryan only, as the brief says. `Architecture.md` and `docs/ml` name Tanishq Arya as owner of `ml/` and `docs/ml/`, so whether the README should say so was for Aryan to decide. He decided in the follow-up fixes: no change, the README credits him only.
+7. The limitation "English" has no source in `docs/app` or `docs/ml`. It rests on CUAD being English text and on every fixture being English. Aryan decided in the follow-up fixes to keep it and tie it to CUAD.
+8. `README.md` was CRLF in the working tree and is now LF. Git normalises line ends, so the diff shows no line-end change.
+
+### Reviews
+
+- Jury review of the README: recruiter, ML engineer, frontend engineer, lawyer, then one verdict. Findings applied. Recruiter: the first screen reads (tagline, badges, table, live link), and the evaluation row now says it scores review candidates at an IoU of 0.5. ML engineer: the "clean checkpoint" row was unexplained and now says it is the same exported weights the app runs, and the Results paragraph says the evaluation ran on a GPU while the hosted app runs on CPU. Frontend engineer: two design claims over-reached and were cut back. "Nothing else is ochre" is false, because the Reader's "Processing incomplete" notice uses the review colours. "Floors that are tested" is false for the 12 px floor, because only the colour pairs have a test. Lawyer: "the clause types worth asking a lawyer about are a known list" read as a view on which clauses matter, and now states the CUAD fact (41 clause types). The README ends with "research prototype, ask a lawyer". Verdict: ship after these, with the open items in Decisions 6 and 7 left to Aryan.
+- YAGNI review of what was added outside the README: nothing to delete in `Development.md` or the images (all 11 files are used or named in the README or the upload step). Applied: the section list in the `Phases.md` entry was cut to one sentence, and the scratch folder `candidates/` (16 shots, 10 MB) and `peek.mjs` in `.handoff/readme_demo/` were deleted.
+- Copy passes over the README, in order: copywriting while drafting, then copy-editing (long sentences split, weak claims cut) and stop-slop (adverbs, passives and "not X" contrasts removed). No number, path, URL or label changed in the passes. No outside review tool was used.
+
+### Checks, on the final files
+
+| Check | Before | After |
+|---|---|---|
+| `ruff format --check .` | 65 files already formatted | 65 files already formatted |
+| `ruff check .` | all checks passed | all checks passed |
+| `pytest` | 1785 passed, 27 skipped (234 s) | 1785 passed, 27 skipped, 1 warning (184.65 s) |
+| `pnpm typecheck` | clean | clean |
+| `pnpm test` | 135 of 135 | 135 of 135 |
+| `pnpm build` | ok | 173 modules, no warning |
+| `pnpm check:dist` | passed | passed (35 files, 47 lines, 3 found) |
+
+The counts did not move. `pytest` ran after the last edit to `Phases.md`, which `test_catalogue.py` reads. Rules section 1 attribution scrub over `README.md` and `Development.md`: no output. Tool-name grep over both and over the lines added to `Phases.md`: no output. Dash scan for U+2010 to U+2015 and U+2212 over `README.md` and `Development.md`: 0 hits. No email address in the README. Link check by script over `README.md` (38 targets, 0 broken) and `Development.md` (1 target, 0 broken). The six anchors in the link row match headings GitHub will generate. The Mermaid block was read against the syntax rules and not rendered.
+
+### Not run
+
+- No Mermaid renderer ran, and the README was not opened on GitHub.
+- `capture.mjs` after its process-query fix.
+- No new browser launch.
+
+### Docs checked
+
+`Rules.md` section 6: `BuildLog.md` and `Phases.md` updated. `Architecture.md` has no link to a README section, and `API.md`, `ParserContract.md`, `DesignSystem.md` and `FrontendDesign.md` did not change. `Rules.md` section 1 called the README's backend and frontend sections the tracks' own, which was out of date, and the follow-up fixes updated it. `Phases.md` line 274 (1-F) and `FrontendDesign.md` lines 722 and 792 mention the old README as history and were left.
+
+### Processes
+
+processes started: Edge 1 launch (up to 16 Edge processes seen after it, 9 in the last ledger), node 2 capture runs and one read-only attach helper, PowerShell queries for the process ledger and leftovers; closed: all. The attached run closed Edge through the browser's own close, and its last query reported one leftover, which was the query's own PowerShell (the bug above). The first node run was stopped by PID 7488, and the final query of this part found no Edge with the throwaway profile. No process was killed by image name. This session added short runs only (`grep`, `python -I`, `ruff`, `pytest`, `pnpm`, `file`, `git` reads), each of which exited by itself.
+
+### Follow-up fixes before the commit
+
+The fixes from `.handoff/README_fix_prompt.md`, made before the first commit of this part. The tree matched the expected `git status --short` at the start (HEAD `9ccbe80`, branch `main`). `ml/`, `docs/ml/`, `backend/` and `frontend/` are untouched, no browser or server ran, and no screenshot was taken.
+
+1. The `accuracy` shot is dropped. The first run used an older copy of the capture brief that asked for it. Its block and caption left `README.md`, and its light and dark image files (168,297 and 165,980 bytes) no longer exist. The README keeps four shots and the sentence that the Accuracy page shows figures after 3-C. `docs/assets/readme/` holds 9 files and 3,987,703 bytes (4,321,980 before). `how-it-works` is added at the retake.
+2. The "English" limitation stays and rests on CUAD: an English-language dataset supplied the fine-tuning data and the test set. No committed document says CUAD is English, so there was no file to cite or to reword from. `data/raw/cuad/README.md` gives the dataset's identity, hash and paper, and not its language. A read-only script over `data/raw/cuad/CUAD_v1/CUAD_v1.json` (standard library, run outside the repo) counted 510 contracts. The median share of words from a short list of common English words was 35.4%, and no contract had more than 1.6% non-ASCII characters. Five contracts fell under 20% on the word share, the lowest at 8.4%, and the check does not say why. It is a word-frequency check and not a language detector.
+The roadmap lines stay in the README, and `Phases.md` (4-B.1) records them as planned by Aryan, not started, next to the four open items for the UI enhancement pass. The line in `Rules.md` section 1 about the README's sections now points at `docs/app/Development.md`, and nothing else in that file changed. The credit stays as it was: the README names Aryan Sharma only, and the docs' ownership notes stay as they are. This entry and the `Phases.md` entry describe the four-shot set and the new folder size.
+
+Checks after the fixes. `ruff format --check` 65 files already formatted, `ruff check` all passed, `pytest` 1785 passed and 27 skipped, 1 warning (297.58 s). `Rules.md` section 8 has no docs-only exemption, so the backend checks ran. That run began before the last prose edits to `Phases.md`, so `tests/test_catalogue.py`, the one test that reads that file, ran again on the final text: 24 passed. The frontend suite was not re-run. `frontend/` is untouched, and no frontend test or build step reads a changed file (the tests read `docs/app/openapi.json` only).
+The link and anchor check by script over `README.md` (43 targets) and `Development.md` (1 target) found 0 broken. The 22 external links were not fetched. Outside the ignored `.handoff/` folder, no file names the two removed Accuracy images. The Rules section 1 scrub over `backend/`, `frontend/`, `docs/app/`, `README.md` and `Development.md`, and the tool-name grep over the code, the config files, `README.md`, `Development.md` and the lines added to `docs/app`, gave no output. The dash scan for U+2010 to U+2015 and U+2212 over the five changed files, with a control line holding an en and an em dash, found 0 hits. Line ends are CRLF throughout in all five files.
+Processes: no browser, no server and no node process. Two long runs started and both ended: the shell that ran ruff and pytest, and the watcher that waited for it. Short commands (git reads, `grep`, `python -I` scripts, `rm` on the two image files, three runs of `tests/test_catalogue.py`) each exited on their own. Nothing was killed.
+
+One slip: while checking whether the first Accuracy file was tracked, I typed a dry run of `git rm --cached -n`. It failed (the file was untracked) and changed nothing.
+
+### Suggested commit
+
+`docs: rewrite the README with live screenshots`, body: `Replace the setup notes with a portfolio README with four live screenshots in light and dark (reader, reader-review, start, landing), the evaluation figures as recorded, an architecture diagram, and limits stated up front. Move the setup notes to docs/app/Development.md, and record the open items for the UI pass in Phases.md.`
+
+Next action: Aryan reads the README on GitHub, commits, uploads `docs/assets/readme/social-preview.png` under the repository's Settings, General, Social preview, and sets the About line and topics. Then the open items for the UI enhancement pass (listed in `Phases.md` under 4-B.1), and a retake of the shots after it, with `how-it-works` added.
+
+The one warning is Starlette's deprecation of `httpx` in `TestClient`, recorded in the Phase 2 entries and unchanged.
