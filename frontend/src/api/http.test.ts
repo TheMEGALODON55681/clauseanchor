@@ -241,6 +241,12 @@ test("a fetch that fails, or a reply that is not the error envelope, is a networ
   await assert.rejects(down.client.getJob(TOKEN, "j"), (e: unknown) => e instanceof ApiError && e.code === "network" && e.message === NETWORK_MESSAGE && e.retryable);
 });
 
+test("a full house says a place can take up to an hour, because a session lasts 60 minutes and nothing ends it sooner", () => {
+  const { message } = errorInfo("SESSION_LIMIT");
+  assert.doesNotMatch(message, /few minutes/);
+  assert.match(message, /up to an hour/);
+});
+
 test("TOO_MUCH_TEXT reads as the agreed sentence", () => {
   assert.equal(errorInfo("TOO_MUCH_TEXT").message, "This file is too large or complex to process");
 });

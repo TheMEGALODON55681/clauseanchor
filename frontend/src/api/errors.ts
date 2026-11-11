@@ -17,7 +17,7 @@ export const ERROR_TABLE: Record<string, Info> = {
   NOT_READY: { ui: "other", message: "The review engine is still starting. Try again in a minute." },
   CATALOGUE_UNAVAILABLE: { ui: "other", message: "The category list is not available right now. Try again in a moment." },
   SESSION_INVALID: { ui: "expired", message: "This session has ended." },
-  SESSION_LIMIT: { ui: "other", message: "ClauseAnchor is busy. Try again in a few minutes." },
+  SESSION_LIMIT: { ui: "other", message: "ClauseAnchor is full right now. A place opens when an earlier session ends, which can take up to an hour." },
   FILE_TOO_LARGE: { ui: "too_large", message: "This file is larger than 10 MB." },
   EMPTY_FILE: { ui: "other", message: "This file is empty." },
   UNSUPPORTED_TYPE: { ui: "unsupported_type", message: "This file type is not supported. Upload a PDF or DOCX." },
