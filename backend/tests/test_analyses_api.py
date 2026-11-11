@@ -729,15 +729,19 @@ def test_a_delete_between_the_insert_and_the_queue_leaves_no_text_on_the_item(
     store, queue = real.app.state.store, real.app.state.analysis_queue
     session_id = store.get_session(second).id
     real_submit = queue.submit
+    submitted = []
 
     def submit_after_delete(job_id: str, document_id: str, *rest: object) -> bool:
         store.delete_document(session_id, document_id)  # the delete that wins the race (R7)
-        return real_submit(job_id, document_id, *rest)
+        accepted = real_submit(job_id, document_id, *rest)
+        submitted.append(queue._items[job_id])  # the read-back then drops it from the lookup
+        return accepted
 
     monkeypatch.setattr(queue, "submit", submit_after_delete)
     _, job_id = started(real, second, new_document(real, second).id)
-    item = queue._items[job_id]
+    (item,) = submitted
     assert (item.parsed, item.stopped_by) == (None, "gone")
+    assert job_id not in queue._items
     assert_error(real.get(f"/api/v1/jobs/{job_id}", headers=bearer(second)), 404, "NOT_FOUND")
     fake_core.release.set()
 

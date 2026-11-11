@@ -276,6 +276,31 @@ def test_a_stopped_job_that_still_waits_drops_its_text_at_once(rig: Rig, how: st
     rig.core.release.set()
 
 
+@pytest.mark.parametrize("how", ["cancel", "delete"])
+def test_stopped_waiting_jobs_do_not_pile_up_while_the_worker_is_busy(rig: Rig, how: str) -> None:
+    """One analysis holds the worker for up to 1,800 s. A client that starts a job and stops it
+    in a loop must not leave a copy of its category ids in the queue for each round, and the
+    lookup that `submit` counts must not grow with it (system audit, 1)."""
+    rig.core.behave = rig.core.gated
+    rig.start()
+    wait_until(rig.core.running.is_set)
+    stopped = []
+    for _ in range(20):
+        session = rig.store.create_session()[1]  # one session may hold one active analysis only
+        parsed = parsed_document()
+        doc = add_parsed(rig.store, session, parsed)
+        job_id, _ = rig.store.add_analysis_job(session.id, doc.id, IDS, "unspecified")
+        assert rig.queue.submit(job_id, doc.id, parsed, IDS, "unspecified")
+        stopped.append(rig.queue._items[job_id])
+        if how == "cancel":
+            rig.queue.cancel(job_id)
+        else:
+            rig.store.delete_document(session.id, doc.id)
+    assert len(rig.queue._items) == 1  # the running job and nothing else
+    assert all(item.category_ids == () and item.parsed is None for item in stopped)
+    rig.core.release.set()
+
+
 def test_an_analyzer_that_finishes_after_it_was_told_to_stop_leaves_no_result(rig: Rig) -> None:
     def ignores_the_flag(text, *, doc_id, category_ids, cancelled, **_):
         rig.core.running.set()

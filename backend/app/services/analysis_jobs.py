@@ -114,6 +114,7 @@ class AnalysisQueue:
                 return False
             self._halt(item, "cancelled")
             waiting = not item.started
+            self._forget(item)
         if waiting:
             self._finish(job_id, "cancelled")
         return True
@@ -122,15 +123,25 @@ class AnalysisQueue:
         """The store's `on_drop` hook. It runs under the store's lock and only sets flags, so the
         analyzer stops at its next check and the worker finds the document gone."""
         with self._lock:
-            for item in self._items.values():
+            for item in list(self._items.values()):  # a copy, because _forget removes entries
                 if item.document_id in document_ids:
                     self._halt(item, "gone")
+                    self._forget(item)
 
     def _halt(self, item: _Item, reason: str) -> None:
         """Marks the job stopped and drops its text. The caller holds the lock."""
         if item.stopped_by is None:
             item.stopped_by = reason
         item.parsed = None
+
+    def _forget(self, item: _Item) -> None:
+        """A stopped job that still waits stays in the FIFO until the worker reaches it, which can
+        be 1,800 s away. It leaves this lookup and gives up its ids now, so a start-and-stop loop
+        piles up bare markers and not ids, and the count in `submit` stays short. A running job
+        stays, because the worker still reads it. The caller holds the lock."""
+        if not item.started:
+            item.category_ids = ()
+            self._items.pop(item.job_id, None)
 
     def _halt_for_time(self, item: _Item) -> None:
         with self._lock:
