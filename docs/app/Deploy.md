@@ -76,7 +76,7 @@ The commands use the names `clauseanchor-rg` for the resource group, `clauseanch
    az containerapp env create -n clauseanchor-env -g clauseanchor-rg --location centralindia --logs-destination none
    ```
 
-   Azure reports this environment's mode as `Express`. Microsoft describes Express as an environment tier on Consumption billing (per-second vCPU and memory, scale to zero, no environment fee). It supports HTTP and TCP probes, HTTP scaling, single-revision rolling updates and live log streaming. It does not support custom KEDA scalers, multiple revisions or traffic splitting, HTTP/2, insecure HTTP, custom domains, session affinity, Easy Auth, sidecars or init containers. That comes from Microsoft's overview, read on 10 November 2026. Nothing here was measured against it.
+   Azure reports this environment's mode as `Express`. Microsoft describes Express as an environment tier on Consumption billing (per-second vCPU and memory and scale to zero. The brief said there is no environment fee, and the Express page read on 11 November 2026 does not say so. Microsoft's price list shows three "Environment" meters at USD 0.10 an hour from 1 November 2026, and does not say which plan they apply to, so look for an environment line in Cost Management). It supports HTTP and TCP probes, HTTP scaling, single-revision rolling updates and live log streaming. It does not support custom KEDA scalers, multiple revisions or traffic splitting, HTTP/2, insecure HTTP, custom domains, session affinity, Easy Auth, sidecars or init containers. That comes from Microsoft's overview, read on 10 November 2026. Nothing here was measured against it.
 
 2. Get the app's spec into Cloud Shell. It is the file `deploy/azure-containerapp.yaml` in this repository. Use the **Manage files**, **Upload** button in Cloud Shell's toolbar, or download it from GitHub:
 
@@ -226,6 +226,8 @@ A sleeping app has a cold start. To avoid one during a demo, keep one replica aw
 
 Do not change any other setting during the demo, because a change ends every session.
 
+**Capacity.** The app holds 25 sessions at once and one analysis at a time, and a visitor keeps a session for 60 minutes even after leaving. The 26th person to start a review in an hour sees "full", and a place can take up to an hour to open. For a group of more than about 25, let a few people try the app while the rest watch (`docs/app/SystemAudit.md`, section 5.4).
+
 **Cost warning.** A replica kept warm for a whole day uses 172,800 vCPU-seconds and 345,600 GiB-seconds, which is nearly the whole monthly free grant (step 9). Azure bills an idle replica at a lower rate, so those figures are an upper bound. Even so, never leave the minimum at 1.
 
 ## 8. Logs
@@ -244,9 +246,15 @@ az containerapp logs show -n clauseanchor -g clauseanchor-rg --type system --fol
 
 The environment was created with the logs destination set to none, so Azure stores no history. You can watch a log live and see nothing of what happened an hour ago. Microsoft's log options page says live streaming still works when storage is off. These commands have not been run on this app yet.
 
+The minimum worth doing for a demo costs nothing. Keep two Cloud Shell tabs open, one for each command above. To count refusals as they happen, pipe the console stream through `grep " 429 "`. After the demo, `az containerapp revision list -n clauseanchor -g clauseanchor-rg -o table` shows whether a new revision started (not tried on this app). Open the app's Metrics page in the portal once and note which of requests, replica count, restarts and memory it offers for an Express app: they would be the only history.
+
 ## 9. Cost and budget
 
 The Consumption plan gives each subscription 180,000 vCPU-seconds, 360,000 GiB-seconds and 2 million requests free every calendar month. At 2 vCPU and 4 GiB, one running hour uses 7,200 vCPU-seconds and 14,400 GiB-seconds, so the grant covers about 25 active hours a month (180,000 / 2 / 3600, and 360,000 / 4 / 3600). Health-probe requests are not billable. When nobody uses the app, it scales to zero and uses nothing.
+
+What a running hour costs at this size (Microsoft's price list for Central India, read on 11 November 2026): USD 0.000024 per vCPU-second and USD 0.000003 per GiB-second when active, which is USD 0.216 an hour for the app, and USD 0.000003 per vCPU-second and per GiB-second when idle, which is USD 0.0648 an hour. Idle rates apply only to a revision with a minimum above zero. With the minimum at 0 every second the replica is up is active. Requests cost USD 0.40 a million after the first 2 million.
+
+One replica is the most this app runs, so the highest a month can cost is 730 hours x USD 0.216, about USD 152 after the grant. A request every few minutes keeps the app awake, because the cool-down before the last replica goes to zero is 300 s by default (Microsoft's scaling page, which does not say whether HTTP rules use it), and a replica that never sleeps would use the USD 100 credit in about 20 days. Do not point an uptime monitor at the app. The budget alert is an email and does not stop the app. `docs/app/SystemAudit.md` section 4 has the arithmetic.
 
 Anything over the grant comes out of your Azure for Students credit: USD 100 for 12 months, with no card. When the credit runs out or expires, Azure disables the subscription and its services. There is no card on file to charge. To see what is left, open https://www.microsoftazuresponsorships.com/balance, or open **Cost Management** in the portal.
 
@@ -277,4 +285,5 @@ The address is public, and anyone with it can upload a file. Tell visitors to us
 | "Unauthorized" or "manifest unknown" when Azure pulls the image | Make the package public (step 2.7) and check that the tag in the file or the update command is a full SHA that was published |
 | An update changed nothing | `:latest`, or the tag that already runs, may start no new revision (reasoned, not tested). Use the full SHA from the new run's **Published** line (step 6). `az containerapp show -n clauseanchor -g clauseanchor-rg --query "properties.template.containers[0].image" -o tsv` prints the image the app runs now |
 | The image build stops at the model bundle check | The message names the problem: a missing file or a digest that does not match. Read it, fix the model release or the build context, and run the workflow again |
-| "Session expired" straight after a wait | Normal after the app has slept: sessions live in memory. Start a new review |
+| "Session expired" straight after a wait | Normal after the app has slept: sessions live in memory. A tab left open and silent for a few minutes can lose its session the same way, because the Reader sends no request once a review ends. Start a new review |
+| "ClauseAnchor is full right now" | 25 sessions are alive. Each lasts 60 minutes, and nothing ends one sooner. A place opens when the oldest expires |

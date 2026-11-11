@@ -4494,3 +4494,90 @@ One slip: while checking whether the first Accuracy file was tracked, I typed a 
 Next action: Aryan reads the README on GitHub, commits, uploads `docs/assets/readme/social-preview.png` under the repository's Settings, General, Social preview, and sets the About line and topics. Then the open items for the UI enhancement pass (listed in `Phases.md` under 4-B.1), and a retake of the shots after it, with `how-it-works` added.
 
 The one warning is Starlette's deprecation of `httpx` in `TestClient`, recorded in the Phase 2 entries and unchanged.
+
+## 2026-11-11: Part 4-B.2, system audit against scale, security, cost and failure
+
+Aryan's brief (`.handoff/system_audit_prompt.md`) asked for six audits of the system as built and deployed, one document, and fixes only for what is small, real and exploitable on the public demo today. The audit is `docs/app/SystemAudit.md` (new). Two findings were small enough to fix: SA1 in `backend/` and SA2 in `frontend/`. Eighteen more are recorded with owners in `Phases.md`. Nothing was installed. No server and no browser ran, and the live URL was not load tested. `ml/` and `docs/ml/` are unchanged.
+
+### Start
+
+- `git status` was clean on `main`, and `git log --oneline -8` began at `459bcf0` (`docs: rewrite the README with live screenshots`).
+- Baseline before any edit: backend 1785 passed, 27 skipped, 1 warning (337.83 s), `ruff format --check` 65 files already formatted, `ruff check` all passed. Frontend: `pnpm typecheck` exit 0, `pnpm test` 135 of 135, `pnpm build` and `pnpm check:dist` passed (35 files, 47 lines probed, 3 found, all in the landing demo's quoted paragraphs). `graphify-out/` dated from 4 November and 49 files of `backend/app` and `frontend/src` had changed since, so the route and rendering searches used `grep`.
+- Read first: `Rules.md`, `Architecture.md`, `API.md`, `Deploy.md`, `deploy/azure-containerapp.yaml`, `Phases.md` (the 2-R entry, 4-B, 4-B.1, 4-C1, the deviation list), `BuildLog.md` (2-C, 4-B, 4-B close), `backend/app` (`config.py`, `main.py`, `api/`, `services/store.py`, `parse_jobs.py`, `analysis_jobs.py`, `analysis.py`, `memcap.py`, `parse_worker.py`, `schemas.py`, `parsing/detect.py` and the archive code in `parsing/docx.py`), `frontend/src/api/`, `session.tsx`, `Reader.tsx`, `useStartFlow.ts`, `Expired.tsx`, every place that renders contract text, the `Dockerfile`, `.dockerignore` and `image.yml`.
+
+### What changed
+
+- `docs/app/SystemAudit.md` (new): the six audits, five jurors for each, the "what would break at scale" round, a verdict each, and the triage of SA1 to SA20.
+- `backend/app/services/analysis_jobs.py`: `_forget`, called from `cancel` and `cancel_documents` (SA1).
+- `backend/tests/test_analysis_jobs.py`: one test with two cases. `backend/tests/test_analyses_api.py`: one test changed.
+- `frontend/src/api/errors.ts`: the `SESSION_LIMIT` message (SA2). `frontend/src/api/http.test.ts`: one test.
+- Docs: `Phases.md` (the 4-B.2 entry, and a line each under R5 and R19), `Architecture.md` (the analysis row, the store lock row, the "Where it runs" row, the end of section 8.2, the test tree row and the frontend test count), `API.md` (the `MAX_SESSIONS` row), `Deploy.md` (the Express billing sentence, a capacity paragraph under demo day, a monitoring paragraph, the price and ceiling paragraphs, two troubleshooting rows), `README.md` (the two test counts), and this entry.
+
+### Sources read on 11 November 2026
+
+Four text fetches, no browser: Microsoft Learn's billing, scaling, quotas, ingress and Express pages, Microsoft's retail price API for Azure Container Apps in Central India, the Azure for Students pages, and GitHub's docs for packages, Actions and releases. Microsoft's India pricing page returned `$-` in every price cell, so the rates come from the price API (vCPU USD 0.000024 a second active and 0.000003 idle, memory USD 0.000003 a GiB-second, requests USD 0.40 a million, all effective 2022-06-01). The price API also lists three "Environment" meters at USD 0.10 an hour from 2026-11-01, and no page says which plan they apply to (SA10). The scaling page gives a 300 s cool-down for scale to zero and does not say whether HTTP rules use it. The Express page lists no minimum replica setting.
+
+### Red before green
+
+- SA1. The new test failed in both cases before the change: `assert 21 == 1` (`len(rig.queue._items)` after 20 stopped jobs and one running one). With `_forget` in: 117 passed across `test_analysis_jobs.py`, `test_analyses_api.py` and `test_store_analysis.py`, after one existing test was changed (see below).
+- The existing test `test_a_delete_between_the_insert_and_the_queue_leaves_no_text_on_the_item` failed after the change with a `KeyError`, because it read the item from `_items` after the route's read-back had removed it. The property it pins (no text on the item, `stopped_by` is `gone`) still holds. The test now captures the item at submit and also asserts that the job has left the lookup.
+- Mutation check on the fix, on the real file with a backup and a byte comparison after: the line `item.category_ids = ()` replaced by `pass`. Both cases of the new test failed on the ids assertion (`assert False` on `all(...)`). The file was restored, `cmp` found it identical, and both cases passed again. The other half of `_forget`, the pop from `_items`, is covered by the `assert 21 == 1` red run above.
+- SA2. `pnpm` runs `node --test`: before the change `src/api/http.test.ts` gave 27 passed and 1 failed (`The input was expected to not match the regular expression /few minutes/`). After it: 136 of 136.
+
+### Reviews
+
+Jury review of the diff, five perspectives working alone and one verdict.
+
+- Concurrency. `_forget` runs under the queue's lock, and the worker sets `started` under the same lock, so a job is either started (kept) or not (forgotten). A forgotten job that the worker later takes from the FIFO finds `stopped_by` set and returns. The lock order is unchanged: `cancel_documents` runs under the store's lock and takes only the queue's. `cancel_documents` now iterates a copy of `_items`, because `_forget` removes entries.
+- API contract. No route, status code or response changes. A second cancel of a stopped job gets 409 `JOB_NOT_CANCELLABLE` from the job's status before it reaches the queue, as before.
+- Memory. A forgotten job leaves a bare item in the FIFO, about 110 bytes by estimate, until the worker reaches it. A running job keeps its ids, because the worker reads them after the run (`check_result`).
+- Tests. The new test covers cancel and delete, 20 rounds each, and checks both the lookup and the ids. One existing test changed, with its reason above. Tests still reach into `_items`, as their neighbours do.
+- Frontend. One string and one test. The Start page and the Reader show the message through `errorInfo`, so nothing else reads it.
+- Verdict: ship. Both fixes need a new image and an update to reach the live app.
+
+Ponytail review of the diff: one finding, `_forget` can return early for a started job so that both callers drop their own `if`. Applied (net minus two lines), and the tests, `ruff format --check` and `ruff check` ran again. Lean otherwise.
+
+The jury rounds of the audit itself are in the file: each section ran a first round, added what the jurors found, and ran a second round that found nothing new.
+
+### Checks, on the final code
+
+| Check | Before | After |
+|---|---|---|
+| `ruff format --check .` | 65 files already formatted | 65 files already formatted |
+| `ruff check .` | all checks passed | all checks passed |
+| `pytest` | 1785 passed, 27 skipped (337.83 s) | 1787 passed, 27 skipped (324.75 s) |
+| `pnpm typecheck` | exit 0 | exit 0 |
+| `pnpm test` | 135 of 135 | 136 of 136 |
+| `pnpm build` | passed | passed |
+| `pnpm check:dist` | passed (35 files, 47 lines, 3 found) | passed (35 files, 47 lines, 3 found) |
+
+Two new tests (the two cases of one test) account for the backend change. The full run began before the last edits to `API.md`, `Phases.md`, `Deploy.md` and `README.md`, so the four test files that read the docs (`test_docs.py`, `test_catalogue.py`, `test_real_catalogue.py` and `test_openapi_export.py`) ran again on the final text: 40 passed, and `ruff` ran again too. The frontend checks ran after the last frontend edit, and no later edit touched `frontend/`.
+
+Rules section 1 attribution scrub over `backend/`, `frontend/` and `docs/app/`: no output. Tool-name grep, form one over the backend code and config, `README.md` and `SystemAudit.md`, form two over the lines added to the tracked docs outside this file, and a third run over the two frontend files: no output. Dash scan for U+2010 to U+2015 and U+2212 over the ten changed or new files (this log excluded: the entry was scanned once it was written), with a control line holding an en and an em dash: 0 hits. Line ends, counted by bytes after the last edit: LF in `README.md`, `Deploy.md`, `SystemAudit.md`, `analysis_jobs.py`, `test_analysis_jobs.py`, `errors.ts` and `http.test.ts`, and CRLF in `API.md`, `Architecture.md`, `BuildLog.md`, `Phases.md` and `test_analyses_api.py`. The index holds LF for all of them and `core.autocrlf` is true, so git normalizes on commit and warns about the LF files. Whether this part changed the line ends of any file was not established.
+
+The copy passes ran in order, copywriting, copy-editing and stop-slop, over the new prose. They are written for marketing pages, so only the rules on clarity, specificity and active voice applied. Seven phrases changed: two "not X, it is Y" contrasts, four adverbs ("mostly", "silently" twice, "quickly") and one sentence that opened with "What". No number, id, path, address or command changed.
+
+### Docs checked
+
+`Rules.md` section 6: `BuildLog.md`, `Phases.md`, `Architecture.md`, `API.md`, `Deploy.md` and `README.md`. `ParserContract.md` did not change, because no parser output moved. `openapi.json` did not change: no route or response model changed, and the export test passes. `FrontendDesign.md` did not change: the message string is not quoted there. `DesignSystem.md` did not change.
+
+### Not run
+
+- Nothing ran on Azure or against the live URL. Every timing is from the laptop runs in `BuildLog.md` (2-C and 2-D.1) and the CI run of 4-B, and the Azure figures in the audit are estimates with a stated factor (2 to 4 over the laptop, an assumption).
+- `pip-audit` was not re-run: nothing may be installed, and its database is online. R12 stays as it was.
+- No browser saw the page, so no security header was added and the Expired and Reader copy was read in the source only.
+- The two fixes are not deployed. The workflow and the update are Aryan's (`Deploy.md` steps 2 and 6).
+
+### Processes
+
+Servers and browsers started: 0, closed: 0. No background process stayed behind. Shell runs that exited by themselves: `pytest` eight times (the baseline, the red run, three file-set runs, the mutant and its restore, the final run), `ruff` four times, the frontend checks twice (the baseline, and the final run of four commands) plus one `node --test` run for the red test, one `python -I` dash scan and two `grep` scrubs. Four text fetches ran through a helper that reads pages as text, and each ended with its report. Read-only `git` only: `status`, `diff` and `log`. Short `grep`, `ls`, `wc` and `cmp` reads are not counted.
+
+### Suggested commits
+
+Three, because the code fixes are two areas and the audit is docs:
+
+- `fix(jobs): drop a stopped waiting analysis from the queue lookup`, body: `A stopped job that still waits kept its category ids in the queue until the worker reached it, and submit counted every entry. A start and cancel loop while one analysis held the worker piled them up. The job now leaves the lookup and gives up its ids at once.` Files: `backend/app/services/analysis_jobs.py`, `backend/tests/test_analysis_jobs.py`, `backend/tests/test_analyses_api.py`.
+- `fix(frontend): say a full house can last an hour`, body: `The session limit message told people to try again in a few minutes. A place opens only when an earlier session ends, which can take up to an hour. The message now says so.` Files: `frontend/src/api/errors.ts`, `frontend/src/api/http.test.ts`.
+- `docs: audit the system against scale, security, cost and failure`, body: `Add the six audits with their juries and the triage of 20 findings, record the open items with owners in Phases.md, and correct the capacity, cost and billing statements in the deploy guide, the architecture notes and the API limits.` Files: `docs/app/SystemAudit.md`, `Phases.md`, `Architecture.md`, `API.md`, `Deploy.md`, `BuildLog.md` and `README.md`.
+
+Next action: Aryan reads `SystemAudit.md`, decides SA3, SA4 and SA16, checks Cost Management for the environment meter (SA10), confirms with Tanishq that the model may sit in a public image, and commits. Then the image workflow and an update by the full SHA, well before the viva, because an update ends every session. Then 4-C.

@@ -22,8 +22,8 @@
   <img src="https://img.shields.io/badge/React-19.2.4-149ECA?logo=react&logoColor=white" alt="React 19.2.4">
   <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.9.3">
   <img src="https://img.shields.io/badge/model-RoBERTa--base-FFD21E?logo=huggingface&logoColor=black" alt="Model: RoBERTa-base">
-  <img src="https://img.shields.io/badge/backend_tests-1785_passed-2E7D32" alt="Backend tests: 1785 passed">
-  <img src="https://img.shields.io/badge/frontend_tests-135_passed-2E7D32" alt="Frontend tests: 135 passed">
+  <img src="https://img.shields.io/badge/backend_tests-1787_passed-2E7D32" alt="Backend tests: 1787 passed">
+  <img src="https://img.shields.io/badge/frontend_tests-136_passed-2E7D32" alt="Frontend tests: 136 passed">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT license"></a>
 </p>
 
@@ -40,7 +40,7 @@
 | **Input** | PDF or DOCX with selectable text, up to 10 MiB, 100 PDF pages and 500,000 characters |
 | **Your file** | Held in memory and deleted within 60 minutes, or at once with Delete document. The API writes no part of it to disk |
 | **Hosting** | One Docker image on Azure Container Apps, Central India, 2 vCPU and 4 GiB, scaled from 0 to 1 replica |
-| **Tests** | 1785 backend (27 skipped) and 135 frontend |
+| **Tests** | 1787 backend (27 skipped) and 136 frontend |
 
 **Live demo:** https://clauseanchor.icystone-c7631062.centralindia.azurecontainerapps.io/
 

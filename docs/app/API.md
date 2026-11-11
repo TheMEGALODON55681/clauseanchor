@@ -499,7 +499,7 @@ These eight are fixed limits in `app/config.py`, and no environment variable set
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `MAX_SESSIONS` | 25 | Live sessions at once. Past it, `POST /api/v1/sessions` answers 429 `SESSION_LIMIT`. Expired sessions do not count |
+| `MAX_SESSIONS` | 25 | Live sessions at once. Past it, `POST /api/v1/sessions` answers 429 `SESSION_LIMIT`. Expired sessions do not count. A session keeps its slot until it expires or `DELETE /api/v1/sessions/current` ends it. The frontend never calls that route, so a visitor holds a slot for the full 60 minutes, and the app admits at most 25 new sessions in any hour (`SystemAudit.md`, SA3) |
 | `MAX_DOCUMENTS_PER_SESSION` | 5 | Documents one session can hold. The store enforces it, and `POST /api/v1/documents` answers 429 `DOCUMENT_LIMIT` past it. `DELETE /api/v1/documents/{document_id}` frees a slot |
 | `SWEEP_INTERVAL_SECONDS` | 30 | How often the sweep runs. Every lookup checks the time, so an expired session is unreachable at once. The sweep sets how long its data stays in memory after that |
 | `ANALYSIS_QUEUE_LENGTH` | 2 | Analyses that can wait while one runs (plan 9.3). A further start answers 429 `ANALYSIS_QUEUE_FULL`. A cancelled analysis gives its place back at once |
