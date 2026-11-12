@@ -8,7 +8,7 @@ import * as F from "./fixtures.ts";
 
 /* The adapter is tested against a stubbed fetch and the synthetic responses in fixtures.ts. */
 
-type Call = { url: string; method: string; headers: Headers; body: unknown };
+type Call = { url: string; method: string; headers: Headers; body: unknown; keepalive?: boolean };
 type Reply = { status: number; body?: unknown } | "network" | "html";
 
 function stub(routes: Record<string, Reply>) {
@@ -16,7 +16,7 @@ function stub(routes: Record<string, Reply>) {
   const fetchStub: typeof fetch = async (input, init) => {
     const url = String(input);
     const method = init?.method ?? "GET";
-    calls.push({ url, method, headers: new Headers(init?.headers), body: init?.body });
+    calls.push({ url, method, headers: new Headers(init?.headers), body: init?.body, keepalive: init?.keepalive });
     const reply = routes[`${method} ${url}`];
     if (!reply) throw new Error(`unexpected request: ${method} ${url}`);
     if (reply === "network") throw new TypeError("fetch failed");
@@ -204,6 +204,30 @@ test("a 503 on a delete is a failure that can be retried, with or without the er
 test("a delete that finds the session gone is still the expired page", async () => {
   const { client } = stub({ [`DELETE ${API_BASE}/documents/${DOC}`]: { status: 401, body: F.ERROR("SESSION_INVALID") } });
   await rejects(client.deleteDocument(TOKEN, DOC), "expired", "SESSION_INVALID");
+});
+
+/* SA3: the frontend ends its own session, so a visitor does not hold one of the 25 slots for 60 minutes. */
+
+test("ending a session sends DELETE to the current session with the token, and takes the empty 204", async () => {
+  const { client, calls } = stub({ [`DELETE ${API_BASE}/sessions/current`]: { status: 204 } });
+  await client.endSession(TOKEN);
+  assert.equal(calls[0].method, "DELETE");
+  assert.equal(calls[0].url, `${API_BASE}/sessions/current`);
+  assert.equal(calls[0].headers.get("Authorization"), `Bearer ${TOKEN}`);
+  assert.ok(!calls[0].keepalive, "an ordinary end is an ordinary request");
+});
+
+test("a page that is leaving asks for a keepalive request, so the browser sends it after the page is gone", async () => {
+  const { client, calls } = stub({ [`DELETE ${API_BASE}/sessions/current`]: { status: 204 } });
+  await client.endSession(TOKEN, { keepalive: true });
+  assert.equal(calls[0].keepalive, true);
+});
+
+test("a session that is already gone is what ending one wants, and any other failure is an error", async () => {
+  const gone = stub({ [`DELETE ${API_BASE}/sessions/current`]: { status: 401, body: F.ERROR("SESSION_INVALID") } });
+  await gone.client.endSession(TOKEN);
+  const down = stub({ [`DELETE ${API_BASE}/sessions/current`]: "network" });
+  await rejects(down.client.endSession(TOKEN), "network");
 });
 
 test("a bad token is the expired page, and an unknown id is not_found", async () => {
