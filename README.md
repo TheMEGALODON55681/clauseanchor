@@ -52,11 +52,11 @@ The app scales to zero, so the first visit after a quiet spell takes 1 to 3 minu
   <a href="https://clauseanchor.icystone-c7631062.centralindia.azurecontainerapps.io/">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/reader-dark.png">
-      <img src="docs/assets/readme/reader-light.png" alt="ClauseAnchor Reader on a fictional services agreement: the Non-Compete category selected, passage 1 of 2 quoted from the contract at characters 3124 to 3336 under a Needs a lawyer label with Confidence not validated, the contract sheet with underlined passages and a findings ruler beside it, and the category list on the left" width="95%">
+      <img src="docs/assets/readme/reader-light.png" alt="ClauseAnchor Reader on the fictional file demo-services-agreement.docx after a review of 24 categories. The left column holds a scope note, a count of 0 found and 24 that need a lawyer, and the category list. The contract sheet shows underlined passages with a findings ruler beside it. The detail panel shows Non-Compete, passage 1 of 2 at characters 3124 to 3336, under a Needs a lawyer label with Confidence not validated. An amber note says processing was incomplete." width="95%">
     </picture>
   </a>
 </p>
-<p align="center"><em>The Reader on a fictional services agreement, with the Non-Compete passage quoted from the contract and marked Needs a lawyer.</em></p>
+<p align="center"><em>The Reader after a 24-category review of a fictional agreement. All 24 categories need a lawyer and none is Found. The panel quotes the Non-Compete passage with its offsets.</em></p>
 
 A contract can run to dozens of pages, and CUAD defines 41 clause types to look for in one, from renewal terms to liability caps. A summary can invent text. A tool that stays silent about what it missed reads like a clean bill of health. ClauseAnchor marks where a listed clause type may be and quotes the exact words with their character offsets. When the evidence falls short of a validated threshold, it says Needs a lawyer.
 
@@ -76,21 +76,21 @@ Indian commercial contracts are the target. The catalogue carries five India ext
   <a href="https://clauseanchor.icystone-c7631062.centralindia.azurecontainerapps.io/">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/start-dark.png">
-      <img src="docs/assets/readme/start-light.png" alt="ClauseAnchor start flow, step 2 of 3, with the fictional file demo-services-agreement.docx uploaded: Buyer or customer chosen as the side, Saffron Lattice Private Limited chosen from two detected parties, a note that this build does not use the side yet, and a summary of the choices on the right" width="70%">
+      <img src="docs/assets/readme/start-light.png" alt="ClauseAnchor start flow, step 2 of 3, with the fictional file demo-services-agreement.docx uploaded. A step list runs down the left, and a note says this build does not use your side yet. Seven roles are listed with Buyer or customer selected, and two detected parties with Saffron Lattice Private Limited selected. A Your choices summary on the right lists the file, role, party, categories and scope." width="70%">
     </picture>
   </a>
 </p>
-<p align="center"><em>Step 2 of 3 on the fictional file: a side and a party are picked, and this build does not use them yet.</em></p>
+<p align="center"><em>Step 2 of 3 on the fictional file: you pick a side and a party, and this build does not use them yet.</em></p>
 
 <p align="center">
   <a href="https://clauseanchor.icystone-c7631062.centralindia.azurecontainerapps.io/">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/reader-review-dark.png">
-      <img src="docs/assets/readme/reader-review-light.png" alt="ClauseAnchor Reader on the same fictional agreement: the Governing Law category selected, a one-sentence passage at characters 5804 to 5852 under a Needs a lawyer label, the note that the passage may be the clause but did not reach the validated threshold, and Confidence not validated below it" width="95%">
+      <img src="docs/assets/readme/reader-review-light.png" alt="ClauseAnchor Reader on the same fictional agreement. The Governing Law category is selected, and clause 10.1 is marked in the sheet. The detail panel quotes its one sentence at characters 5804 to 5852 under a Needs a lawyer label, then a note that the passage may be the clause but did not reach the validated threshold, then Confidence not validated." width="95%">
     </picture>
   </a>
 </p>
-<p align="center"><em>Governing Law selected at characters 5804 to 5852, with the quoted evidence, the Needs a lawyer label and the candidate-only wording.</em></p>
+<p align="center"><em>Governing Law selected: the panel quotes clause 10.1 at characters 5804 to 5852, under the Needs a lawyer label and the candidate-only wording.</em></p>
 
 ## Design
 

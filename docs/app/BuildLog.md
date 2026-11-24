@@ -4658,3 +4658,72 @@ Four, each by area, so no file lands in the wrong one (the first session's work 
 4. `docs: retake the README screenshots after the UI pass`, body `Retake landing and the social preview, add how-it-works, fix the counts.` Files: `README.md` and five images under `docs/assets/readme/`.
 
 Next action: Aryan runs the four commits in that order, then the image workflow and `az containerapp update` with the new SHA, then retakes the `start`, `reader` and `reader-review` shots against the redeployed app.
+
+## 2026-11-24: Part 4-B.3 close, the redeploy record and the live README shots
+
+Aryan's brief (`.handoff/live_retake_prompt.md`): retake the `start`, `reader` and `reader-review` shots against the redeployed app, update the README text for them, record what Azure reports for the scale rule, and record the deploy. `ml/`, `docs/ml/`, `backend/` and `frontend/` are unchanged. No `az` command ran, the live app was not changed, and the capture's upload was deleted at the end of its run.
+
+### Start
+
+- `git status --short` printed nothing and `git log --oneline -6` began at `5beecc9`, which is HEAD (`5beecc969c0b94ada4fe94eb59ce6e4291a656d1`), pushed. That matched the brief.
+- Before the launch I read `capture.mjs` and checked its page selectors against the redesigned sources (the step titles, the Start review button, the "24 of 46 selected" count, the category rows, the confirm dialog's Delete contract). The Next button was not read in the source, and the run showed it works. The Start summary aside is `hidden xl:block`, and the capture viewport is 1440 wide, so it shows. The script always took every live shot, so I added one flag.
+
+### What changed
+
+- `.handoff/readme_demo/capture.mjs` (ignored by git): `--reader-only` skips `landing`, `how-it-works` and the social preview and takes only `start`, `reader` and `reader-review`. It still loads the landing page first, which proves the new interface is up.
+- `docs/assets/readme/`: `start`, `reader` and `reader-review`, each in light and dark, retaken from the live app. The five other files have the same SHA-256 hashes before and after the run.
+- `README.md`: the alt text and caption of the three shots. The README carried no note about old shots, so none was removed.
+- `deploy/azure-containerapp.yaml`: a comment beside the scale rule. The rule itself is as Aryan created the app from it.
+- `docs/app/Architecture.md` (section 8.1, "Where it runs") and `docs/app/Deploy.md` (step 4): the same statement of what Azure reports.
+- `docs/app/Phases.md`: a "Deployed and retaken" paragraph under 4-B.3, the 4-B.1 retake item closed, and the 4-B.3 still-open line.
+- Not touched, because they are outside the brief: `FrontendDesign.md` 17.9, `SystemAudit.md`, and the earlier 4-B.3 entry above (history stays).
+
+### The deploy, as Aryan reported it from Cloud Shell
+
+None of this was measured here.
+
+- Image `ghcr.io/themegalodon55681/clauseanchor:5beecc969c0b94ada4fe94eb59ce6e4291a656d1`. The workflow reported 1672 MiB on disk and a peak of 1025 MiB of 4096, file cache included.
+- `az containerapp update` returned `provisioningState: Succeeded` and `runningStatus: Running`, revision `clauseanchor--latest`, 2 vCPU, 4Gi, `ephemeralStorage` 8Gi, the same startup and liveness probes, minReplicas 0, maxReplicas 1.
+- `/api/v1/ready` answered 200 on the first try. `/samples/fictional-services-agreement.docx` answered `HTTP/2 200` with `content-type: application/vnd.openxmlformats-officedocument.wordprocessingml.document`. `/` returned the page titled ClauseAnchor.
+- Scale rule: Azure reports name `http-scaler` and an empty `concurrentRequests`. The spec, `Architecture.md` and `Deploy.md` said `http-scale` at 10. With a maximum of 1 replica the rule only wakes the app from zero. The docs do not say why Azure reports it this way, because that is not known.
+
+### The retake
+
+- `node .handoff/readme_demo/capture.mjs --reader-only`, one run, one launch, with Aryan's approval. `/api/v1/ready` answered 200 at 0 s (the app was awake). The fictional agreement uploaded, the 24-category review finished after 89 s, and the run took 107 s in all. Both DELETE requests answered 204. Console errors: 0.
+- Sizes: `start` 312,136 (dark) and 309,475 (light) bytes, `reader` 693,917 and 690,706, `reader-review` 585,583 and 584,554. The folder holds 11 files and 4,863,387 bytes, the largest 693,917.
+- Every new image was opened. Each shows the new interface, and none shows a loading or cold-start screen, an error, or cut-off content. Only the fictional agreement appears. `start` is step 2 of 3 with Buyer or customer and Saffron Lattice Private Limited selected, and the summary beside it lists the file, role, party, categories and scope. `reader` is Non-Compete, passage 1 of 2, characters 3124 to 3336. `reader-review` is Governing Law, clause 10.1, characters 5804 to 5852, which is 48 characters, the length of the quoted sentence. Both Reader shots show Needs a lawyer and Confidence not validated.
+- Seen and left alone: the Reader band reads "Processing incomplete" and "Some categories could not be finished. They are listed as Unavailable.", while the count beside it says 24 need a lawyer and none is Unavailable. The 10 November shots had the same band. I did not look into the cause and changed nothing.
+
+### Reviews
+
+- Jury of two readings, one verdict. Recruiter at 30 seconds: the captions carry the message (24 categories reviewed, all Needs a lawyer, none Found, offsets quoted; a side and a party that this build does not use yet). The alt text is not on screen, so the captions have to stand alone, and they do. Miss: the "Processing incomplete" band sits next to a count that shows nothing Unavailable. Frontend engineer, checking each alt text and caption against its image: seven roles, two detected parties, the step list, the summary items, the 24 and 0 counts, the amber note, clause 10.1 and both offset pairs all match what is drawn. Same miss. Verdict: ship, with the band recorded and not changed.
+- Over-engineering review of the diff: two cuts applied to the new `Phases.md` paragraph (a guess about what the two DELETE requests were, and a wrong pointer to where the old-shots note lived). Kept: the flag as one `if` around the three shots (the smallest change that skips them), and the paragraph itself, because the brief asks for each fact in it.
+- The copy passes (copywriting, copy-editing, stop-slop) ran in that order over the six README strings. Long clauses became short sentences, "are picked" became "you pick", the 24-category count and the amber note were added, and each caption now says what its image shows.
+
+### Checks
+
+| Check | Result |
+|---|---|
+| Attribution scrub (Rules section 1, as written) | no output. The same pattern over `README.md` and `deploy/azure-containerapp.yaml`: no output |
+| Tool-name grep | no output on the README, the backend, the spec file and the lines added to the docs outside this file |
+| Dash scan, U+2010 to U+2015 and U+2212 | control file: 1 hit. 0 hits on `README.md`, the spec file, `Architecture.md`, `Deploy.md`, `Phases.md` and `capture.mjs`, and 0 on this file after the entry was written |
+| Backend tests that read the docs (`test_docs.py`, `test_catalogue.py`, `test_real_catalogue.py`, `test_openapi_export.py`, `test_frontend.py`) | 71 passed, 1 warning |
+| Full backend and frontend suites | not run, because nothing under `backend/` or `frontend/` changed |
+
+Line ends: LF in `README.md`, `Deploy.md` and the spec file, CRLF in `BuildLog.md`, `Phases.md` and `Architecture.md`. Each edit kept its file's ending.
+
+### Processes
+
+- One headless Edge launch with a fresh throwaway profile under `.handoff/readme_demo/`, extensions and sync off, and no local server. 18 processes started and 18 closed (through the DevTools close, none left), and the profile folder was removed. The ledger is `.handoff/readme_demo/ledger.txt`. Aryan's own 11 Edge processes were running before and after, and none is in the ledger.
+- `node --check`, `pytest` and the greps ran in the foreground and exited by themselves. Git was read-only: `status`, `diff`, `log` and `check-ignore`.
+
+### Not changed, and still open
+
+- Still open from 17.9, unchanged: browser proof for the two kinds of axe result that need review (the highlight marks, and the footer at 375), and the hero's height across the three examples and layout shift for input-driven changes, neither measured.
+- Left as written, outside the brief: `SystemAudit.md` section 9 still says none of the UI pass was seen against the live server and calls the rule "the 10 request scale rule" (lines 323, 372 and 409), and the "README shots" paragraph at the end of `FrontendDesign.md` 17.9 still says the shots wait for the redeploy.
+
+### Suggested commit
+
+`docs: retake the live README shots and record the deploy`, body `Retake start, reader and reader-review from the redeployed app, update their alt text and captions, record the image, the update and the scale rule Azure reports.` Files: `README.md`, `deploy/azure-containerapp.yaml`, `docs/app/Architecture.md`, `docs/app/BuildLog.md`, `docs/app/Deploy.md`, `docs/app/Phases.md` and the six images `start`, `reader` and `reader-review` under `docs/assets/readme/`.
+
+Next action: Aryan reads the README on GitHub, commits, and pushes. Then 4-C.

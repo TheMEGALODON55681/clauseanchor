@@ -56,6 +56,9 @@ properties:
       minReplicas: 0
       maxReplicas: 1
       rules:
+        # This is the rule the app was created from. On the Express environment, Azure reports the live
+        # rule as name http-scaler with concurrentRequests empty (read on 24 November 2026). It does not
+        # matter at maxReplicas 1: the rule only wakes the app from zero.
         - name: http-scale
           http:
             metadata:

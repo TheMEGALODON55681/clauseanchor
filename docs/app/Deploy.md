@@ -104,7 +104,7 @@ The commands use the names `clauseanchor-rg` for the resource group, `clauseanch
    az containerapp create -n clauseanchor -g clauseanchor-rg --yaml azure-containerapp.yaml
    ```
 
-What the file sets: 2 vCPU and 4 Gi of memory, external HTTPS ingress to port 8000, one revision at a time, and 0 to 1 replicas with one HTTP scale rule at 10 concurrent requests. It sets a startup probe on `/api/v1/ready` (about 330 seconds for the image pull and the model load) and a liveness probe on `/api/v1/health`, and no readiness probe. The file's comments give the reasons.
+What the file sets: 2 vCPU and 4 Gi of memory, external HTTPS ingress to port 8000, one revision at a time, and 0 to 1 replicas with one HTTP scale rule. The file names the rule `http-scale` at 10 concurrent requests, and on the Express environment Azure reports it as `http-scaler` with `concurrentRequests` empty (seen on 24 November 2026). At a maximum of 1 replica the rule only wakes the app from zero, so the difference does not matter. It sets a startup probe on `/api/v1/ready` (about 330 seconds for the image pull and the model load) and a liveness probe on `/api/v1/health`, and no readiness probe. The file's comments give the reasons.
 
 Keep the maximum at 1. Sessions live in the memory of one replica, so a second copy could not find them.
 
