@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { available } from "../api/client";
 import Button from "../components/Button";
 import CategoryPicker from "../components/CategoryPicker";
+import DemoNotice from "../components/DemoNotice";
 import ErrorCard from "../components/ErrorCard";
 import { Container, MarginGrid } from "../components/Layout";
 import NoticeBanner from "../components/NoticeBanner";
@@ -156,12 +157,8 @@ export default function Start() {
                   <p className="text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
                     Your contract is processed in memory and deleted within 60 minutes.
                   </p>
-                  {/* The prepared sample needs the sample endpoint of 3-C. */}
-                  {!available.samples && (
-                    <p className="text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
-                      The sample contract is not available in this build yet.
-                    </p>
-                  )}
+                  {/* The built-in sample needs the sample endpoint of 3-C. Until then a fictional agreement is a plain download. */}
+                  <DemoNotice />
                 </>
               )}
 

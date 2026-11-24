@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { available } from "../api/client";
 import { CATALOGUE, GROUP_ORDER } from "../api/catalogue";
 import Button from "../components/Button";
+import DemoNotice from "../components/DemoNotice";
 import Disclosure from "../components/Disclosure";
 import { Container, MarginGrid, Section, SectionFrame } from "../components/Layout";
 import OffsetTag from "../components/OffsetTag";
@@ -25,10 +25,10 @@ const EVIDENCE: EvidencePassage | null = null;
 const PRIVACY_LINE = "Your contract is processed in memory and deleted within 60 minutes.";
 
 const DOES = [
-  "Finds clauses in 46 listed categories",
+  "Finds clauses in 41 listed categories",
   "Quotes your contract word for word and shows where each quote sits",
   "Adds statute notes and judgment passages in a later build",
-  "Shows how confident it is, and says so when it is unsure",
+  "Marks every finding Needs a lawyer, and shows no score",
 ];
 const DOES_NOT = [
   "Give legal advice",
@@ -45,7 +45,11 @@ const QUESTIONS: [string, string][] = [
   ["Which law does it cover?", "ClauseAnchor finds listed clause categories and does not apply any country's law. The five India-specific categories show as not available in this build yet. Statute notes and judgment passages come in a later build."],
 ];
 
-const GROUPS = GROUP_ORDER.map((group) => ({ group, names: CATALOGUE.filter((c) => c.group === group).map((c) => c.label) }));
+/* The India-specific group is listed and does not run in this build (docs/ml/CategoryCatalogue.md), so its summary says so. */
+const GROUPS = GROUP_ORDER.map((group) => {
+  const rows = CATALOGUE.filter((c) => c.group === group);
+  return { group, names: rows.map((c) => c.label), later: rows.every((c) => c.id.startsWith("in.")) };
+});
 
 function RoleFragment() {
   const pick = (role: string) => ROLES.find((r) => r.role === role)!;
@@ -63,10 +67,10 @@ function FindingFragment() {
   return (
     <div className="flex flex-col gap-3 p-4" style={{ background: "var(--paper-sheet)", border: "1px solid var(--rule-default)", borderRadius: "var(--radius-lg)" }}>
       <p style={{ fontFamily: "var(--font-serif)", fontSize: 17, lineHeight: "30px", color: "var(--ink-primary)" }}>
-        <mark className="ca-mark" style={{ ...markStyle("found"), color: "inherit", paddingBottom: 3 }}>{e.quote}</mark>
+        <mark className="ca-mark" style={{ ...markStyle(e.status), color: "inherit", paddingBottom: 3 }}>{e.quote}</mark>
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        <StatusChip status="found" size="s" />
+        <StatusChip status={e.status} size="s" />
         <OffsetTag start={e.start} end={e.end} />
       </div>
     </div>
@@ -89,10 +93,10 @@ function Ctas() {
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button to="/start" size="l">Review a contract</Button>
       </div>
-      {/* The prepared sample needs the sample endpoint of 3-C. */}
-      {!available.samples && (
-        <p className="mt-3 text-[14px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>The sample contract is not available in this build yet.</p>
-      )}
+      {/* The built-in sample needs the sample endpoint of 3-C. Until then a fictional agreement is a plain download. */}
+      <div className="mt-3">
+        <DemoNotice />
+      </div>
     </>
   );
 }
@@ -113,7 +117,7 @@ export default function Landing() {
               Know which clauses to ask a lawyer about.
             </h1>
             <p className="mt-4 max-w-[66ch] font-serif text-[17px] leading-[28px] md:text-[19px] md:leading-[32px]" style={{ color: "var(--ink-secondary)" }}>
-              ClauseAnchor checks your contract against 46 listed clause categories and marks each match in the margin. Every finding quotes your text. Where it is unsure, it says Needs a lawyer.
+              ClauseAnchor checks your contract against 41 listed clause categories and marks each match in the margin. Every finding quotes your text. In this build each one is marked Needs a lawyer.
             </p>
             <div className="mt-6">
               <Ctas />
@@ -134,7 +138,7 @@ export default function Landing() {
       >
         <h2 id="problem-title" className="t-display-md">Contracts run long. The clause types worth asking about are a known list.</h2>
         <p className="t-prose-lg mt-4">
-          The Contract Understanding Atticus Dataset labels 41 kinds of clause across 510 commercial contracts, with more than 13,000 annotations. ClauseAnchor starts from those 41 and adds five for Indian agreements.{" "}
+          The Contract Understanding Atticus Dataset labels 41 kinds of clause across 510 commercial contracts, with more than 13,000 annotations. ClauseAnchor checks those 41. The five India-specific categories it also lists come in a later build.{" "}
           <a className="link-prose" href="https://www.atticusprojectai.org/cuad/" target="_blank" rel="noreferrer">Read about the dataset</a>.
         </p>
       </Section>
@@ -165,7 +169,7 @@ export default function Landing() {
       <Section id="lawyer" labelledBy="lawyer-title" mark={mark()}>
         <h2 id="lawyer-title" className="t-display-md">Built to tell you when to call a lawyer.</h2>
         <p className="t-prose-lg mt-4">
-          When the evidence for a category is close, ClauseAnchor does not guess. It marks the category Needs a lawyer and shows you the text it found. Take the marked clauses and their quoted evidence to a lawyer, and start the conversation at the clause.
+          ClauseAnchor does not guess. In this build it marks every match Needs a lawyer and shows you the text it found. Take the marked clauses and their quoted evidence to a lawyer, and start the conversation at the clause.
         </p>
         <div className="mt-8 grid gap-8 md:grid-cols-2 md:gap-0">
           <div className="md:pr-8">
@@ -188,13 +192,13 @@ export default function Landing() {
       </Section>
 
       <Section id="categories" labelledBy="categories-title" mark={mark()}>
-        <h2 id="categories-title" className="t-display-md">46 clause categories, in seven groups.</h2>
+        <h2 id="categories-title" className="t-display-md">41 clause categories run in this build.</h2>
         <p className="t-prose-lg mt-4">
-          From basics such as governing law to India-specific clauses such as stamping and registration. A category that is not on the list is not checked.
+          From basics such as governing law to restrictions and liability. The five India-specific categories, such as stamping and registration, are listed and come in a later build. A category that is not on the list is not checked.
         </p>
         <div className="mt-8">
           {GROUPS.map((g, i) => (
-            <Disclosure key={g.group} summary={`${g.group} (${g.names.length})`} open={i === 0}>
+            <Disclosure key={g.group} summary={`${g.group} (${g.names.length}${g.later ? ", coming later" : ""})`} open={i === 0}>
               <ul className="gap-x-8 sm:columns-2">
                 {g.names.map((name) => <li key={name} className="py-0.5">{name}</li>)}
               </ul>

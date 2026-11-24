@@ -27,11 +27,11 @@ const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNo
   },
   {
     id: "categories",
-    title: "Looking for 46 kinds of clause",
+    title: "Looking for 41 kinds of clause",
     body: (
       <>
         <p>
-          The review checks a fixed list of clause categories: 41 drawn from the CUAD research dataset and five added for Indian agreements, such as stamping and registration. Each category is searched across the whole document in overlapping windows.
+          The review checks a fixed list of 41 clause categories drawn from the CUAD research dataset. The list also names five categories for Indian agreements, such as stamping and registration, which come in a later build. Each category is searched across the whole document in overlapping windows.
         </p>
         <p>
           If a provision is not on the list, it is not checked. Unhighlighted text means only that no listed category was confirmed there. A Manual review list that collects those passages is not available in this build yet, so read the full text yourself.
@@ -54,7 +54,7 @@ const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNo
           This build does not validate its confidence yet. Every finding carries the note Confidence not validated and shows no score, so read each marked passage yourself. A later build will measure how often the marks are right, against labelled contracts.
         </p>
         <p>
-          When the evidence for a category is close, ClauseAnchor marks the category Needs a lawyer instead of guessing. The Accuracy page will list the measured numbers for each category, including how often a real clause is missed without a warning. It is not available in this build yet.
+          ClauseAnchor does not guess. In this build it marks every match Needs a lawyer instead of calling it found. The Accuracy page will list the measured numbers for each category, including how often a real clause is missed without a warning. It is not available in this build yet.
         </p>
       </>
     ),
@@ -110,9 +110,10 @@ const SECTIONS: { id: string; title: string; body: ReactNode; fragment?: ReactNo
           <strong>CUAD</strong> by The Atticus Project, licensed under CC BY 4.0. Category definitions and labelled examples.{" "}
           <Link variant="external" href="https://www.atticusprojectai.org/cuad">atticusprojectai.org</Link>
         </li>
-        <li><strong>OpenNyaya</strong>. Indian judgment texts and structure.</li>
-        <li><strong>NyayaAnumana</strong>. Indian case corpus, for passage retrieval in a later build.</li>
-        <li><strong>InLegalBERT</strong>. Language model pretrained on Indian legal text.</li>
+        <li>
+          <strong>RoBERTa-base</strong>. The base model that the review model is fine-tuned from, published as{" "}
+          <Link variant="external" href="https://huggingface.co/FacebookAI/roberta-base">FacebookAI/roberta-base</Link>
+        </li>
       </ul>
     ),
   },

@@ -11,10 +11,8 @@ import { HERO_EXAMPLES, splitExcerpt, type HeroExample } from "./heroExamples";
    example (index.css, .hero-demo) and "Next example" remounts it with a new key.
    Everything here is the final state, and the CSS keyframes only add the start. */
 
-const STATUS_WORD = { found: "Found", review: "Needs a lawyer" } as const;
-
-/* Only what this build serves: the quote with its offsets, the category and the status.
-   No confidence band, no statute note and no case law, because none is real data yet. */
+/* What this build serves, drawn the way the Reader draws a review candidate: the quote with its offsets, the category, Needs a lawyer and
+   Confidence not validated. No score, no statute note and no case law, because none is real data yet. */
 function panelData(e: HeroExample): PanelData {
   return {
     title: e.category,
@@ -22,7 +20,8 @@ function panelData(e: HeroExample): PanelData {
     sectionPath: e.sectionPath,
     offsets: { start: e.start, end: e.end },
     quote: e.quote,
-    reviewNote: e.status === "review" ? REVIEW_CANDIDATE_NOTE : undefined,
+    confidence: "unvalidated",
+    reviewNote: REVIEW_CANDIDATE_NOTE,
   };
 }
 
@@ -46,7 +45,7 @@ export default function HeroDemo() {
               Next example
             </Button>
             <p className="sr-only" aria-live="polite">
-              Example {i + 1} of {HERO_EXAMPLES.length}: {e.category}, {STATUS_WORD[e.status]}
+              Example {i + 1} of {HERO_EXAMPLES.length}: {e.category}, Needs a lawyer
             </p>
           </div>
         }
@@ -72,7 +71,7 @@ export default function HeroDemo() {
             <p style={{ fontFamily: "var(--font-serif)", fontSize: 17, lineHeight: "30px", color: "var(--ink-primary)", maxWidth: "var(--measure)", minWidth: 0 }}>
               {before}
               <span className="sr-only">
-                Finding, {STATUS_WORD[e.status]}: {e.category}.{" "}
+                Finding, Needs a lawyer: {e.category}.{" "}
               </span>
               <mark
                 className="ca-mark ca-ink"

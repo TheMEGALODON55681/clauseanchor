@@ -6,15 +6,24 @@ import { HERO_EXAMPLES, splitExcerpt } from "./heroExamples.ts";
 
 const index = buildOffsetIndex(SAMPLE_CONTRACT);
 
-test("three examples show two findings and one abstention, in that order", () => {
+/* The live analyzer returns review candidates only (automatic acceptance is off, docs/ml/ReleaseHandoff.md), so each example shows
+   Needs a lawyer, the way the Reader draws it, and no caption calls a finding Found (4-B.3, DU). */
+test("three examples show the status this build returns, Needs a lawyer, for three categories in order", () => {
   assert.deepEqual(
     HERO_EXAMPLES.map((e) => [e.category, e.status]),
     [
-      ["Non-Compete", "found"],
-      ["Notice Period to Terminate Renewal", "found"],
+      ["Non-Compete", "review"],
+      ["Notice Period to Terminate Renewal", "review"],
       ["Competitive Restriction Exception", "review"],
     ],
   );
+});
+
+test("each caption says Needs a lawyer first, and none says Found", () => {
+  for (const e of HERO_EXAMPLES) {
+    assert.match(e.caption, /^Needs a lawyer\. /, e.category);
+    assert.doesNotMatch(e.caption, /\bFound\b/, e.category);
+  }
 });
 
 test("each finding's offsets slice the sample contract to its quote", () => {

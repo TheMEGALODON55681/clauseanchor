@@ -28,6 +28,34 @@ test("a delete that finds the session gone goes to the Expired page, and any oth
   assert.ok(remove.indexOf("await client.deleteDocument") < remove.indexOf("forgetDoc(documentId)"), "forgotten only after the delete succeeded");
 });
 
+/* SA3: deleting the last document leaves the session with nothing to keep, so it ends on the server and frees its slot. A delete that
+   leaves another document does not. A failed end is ignored, because the sweep ends the session anyway. The Reader's own effect sends
+   a visitor with no token to the Expired page, so it must stand down while the Reader is the one leaving. */
+
+test("deleting the last document ends the session, after the document is forgotten, and a failed end is ignored", () => {
+  const remove = source.match(/async function remove\(\) \{[\s\S]*?\n  \}/)?.[0] ?? "";
+  assert.match(remove, /Object\.keys\(docs\)\.some\(\(id\) => id !== documentId\)/);
+  assert.match(remove, /client\.endSession\(token\)\.catch\(\(\) => undefined\)/);
+  assert.ok(remove.indexOf("forgetDoc(documentId)") < remove.indexOf("client.endSession"), "forgotten first");
+  assert.ok(remove.indexOf("client.endSession") < remove.indexOf('navigate("/expired?reason=deleted"'), "ended before it leaves");
+});
+
+test("the effect that sends a visitor with no token to Expired stands down while the Reader leaves", () => {
+  assert.match(source, /const leaving = useRef\(false\)/);
+  const effect = source.match(/Contract text is fetched once[\s\S]*?goExpired\(\);\n      return;\n    \}/)?.[0] ?? "";
+  assert.match(effect, /if \(leaving\.current\) return;/);
+  assert.ok(effect.indexOf("leaving.current") < effect.indexOf("goExpired()"), "checked before it sends anyone away");
+});
+
+/* 4-B.3, DV. This build runs no case law retrieval, so a panel that prints "Case law 0" and "No verified case law found" claims a search
+   that never ran (the panel's own comment says so). The section is drawn only for a clause that carries a passage. */
+
+test("the panel draws a case law section only when the clause carries a passage", () => {
+  assert.match(source, /caseLaw: clause\.passages\.length \? \(/);
+  assert.match(source, /caseLawCount: clause\.passages\.length \|\| undefined/);
+  assert.doesNotMatch(source, /<JudgmentCard state="empty" \/>/);
+});
+
 /* View list opens the categories and pages that were not finished, and is not drawn when there is nothing to show. */
 
 const scope = readFileSync(new URL("../components/ScopePanel.tsx", import.meta.url), "utf8");

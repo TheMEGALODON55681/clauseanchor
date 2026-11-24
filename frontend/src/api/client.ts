@@ -15,6 +15,8 @@ export interface ApiClient {
   getAnalysis(token: string, analysisId: string): Promise<Analysis>;
   cancelJob(token: string, jobId: string): Promise<Job>;
   deleteDocument(token: string, documentId: string): Promise<void>;
+  /** Ends the session now and frees its slot (SA3). A session that is already gone counts as ended. `keepalive` lets a page that is leaving send it. */
+  endSession(token: string, options?: { keepalive?: boolean }): Promise<void>;
   /* The four below have no endpoint until Phase 3, and the adapter refuses them (`not_available`). A page shows its own
      "not available" state while the matching flag in `available` is false, and does not call them. */
   setParty(token: string, documentId: string, binding: PartyBinding): Promise<void>;

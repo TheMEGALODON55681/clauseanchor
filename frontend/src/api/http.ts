@@ -139,6 +139,15 @@ export function createHttpClient(doFetch: typeof fetch): ApiClient {
       }
     },
 
+    // A session the API no longer knows (401) is what ending one wants, so it counts as done. Anything else is an error the caller may ignore.
+    endSession: async (token, options) => {
+      try {
+        await send("/sessions/current", { method: "DELETE", token, ...(options?.keepalive ? { keepalive: true } : {}) });
+      } catch (e) {
+        if (!(e instanceof ApiError && e.code === "expired")) throw e;
+      }
+    },
+
     setParty: async () => notAvailable(),
     getManualReview: async () => notAvailable(),
     downloadReport: async () => notAvailable(),

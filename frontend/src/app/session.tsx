@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { client } from "../api/client";
 import type { Role } from "../api/types";
@@ -58,6 +58,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     pending.current = null;
     setToken(null);
     setDocs({});
+  }, []);
+
+  // SA3: a page that is really leaving frees its slot on the server. The token is state, so the handler reads it through a ref.
+  const tokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
+  useEffect(() => {
+    const onHide = (e: PageTransitionEvent) => {
+      // A page that goes into the back-forward cache may come back with its token, so it ends nothing.
+      if (e.persisted || !tokenRef.current) return;
+      void client.endSession(tokenRef.current, { keepalive: true }).catch(() => undefined);
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
   }, []);
 
   const setDoc = useCallback((id: string, patch: Partial<DocMeta>) => {

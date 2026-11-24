@@ -91,6 +91,8 @@ export default function Reader() {
   const seen = useRef(new Set<string>());
   // The newest role change wins: an answer for an older one is dropped, whatever order the answers arrive in.
   const roleSeq = useRef(0);
+  // Set while the Reader ends the session itself, so the effect below does not read the missing token as an expired session.
+  const leaving = useRef(false);
 
   const goExpired = useCallback(() => navigate("/expired?reason=expired", { replace: true, viewTransition: true }), [navigate]);
 
@@ -106,6 +108,7 @@ export default function Reader() {
 
   /* Contract text is fetched once and kept in memory only. */
   useEffect(() => {
+    if (leaving.current) return;
     if (!token || !meta?.analysisJobId || !meta.analysisId) {
       goExpired();
       return;
@@ -453,6 +456,12 @@ export default function Reader() {
     try {
       await client.deleteDocument(token, documentId);
       forgetDoc(documentId);
+      // The last document is gone, so nothing keeps the session open: free its slot now (SA3). A failed end is ignored, because the sweep ends it.
+      if (!Object.keys(docs).some((id) => id !== documentId)) {
+        leaving.current = true;
+        await client.endSession(token).catch(() => undefined);
+        endSession();
+      }
       navigate("/expired?reason=deleted", { replace: true, viewTransition: true });
     } catch (e) {
       setConfirmDelete(false);
@@ -575,22 +584,19 @@ export default function Reader() {
               ))}
             </div>
           ) : undefined,
-          caseLaw: (
+          // This build runs no case law retrieval, so the section is drawn only for a clause that carries a passage (4-B.3, DV).
+          caseLaw: clause.passages.length ? (
             <div className="flex flex-col gap-2">
-              {clause.passages.length ? (
-                clause.passages.map((p) => (
-                  <JudgmentCard
-                    key={p.id}
-                    authority={authorityOf(p.authority_status)}
-                    passage={{ caseName: p.case_name, court: p.court, year: p.year, citation: p.citation, text: p.text, sourceUrl: p.source_url }}
-                  />
-                ))
-              ) : (
-                <JudgmentCard state="empty" />
-              )}
+              {clause.passages.map((p) => (
+                <JudgmentCard
+                  key={p.id}
+                  authority={authorityOf(p.authority_status)}
+                  passage={{ caseName: p.case_name, court: p.court, year: p.year, citation: p.citation, text: p.text, sourceUrl: p.source_url }}
+                />
+              ))}
             </div>
-          ),
-          caseLawCount: clause.passages.length,
+          ) : undefined,
+          caseLawCount: clause.passages.length || undefined,
           pager:
             cat.clauses.length > 1 ? (
               <Pager

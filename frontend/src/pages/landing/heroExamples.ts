@@ -7,7 +7,7 @@ import { buildOffsetIndex, sliceCp } from "../../lib/offsets.ts";
 
 export type HeroExample = {
   category: string;
-  status: "found" | "review";
+  status: "review";
   sectionPath: string;
   /** What this example shows, set in the margin. */
   caption: string;
@@ -22,9 +22,9 @@ export type HeroExample = {
 export const HERO_EXAMPLES: HeroExample[] = [
   {
     category: "Non-Compete",
-    status: "found",
+    status: "review",
     sectionPath: "Clause 4 › 4.1",
-    caption: "Found. The marked words are the clause itself.",
+    caption: "Needs a lawyer. The marked words are the text it found.",
     excerpt:
       "4.1 During the term of this Agreement and for a period of two (2) years after its termination or expiry, the Provider shall not, directly or indirectly, provide warehouse management or logistics services to any business that competes with the Company anywhere in India.",
     excerptStart: 2591,
@@ -35,9 +35,9 @@ export const HERO_EXAMPLES: HeroExample[] = [
   },
   {
     category: "Notice Period to Terminate Renewal",
-    status: "found",
+    status: "review",
     sectionPath: "Clause 3 › 3.2",
-    caption: "Found, and quoted word for word.",
+    caption: "Needs a lawyer. The quote is word for word.",
     excerpt:
       '3.2 On expiry of the initial term, this Agreement shall automatically renew for successive periods of one (1) year each (each a "Renewal Term"), unless either Party gives the other written notice of non-renewal at least ninety (90) days before the end of the then current term.',
     excerptStart: 2296,
@@ -49,7 +49,7 @@ export const HERO_EXAMPLES: HeroExample[] = [
     category: "Competitive Restriction Exception",
     status: "review",
     sectionPath: "Clause 4 › 4.2",
-    caption: "Needs a lawyer. The evidence is close, so ClauseAnchor shows the text and does not decide.",
+    caption: "Needs a lawyer. It shows the text and does not decide.",
     excerpt:
       "4.2 The restriction in Clause 4.1 shall not apply to services that the Provider was already providing to an existing client on the Effective Date and has disclosed in writing to the Company.",
     excerptStart: 2862,

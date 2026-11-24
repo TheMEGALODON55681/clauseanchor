@@ -37,7 +37,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function useStartFlow() {
   const navigate = useNavigate();
-  const { ensureToken, endSession, setDoc } = useSession();
+  const { ensureToken, endSession, setDoc, forgetDoc, docs } = useSession();
+  // The session's documents as of the latest render, for the sweep in `upload` (a ref, so `upload` keeps its identity).
+  const docsRef = useRef(docs);
+  docsRef.current = docs;
   const [flow, dispatch] = useReducer(flowReducer, initialFlow);
   const [docId, setDocId] = useState<string | null>(null);
   const [doc, setDocument] = useState<Document | null>(null);
@@ -85,8 +88,16 @@ export function useStartFlow() {
       let uploaded = false;
       try {
         const token = await ensureToken();
-        if (replaced) await client.deleteDocument(token, replaced);
+        if (replaced) {
+          await client.deleteDocument(token, replaced);
+          forgetDoc(replaced);
+        }
         current.current = null;
+        // SA3, start over: a document left from an earlier review is abandoned by this upload, so its text goes now. Opening /start alone deletes nothing.
+        for (const id of Object.keys(docsRef.current)) if (id !== replaced) {
+          await client.deleteDocument(token, id);
+          forgetDoc(id);
+        }
         const { document_id, parse_job_id } = await client.uploadDocument(token, input);
         if (mine !== seq.current) {
           // The user chose another file while this one was on its way. Nothing refers to it, so it goes.
@@ -119,7 +130,7 @@ export function useStartFlow() {
         dispatch({ type: uploaded ? "parse-failed" : "upload-failed", seq: mine, error: flowError(e) });
       }
     },
-    [ensureToken, setDoc, gone],
+    [ensureToken, setDoc, forgetDoc, gone],
   );
 
   /** Uploads the same file again, after a failed upload or a failed read. */

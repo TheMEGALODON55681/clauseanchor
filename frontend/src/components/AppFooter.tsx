@@ -17,7 +17,7 @@ export default function AppFooter({ sampleMode = false, creditsHref = "#" }: { s
         Not legal advice. ClauseAnchor points to text in your contract. It does not tell you what the law requires.
       </p>
       <p style={{ fontSize: 12, color: "var(--ink-tertiary)" }}>
-        Case data: CUAD by The Atticus Project (CC BY 4.0), OpenNyaya, NyayaAnumana.{" "}
+        Clause data: CUAD by The Atticus Project (CC BY 4.0). Model: RoBERTa-base.{" "}
         {sampleMode && "Sample mode: showing a prepared example. "}
         <Link variant="inline" href={creditsHref}>Data sources and credits</Link>
       </p>
