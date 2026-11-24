@@ -6,6 +6,7 @@ hashed files in `assets/`, and unhashed files beside them.
 
 from __future__ import annotations
 
+import mimetypes
 from collections.abc import Callable
 from pathlib import Path
 
@@ -18,6 +19,7 @@ INDEX = '<!doctype html><title>Made up</title><div id="root"></div>'
 ASSET = "/assets/index-1a2b3c4d.js"
 ASSET_TEXT = "export default 1\n"
 IMMUTABLE = "public, max-age=31536000, immutable"
+DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 MakeClient = Callable[..., TestClient]
 
 
@@ -29,6 +31,8 @@ def dist(tmp_path: Path) -> Path:
     (root / "index.html").write_text(INDEX, encoding="utf-8")
     (root / ASSET.lstrip("/")).write_bytes(ASSET_TEXT.encode())  # bytes: no Windows newline change
     (root / "fonts" / "plain.woff2").write_bytes(b"wOF2")
+    (root / "samples").mkdir()
+    (root / "samples" / "plain.docx").write_bytes(b"PK\x03\x04")
     (root / "favicon.svg").write_text("<svg xmlns='http://www.w3.org/2000/svg'/>", encoding="utf-8")
     return root
 
@@ -60,6 +64,24 @@ def test_an_asset_is_served(web: TestClient) -> None:
 def test_a_font_is_served_with_a_font_type(web: TestClient) -> None:
     # Python's own table has no .woff2, and a slim Linux image has no /etc/mime.types
     assert web.get("/fonts/plain.woff2").headers["content-type"] == "font/woff2"
+
+
+@pytest.fixture
+def slim_image_types(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Takes `.docx` out of Python's table, as a slim Linux image has it. A Windows registry with
+    Word installed supplies the type, so without this the test passes on a laptop and fails live."""
+    monkeypatch.delitem(mimetypes.types_map, ".docx", raising=False)
+
+
+def test_a_docx_sample_is_served_with_the_word_type_and_stays_uncached(
+    slim_image_types: None, web: TestClient
+) -> None:
+    # Without the type the file goes out under a generic one (the live image sent text/plain)
+    response = web.get("/samples/plain.docx")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == DOCX
+    assert response.headers["cache-control"] == "no-store"
+    assert response.content == b"PK\x03\x04"
 
 
 def test_the_api_still_answers_json(web: TestClient) -> None:

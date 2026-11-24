@@ -67,8 +67,11 @@ def _serve_frontend(app: FastAPI, dist: Path) -> None:
     trailing slash its redirect, and an unknown /api path its 404 envelope instead of index.html.
     The app uses hash routes, so a file that does not exist is a 404 and needs no fallback.
     """
-    # Python's table has no .woff2, and a slim Linux image has no mime.types to add it
+    # Python's table has no .woff2 or .docx, and a slim Linux image has no mime.types to add them
     mimetypes.add_type("font/woff2", ".woff2")
+    mimetypes.add_type(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"
+    )
     files = StaticFiles(directory=dist, html=True)
     not_found = app.router.not_found
 
