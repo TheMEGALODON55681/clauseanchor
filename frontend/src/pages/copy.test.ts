@@ -135,3 +135,10 @@ test("the switch and the summary line are named for the categories, not for a la
 test("the Reader's empty panel does not promise case law", () => {
   assert.doesNotMatch(read("./Reader.tsx"), /and any case law/);
 });
+
+/* 4-B.4: the Gallery's partial toolbar specimen reads as the Reader's line does, and claims no Unavailable row. */
+test("the Gallery's partial toolbar specimen no longer claims rows listed as Unavailable", () => {
+  const gallery = read("./Gallery.tsx");
+  assert.doesNotMatch(gallery, /could not be finished/);
+  assert.match(gallery, /partialNote="Partial result\. 3 categories were checked in part\. View list has the details\."/);
+});

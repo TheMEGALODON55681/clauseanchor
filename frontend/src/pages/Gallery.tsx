@@ -745,7 +745,7 @@ function Library({ mode }: { mode: Mode }) {
       <Group label="Reader toolbar">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {(["complete", "partial", "sample-mode"] as const).map((v) => (
-            <Labeled key={v} label={v} width="100%"><ReaderToolbar variant={v} filename={SAMPLE_FILE} meta="8 pages" partialNote="Some categories could not be finished. They are listed as Unavailable." /></Labeled>
+            <Labeled key={v} label={v} width="100%"><ReaderToolbar variant={v} filename={SAMPLE_FILE} meta="8 pages" partialNote="Partial result. 3 categories were checked in part. View list has the details." /></Labeled>
           ))}
         </div>
       </Group>

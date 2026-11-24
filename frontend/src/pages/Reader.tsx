@@ -7,7 +7,7 @@ import { ApiError, type Analysis, type Clause, type Document, type Job, type Man
 import { CATALOGUE, CATEGORY_BY_ID, GROUP_ORDER } from "../api/catalogue";
 import { buildOffsetIndex, sliceCp, toUtf16, type OffsetIndex } from "../lib/offsets";
 import { authorityOf } from "../lib/authority";
-import { categoryStatus, freshDelays, listRows, sessionEndsIn, unfinishedList } from "../lib/reader";
+import { categoryStatus, freshDelays, listRows, partialLine, sessionEndsIn, unfinishedList } from "../lib/reader";
 import { suggestedParty } from "../lib/startFlow";
 import { panelTransition } from "../lib/panelTransition";
 import { useMedia, useReducedMotion } from "../lib/useMedia";
@@ -383,7 +383,6 @@ export default function Reader() {
 
   // The categories that were, or are being, checked. An Unavailable one is listed but not reviewed.
   const reviewedCount = rows.filter((r) => r.status !== "unavailable").length;
-  const unavailableNames = (analysis?.categories ?? []).filter((c) => c.status === "unavailable").map((c) => labelOf(c.category_id));
   // What View list opens: the categories and the pages that were not finished.
   const unfinished = useMemo(() => unfinishedList(rows, catMap, doc), [rows, catMap, doc]);
 
@@ -708,9 +707,7 @@ export default function Reader() {
         ? "The review took too long, so ClauseAnchor stopped it. Categories not reached show as Unavailable."
         : job?.status === "failed"
           ? "The review stopped early. Categories not reached are listed as Unavailable."
-        : unavailableNames.length
-          ? `Partial result. Not finished: ${unavailableNames.join(", ")}.`
-          : "Some categories could not be finished. They are listed as Unavailable.";
+        : partialLine(unfinished);
 
   // Your side has no endpoint until 3-A. The menu says so in place of the roles.
   const roleItems: MenuItem[] = available.partyBinding

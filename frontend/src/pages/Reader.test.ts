@@ -69,6 +69,23 @@ test("View list is drawn only with a list behind it, and it opens that list", ()
   assert.match(source, /unfinished=\{unfinished\}/);
 });
 
+/* 4-B.4: the toolbar and the Review scope band take their words from what the API returned (reader.test.ts), so neither holds a fixed
+   sentence that claims Unavailable rows, and the two lines for a cancelled, timed out or failed review stay as they were. */
+
+test("the toolbar note and the scope band are built from the list of what was left out", () => {
+  assert.match(source, /partialLine\(unfinished\)/);
+  assert.match(scope, /incompleteBand\(unfinished\)/);
+  assert.doesNotMatch(source, /Some categories could not be finished/);
+  assert.doesNotMatch(scope, /some categories or pages were not finished/);
+  assert.doesNotMatch(source, /Partial result\. Not finished/);
+});
+
+test("a cancelled, timed out or failed review keeps its own line", () => {
+  assert.match(source, /"You stopped the review\. Categories not reached are listed as Unavailable\."/);
+  assert.match(source, /"The review took too long, so ClauseAnchor stopped it\. Categories not reached show as Unavailable\."/);
+  assert.match(source, /"The review stopped early\. Categories not reached are listed as Unavailable\."/);
+});
+
 /* A switch that adds five unavailable categories lists them whenever it is on: the Reader reads the scope from the analysis. */
 
 test("the Reader lists the India-specific rows from the analysis's own scope", () => {

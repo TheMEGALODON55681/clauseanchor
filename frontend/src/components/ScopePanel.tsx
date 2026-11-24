@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import type { Unfinished } from "../lib/reader";
+import { incompleteBand, type Unfinished } from "../lib/reader";
 import Button from "./Button";
 import { InfoIcon, PersonWithDocIcon } from "./icons";
 
@@ -85,7 +85,7 @@ export default function ScopePanel({
           }}
         >
           <span style={{ display: "inline-flex", marginTop: 1 }}><PersonWithDocIcon size={14} /></span>
-          Processing incomplete: some categories or pages were not finished
+          {incompleteBand(unfinished)}
         </div>
       )}
       {variant === "sample-mode" && (

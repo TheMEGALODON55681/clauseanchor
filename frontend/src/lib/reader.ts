@@ -79,6 +79,11 @@ export function listRows(requested: readonly string[], india: boolean, byId: Rea
 
 export type Unfinished = { label: string; note: string };
 
+const IN_PART = "Checked in part";
+const NOT_CHECKED = "Not checked";
+const UNREAD = "Could not be read";
+const WHOLE_DOC = "Part of the document";
+
 /** The page warnings that set `partial` and name a page (ParserContract.md section 10). */
 const UNREAD_PAGE = new Set(["PARTIALLY_SCANNED_PDF", "UNMAPPED_GLYPHS"]);
 
@@ -86,13 +91,35 @@ const UNREAD_PAGE = new Set(["PARTIALLY_SCANNED_PDF", "UNMAPPED_GLYPHS"]);
 export function unfinishedList(rows: readonly ListRow[], byId: ReadonlyMap<string, Category>, doc: Pick<Document, "partial" | "warnings"> | null): Unfinished[] {
   const out: Unfinished[] = [];
   for (const r of rows) {
-    const note = r.note ?? (r.pending ? null : r.status === "unavailable" ? "Not checked" : byId.get(r.id)?.search_complete === false ? "Checked in part" : null);
+    const note = r.note ?? (r.pending ? null : r.status === "unavailable" ? NOT_CHECKED : byId.get(r.id)?.search_complete === false ? IN_PART : null);
     if (note) out.push({ label: CATEGORY_BY_ID[r.id]?.label ?? r.id, note });
   }
   if (doc?.partial) {
     const pages = [...new Set(doc.warnings.filter((w) => w.page !== null && UNREAD_PAGE.has(w.code)).map((w) => w.page as number))].sort((a, b) => a - b);
-    if (pages.length) for (const p of pages) out.push({ label: `Page ${p}`, note: "Could not be read" });
-    else out.push({ label: "Part of the document", note: "Could not be read" });
+    if (pages.length) for (const p of pages) out.push({ label: `Page ${p}`, note: UNREAD });
+    else out.push({ label: WHOLE_DOC, note: UNREAD });
   }
   return out;
 }
+
+/** What a finished review left out, as counts of what View list names. The India-specific rows are not counted: the review never asked
+ *  for them, so they are not why it is incomplete. An empty list says so instead of naming rows that do not exist. */
+function leftOut(list: readonly Unfinished[]): string {
+  const n = (note: string) => list.filter((u) => u.note === note).length;
+  const inPart = n(IN_PART);
+  const notChecked = n(NOT_CHECKED);
+  const pages = list.filter((u) => u.note === UNREAD && u.label !== WHOLE_DOC).length;
+  const s = [
+    inPart && `${inPart} ${inPart === 1 ? "category was" : "categories were"} checked in part.`,
+    notChecked && `${notChecked} ${notChecked === 1 ? "category was" : "categories were"} not checked.`,
+    pages && `${pages} ${pages === 1 ? "page" : "pages"} could not be read.`,
+    list.some((u) => u.label === WHOLE_DOC) && `${WHOLE_DOC} could not be read.`,
+  ].filter(Boolean);
+  return s.length ? s.join(" ") : "The result does not say what was left out.";
+}
+
+/** The toolbar note for a review the API ended `partial`. */
+export const partialLine = (list: readonly Unfinished[]) => `Partial result. ${leftOut(list)}${list.length ? " View list has the details." : ""}`;
+
+/** The Review scope band for a finished review whose `processing_complete` is false. */
+export const incompleteBand = (list: readonly Unfinished[]) => `Processing incomplete: ${leftOut(list)}`;

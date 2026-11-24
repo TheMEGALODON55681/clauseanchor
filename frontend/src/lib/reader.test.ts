@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { INDIA_NOTE, categoryStatus, freshDelays, httpsUrl, listRows, nearestMark, sessionEndsIn, unfinishedList } from "./reader.ts";
+import { INDIA_NOTE, categoryStatus, freshDelays, httpsUrl, incompleteBand, listRows, nearestMark, partialLine, sessionEndsIn, unfinishedList } from "./reader.ts";
 import { INDIA_IDS } from "../api/catalogue.ts";
 import type { Category, Clause } from "../api/types.ts";
 
@@ -153,6 +153,54 @@ test("unfinishedList: names the India categories, the unavailable ones and the o
   ]);
   assert.deepEqual(out.slice(2).map((o) => o.note), Array(5).fill(INDIA_NOTE));
   assert.equal(out.length, 7);
+});
+
+/* 4-B.4: a finished review the API calls `partial` says what it left out, from the fields it returns. The live demo run is the case:
+   a clean parse, every category abstained (so none Unavailable), and a few categories whose question the core cut to 64 tokens,
+   which it reports as `search_complete: false`. The old toolbar line claimed rows listed as Unavailable that did not exist. */
+
+const DEMO_IDS = ["cuad.governing_law", "cuad.exclusivity", "cuad.change_of_control", "cuad.cap_on_liability", "cuad.non_compete"];
+const demoCats = byId(...DEMO_IDS.map((id, i) => cat(id, "abstained", 1, i === 0 || i === 4)));
+const demoList = unfinishedList(listRows(DEMO_IDS, false, demoCats, true), demoCats, { partial: false, warnings: [] });
+
+test("partialLine: the demo run says three categories were checked in part, and never claims an Unavailable row", () => {
+  assert.equal(demoList.length, 3);
+  assert.equal(partialLine(demoList), "Partial result. 3 categories were checked in part. View list has the details.");
+  assert.doesNotMatch(partialLine(demoList), /unavailable/i);
+});
+
+test("incompleteBand: the Review scope band says the same thing without the pointer", () => {
+  assert.equal(incompleteBand(demoList), "Processing incomplete: 3 categories were checked in part.");
+});
+
+test("partialLine: one of each kind is singular, and the kinds read in a fixed order", () => {
+  const list = [
+    { label: "Page 4", note: "Could not be read" },
+    { label: "Cap on Liability", note: "Not checked" },
+    { label: "Governing Law", note: "Checked in part" },
+  ];
+  assert.equal(partialLine(list), "Partial result. 1 category was checked in part. 1 category was not checked. 1 page could not be read. View list has the details.");
+  assert.equal(incompleteBand(list), "Processing incomplete: 1 category was checked in part. 1 category was not checked. 1 page could not be read.");
+});
+
+test("partialLine: pages are counted, and a file with no pages says part of the document", () => {
+  const pages = [{ label: "Page 4", note: "Could not be read" }, { label: "Page 7", note: "Could not be read" }];
+  assert.match(partialLine(pages), /^Partial result\. 2 pages could not be read\./);
+  assert.equal(incompleteBand([{ label: "Part of the document", note: "Could not be read" }]), "Processing incomplete: Part of the document could not be read.");
+});
+
+test("partialLine: the India-specific rows are not counted, because the review never asked for them", () => {
+  const cats = byId(cat(THREE[0], "abstained", 1), cat(THREE[1], "abstained", 1), cat(THREE[2], "abstained", 1, false));
+  const list = unfinishedList(listRows(THREE, true, cats, true), cats, { partial: false, warnings: [] });
+  assert.equal(list.length, 1 + 5, "View list still names them");
+  assert.equal(incompleteBand(list), "Processing incomplete: 1 category was checked in part.");
+});
+
+test("partialLine: when nothing in the fields names a cause, it says so, invents no rows and points to no list that is not drawn", () => {
+  assert.equal(partialLine([]), "Partial result. The result does not say what was left out.");
+  assert.equal(incompleteBand([]), "Processing incomplete: The result does not say what was left out.");
+  // View list is drawn whenever the list has a row, the India rows included.
+  assert.equal(partialLine([{ label: "Insurance", note: INDIA_NOTE }]), "Partial result. The result does not say what was left out. View list has the details.");
 });
 
 test("unfinishedList: names the pages that could not be read, or the document when the file has no pages", () => {
