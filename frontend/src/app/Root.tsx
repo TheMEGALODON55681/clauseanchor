@@ -86,6 +86,7 @@ export default function Root() {
       <div style={{ position: "relative", zIndex: 30 }}>
         <AppHeader
           variant={!wide ? "mobile" : "default"}
+          contained={!inReader}
           links={links}
           homeHref="#/"
           trailing={
@@ -111,18 +112,18 @@ export default function Root() {
               background: "var(--paper-sheet)",
               borderBottom: "1px solid var(--rule-default)",
               boxShadow: "var(--elevation-2)",
-              padding: "8px 20px 14px",
-              flexDirection: "column",
-              gap: 10,
             }}
           >
-            {links.map((l) => (
-              <span key={l.label} aria-current={l.current ? "page" : undefined} style={{ minHeight: 36, display: "flex", alignItems: "center" }}>
-                <Link variant="standalone" href={l.href}>{l.label}</Link>
-              </span>
-            ))}
-            <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>Not legal advice</span>
-            {reviewButton}
+            {/* The same side edges as the header above it. */}
+            <div className={inReader ? "flex flex-col gap-[10px] px-5 pb-[14px] pt-2" : "container-page flex flex-col gap-[10px] pb-[14px] pt-2"}>
+              {links.map((l) => (
+                <span key={l.label} aria-current={l.current ? "page" : undefined} style={{ minHeight: 36, display: "flex", alignItems: "center" }}>
+                  <Link variant="standalone" href={l.href}>{l.label}</Link>
+                </span>
+              ))}
+              <span style={{ fontSize: 13, color: "var(--ink-tertiary)" }}>Not legal advice</span>
+              {reviewButton}
+            </div>
           </nav>
         )}
       </div>

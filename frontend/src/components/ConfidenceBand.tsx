@@ -32,7 +32,7 @@ export default function ConfidenceBand({ variant, size = "compact", calibration 
     fontSize: size === "compact" ? 12 : 13,
     fontWeight: 500,
     color: cfg.color,
-    // The track gives way in a narrow panel, never the label.
+    // The label never breaks or shrinks. In a narrow panel the row wraps and the label drops under the track.
     flexShrink: 0,
     whiteSpace: "nowrap",
   } as const;
@@ -74,7 +74,7 @@ export default function ConfidenceBand({ variant, size = "compact", calibration 
 
   return (
     <div className="font-sans inline-flex flex-col gap-2">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {track}
         {calibration ? (
           <button

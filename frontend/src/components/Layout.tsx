@@ -8,9 +8,10 @@ export function Container({ children }: { children: ReactNode }) {
   return <div className="container-page">{children}</div>;
 }
 
-export function MarginGrid({ margin, aside, children }: { margin?: ReactNode; aside?: ReactNode; children: ReactNode }) {
+/** `center` puts the margin, the main column and the aside on one midline from 1280px, for a row whose text and visual differ in height. */
+export function MarginGrid({ margin, aside, center = false, children }: { margin?: ReactNode; aside?: ReactNode; center?: boolean; children: ReactNode }) {
   return (
-    <div className="margin-grid">
+    <div className={center ? "margin-grid margin-grid-center" : "margin-grid"}>
       {margin && <div className="margin-grid-margin">{margin}</div>}
       <div className="margin-grid-main">{children}</div>
       {aside && <div className="margin-grid-aside">{aside}</div>}
@@ -18,10 +19,11 @@ export function MarginGrid({ margin, aside, children }: { margin?: ReactNode; as
   );
 }
 
-/** The section shell: the rule above, the vertical rhythm and the page width. A section that needs more than one grid row builds its rows inside it. */
-export function SectionFrame({ id, labelledBy, children }: { id?: string; labelledBy?: string; children: ReactNode }) {
+/** The section shell: the rule above, the vertical rhythm and the page width. A section that needs more than one grid row builds its rows inside it.
+    `compact` is for a section that holds one heading and a short block: 48 and 64px of padding, where the rest take 64, 80 and 96. */
+export function SectionFrame({ id, labelledBy, compact = false, children }: { id?: string; labelledBy?: string; compact?: boolean; children: ReactNode }) {
   return (
-    <section id={id} aria-labelledby={labelledBy} className="border-t py-16 first:border-t-0 md:py-24 lg:py-32" style={{ borderColor: "var(--rule-default)" }}>
+    <section id={id} aria-labelledby={labelledBy} className={`border-t first:border-t-0 ${compact ? "py-12 md:py-16" : "py-16 md:py-20 lg:py-24"}`} style={{ borderColor: "var(--rule-default)" }}>
       <Container>{children}</Container>
     </section>
   );
@@ -43,16 +45,18 @@ export function Section({
   labelledBy,
   mark,
   aside,
+  compact,
   children,
 }: {
   id?: string;
   labelledBy?: string;
   mark?: string;
   aside?: ReactNode;
+  compact?: boolean;
   children: ReactNode;
 }) {
   return (
-    <SectionFrame id={id} labelledBy={labelledBy}>
+    <SectionFrame id={id} labelledBy={labelledBy} compact={compact}>
       <MarginGrid margin={mark && <span aria-hidden className="t-section-mark">{mark}</span>} aside={aside}>
         {children}
       </MarginGrid>

@@ -381,6 +381,42 @@ html {
     }
     .margin-grid > .margin-grid-aside { grid-column: 3; grid-row: 1; }
   }
+  /* A row whose text and visual differ in height (the landing steps) shares one midline from 1280. */
+  @media (min-width: 1280px) {
+    .margin-grid-center { align-items: center; }
+  }
+
+  /* The landing hero on one grid. Below 1024 it is one column in reading order: the headline block, the example control, the sheet,
+     its caption, the panel. From 1024 the caption sits in the margin column beside the sheet and the panel is under it. From 1280
+     the panel moves to the aside and runs from the headline's top beside the headline block, the control and the sheet. */
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 16px;
+  }
+  .hero-grid > .hero-control { margin-top: 24px; }
+  @media (min-width: 768px) {
+    .hero-grid > .hero-control { margin-top: 40px; }
+  }
+  @media (min-width: 1024px) {
+    .hero-grid {
+      grid-template-columns: var(--w-margin) minmax(0, 1fr);
+      column-gap: 2rem;
+    }
+    .hero-grid > .hero-head { grid-column: 2; grid-row: 1; }
+    .hero-grid > .hero-control { grid-column: 2; grid-row: 2; }
+    .hero-grid > .hero-sheet-cell { grid-column: 2; grid-row: 3; }
+    .hero-grid > .hero-caption { grid-column: 1; grid-row: 3; align-self: start; }
+    .hero-grid > .hero-panel-cell { grid-column: 2; grid-row: 4; }
+  }
+  @media (min-width: 1280px) {
+    /* The panel is taller than the three rows beside it. A fourth row takes the leftover height, so the first three keep their own. */
+    .hero-grid {
+      grid-template-columns: var(--w-margin) minmax(0, var(--w-main)) minmax(0, 1fr);
+      grid-template-rows: auto auto auto 1fr;
+    }
+    .hero-grid > .hero-panel-cell { grid-column: 3; grid-row: 1 / span 4; align-self: start; }
+  }
 
   /* The Reader's paper: the measure, 48 px of margin on each side and a 1 px edge. It gives way to a
      narrow viewport, and the band above the sheet takes the same width. */
@@ -618,6 +654,33 @@ html {
 }
 .ca-toast {
   animation: ca-rise var(--dur-state) var(--ease-out) backwards;
+}
+
+/* State motion (4-B.3). A new step of the start flow fades in and rises 8px, once per change. */
+@keyframes ca-step-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+.ca-step {
+  animation: ca-step-in var(--dur-state) var(--ease-out) backwards;
+}
+
+/* A file the page accepted: its icon grows in from 0.9 with a fade, on the ca-pop keyframes above. */
+.ca-accept {
+  --pop-from: 0.9;
+  display: inline-flex;
+  animation: ca-pop var(--dur-state) var(--ease-out) backwards;
+}
+
+/* The work done in a running review, as a 2px bar on the foot of the progress band. --fill is a share between 0 and 1. The bar
+   scales from the left, so a jump from 12 steps to 18 reads as movement and never as a flicker. */
+.ca-bar {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: var(--anchor-600);
+  transform-origin: left;
+  transform: scaleX(var(--fill, 0));
+  transition: transform var(--dur-state) var(--ease-out);
 }
 
 /* The Reader's detail panel cross-fades when a finding is picked with the pointer

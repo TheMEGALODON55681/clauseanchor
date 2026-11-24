@@ -108,7 +108,7 @@ export default function Start() {
             </aside>
           }
         >
-          <div className="flex max-w-[640px] flex-col gap-8">
+          <div className="flex max-w-[640px] flex-col gap-6">
             <h1 className="t-display-md">Review a contract</h1>
 
             <section aria-labelledby="step-title" className="flex flex-col gap-6">
@@ -116,82 +116,88 @@ export default function Start() {
                 {STEP_TITLES[step - 1]}
               </h2>
 
-              {step === 1 && (
-                <>
-                  <div
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragging(true);
-                    }}
-                    onDragLeave={() => setDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragging(false);
-                      const file = e.dataTransfer.files[0];
-                      if (file && flow.upload.status !== "validating") void upload({ file });
-                    }}
-                  >
-                    <UploadDropzone
-                      state={zoneOf(flow, dragging, retryable)}
-                      fileName={flow.upload.status === "idle" ? "" : flow.upload.fileName}
-                      fileMeta={fileMeta}
-                      message={failure?.message}
-                      onChoose={() => fileInput.current?.click()}
-                      onReplace={() => fileInput.current?.click()}
-                    />
-                    <input
-                      ref={fileInput}
-                      type="file"
-                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      className="sr-only"
-                      tabIndex={-1}
-                      aria-label="Choose a contract file"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) void upload({ file });
-                        e.target.value = "";
+              {/* The heading stays put, so focus keeps its element. The body is keyed on the step: a new step fades in and rises once. */}
+              <div key={step} className="ca-step flex flex-col gap-6">
+                {step === 1 && (
+                  <div className="flex flex-col gap-4">
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragging(true);
                       }}
-                    />
+                      onDragLeave={() => setDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragging(false);
+                        const file = e.dataTransfer.files[0];
+                        if (file && flow.upload.status !== "validating") void upload({ file });
+                      }}
+                    >
+                      <UploadDropzone
+                        state={zoneOf(flow, dragging, retryable)}
+                        fileName={flow.upload.status === "idle" ? "" : flow.upload.fileName}
+                        fileMeta={fileMeta}
+                        message={failure?.message}
+                        onChoose={() => fileInput.current?.click()}
+                        onReplace={() => fileInput.current?.click()}
+                      />
+                      <input
+                        ref={fileInput}
+                        type="file"
+                        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        className="sr-only"
+                        tabIndex={-1}
+                        aria-label="Choose a contract file"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void upload({ file });
+                          e.target.value = "";
+                        }}
+                      />
+                    </div>
+                    {failure && retryable && <ErrorCard message={failure.message} code={failure.apiCode ?? "ERR_NETWORK"} onRetry={retry} />}
+                    {/* Notes block: the privacy line, the public-demo line and the sample link read as one thing, in 15 px lines.
+                        The built-in sample needs the sample endpoint of 3-C. Until then a fictional agreement is a plain download. */}
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[15px] leading-[24px]" style={{ color: "var(--ink-secondary)" }}>
+                        Your contract is processed in memory and deleted within 60 minutes.
+                      </p>
+                      <DemoNotice />
+                    </div>
                   </div>
-                  {failure && retryable && <ErrorCard message={failure.message} code={failure.apiCode ?? "ERR_NETWORK"} onRetry={retry} />}
-                  <p className="text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
-                    Your contract is processed in memory and deleted within 60 minutes.
-                  </p>
-                  {/* The built-in sample needs the sample endpoint of 3-C. Until then a fictional agreement is a plain download. */}
-                  <DemoNotice />
-                </>
-              )}
+                )}
 
-              {step === 2 && (
-                <>
-                  {!available.partyBinding && <NoticeBanner variant="not-available" text="This build does not use your side yet. Findings carry no burden or benefit label." />}
-                  <RoleSelector value={flow.role} hideLegend hint={available.partyBinding ? undefined : null} onChange={(role) => dispatch({ type: "set-role", role })} />
-                  <PartyBindingField
-                    state={partyState}
-                    parties={ordered}
-                    value={flow.party}
-                    none={flow.partyNone}
-                    suggested={suggested === null ? null : parties[suggested].id}
-                    onChange={(party) => dispatch({ type: "set-party", party })}
-                    onNone={() => dispatch({ type: "set-party-none" })}
-                  />
-                </>
-              )}
+                {step === 2 && (
+                  <>
+                    {!available.partyBinding && <NoticeBanner variant="not-available" text="This build does not use your side yet. Findings carry no burden or benefit label." />}
+                    <RoleSelector value={flow.role} hideLegend hint={available.partyBinding ? undefined : null} onChange={(role) => dispatch({ type: "set-role", role })} />
+                    <PartyBindingField
+                      state={partyState}
+                      parties={ordered}
+                      value={flow.party}
+                      none={flow.partyNone}
+                      suggested={suggested === null ? null : parties[suggested].id}
+                      onChange={(party) => dispatch({ type: "set-party", party })}
+                      onNone={() => dispatch({ type: "set-party-none" })}
+                    />
+                  </>
+                )}
 
-              {step === 3 && (
-                <>
-                  <CategoryPicker selected={flow.categories} onToggle={(id) => dispatch({ type: "toggle-category", id })} onSet={(ids) => dispatch({ type: "set-categories", ids })} />
-                  <Switch
-                    checked={flow.india}
-                    onChange={(on) => dispatch({ type: "set-india", on })}
-                    label="Include India-specific categories"
-                    description="Adds the five India-specific categories. In this build they show as not yet available."
-                  />
-                  <NoticeBanner variant="review-scope" />
-                  <NoticeBanner variant="legal-scope" />
-                  <div className="xl:hidden">{summary}</div>
-                </>
-              )}
+                {step === 3 && (
+                  <>
+                    <CategoryPicker selected={flow.categories} onToggle={(id) => dispatch({ type: "toggle-category", id })} onSet={(ids) => dispatch({ type: "set-categories", ids })} />
+                    <Switch
+                      checked={flow.india}
+                      onChange={(on) => dispatch({ type: "set-india", on })}
+                      label="Include India-specific categories"
+                      description="Adds the five India-specific categories. In this build they show as not yet available."
+                    />
+                    <NoticeBanner variant="review-scope" />
+                    <NoticeBanner variant="legal-scope" />
+                    <div className="xl:hidden">{summary}</div>
+                  </>
+                )}
+              </div>
             </section>
 
             {startError && <ErrorCard message={startError.message} code={startError.apiCode ?? "ERR_NETWORK"} onRetry={startError.retryable ? () => void start() : undefined} />}
@@ -218,7 +224,7 @@ export default function Start() {
                   </Button>
                 )}
               </div>
-              <p aria-live="polite" className="min-h-[20px] text-[13px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
+              <p aria-live="polite" className="min-h-[20px] text-[14px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>
                 {hint}
               </p>
             </div>

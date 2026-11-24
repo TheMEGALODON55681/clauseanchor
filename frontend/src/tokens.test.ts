@@ -63,6 +63,37 @@ test("tertiary ink reaches 4.5 on every tinted fill in both themes", () => {
   }
 });
 
+/* Body ink sits on the mark tints: a found mark, a review mark, a picked mark, and a review mark under the pointer. A tint is
+   translucent, so it is blended over each surface first. The hover tint is 22 percent of the review line (index.css), and the
+   test reads that share from the rule. axe cannot compute a contrast over these gradient layers (4-B.3, FrontendDesign.md 17.9). */
+test("body ink reaches 4.5 on every mark tint over both surfaces, in both themes", () => {
+  assert.match(css, /--mark-review-tint: color-mix\(in srgb, var\(--mark-review-line\) 22%, transparent\)/);
+  const rgba = (selector: RegExp) => {
+    const out: Record<string, number[]> = {};
+    for (const [, name, r, g, b, a] of css.match(selector)![1].matchAll(/--(mark-[a-z]+-tint):\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/g)) out[name] = [+r, +g, +b, +a];
+    return out;
+  };
+  const toHex = (c: number[]) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+  const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  let pairs = 0;
+  for (const [label, theme, tints] of [
+    ["light", light, rgba(/:root,\s*\.light\s*\{([\s\S]*?)\n\}/)],
+    ["dark", dark, rgba(/\.dark\s*\{([\s\S]*?)\n\}/)],
+  ] as const) {
+    const all = { ...tints, "mark-review-hover": [...rgb(theme["mark-review-line"]), 0.22] };
+    for (const surface of ["paper-base", "paper-sheet"]) {
+      for (const [name, [r, g, b, a]] of Object.entries(all)) {
+        const under = rgb(theme[surface]);
+        const blended = toHex([r, g, b].map((v, i) => v * a + under[i] * (1 - a)));
+        const got = ratio(theme["ink-primary"], blended);
+        assert.ok(got >= 4.5, `${label}: --ink-primary on ${name} over --${surface} is ${got.toFixed(2)}, needs 4.5`);
+        pairs += 1;
+      }
+    }
+  }
+  assert.equal(pairs, 16, "two themes, two surfaces, four tints");
+});
+
 test("light: absent, neutral and unresolved text reach 4.5 on their chips", () => {
   check(light, "light", [
     ...on("status-absent-fg", ["status-absent-bg", "paper-sheet"], 4.5),

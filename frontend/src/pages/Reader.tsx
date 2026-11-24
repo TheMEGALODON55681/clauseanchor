@@ -837,10 +837,12 @@ export default function Reader() {
                   <div className="reader-sheet flex min-w-0 flex-col gap-2">
                     {!finished && (
                       <div
-                        className="flex min-h-[44px] items-center px-3"
+                        className="relative flex min-h-[44px] items-center overflow-hidden px-3"
                         style={{ background: "var(--paper-sheet)", border: "1px solid var(--rule-default)", borderRadius: "var(--radius-md)" }}
                       >
                         <StageProgress compact steps={steps} onCancel={cancel} />
+                        {/* The work done, as a bar on the band's foot. The line above says the same in words, so the bar is silent. */}
+                        {job?.total_units ? <span aria-hidden className="ca-bar" style={{ "--fill": Math.min(1, job.completed_units / job.total_units) } as CSSProperties} /> : null}
                       </div>
                     )}
                     {partialRead && <NoticeBanner variant="read-partial" />}

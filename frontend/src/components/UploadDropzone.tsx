@@ -55,7 +55,8 @@ export default function UploadDropzone({
   if (state === "uploaded") {
     return (
       <Shell tone="idle">
-        <span style={{ color: "var(--anchor-600)" }}><FileIcon size={28} /></span>
+        {/* The file the page just accepted: its icon grows in once, so the change from "Checking" reads as an arrival. */}
+        <span className="ca-accept" style={{ color: "var(--anchor-600)" }}><FileIcon size={28} /></span>
         <div style={{ marginTop: 8, fontSize: 15, fontWeight: 500, color: "var(--ink-primary)", overflowWrap: "anywhere" }}>
           {fileName}
         </div>
@@ -113,6 +114,9 @@ function Shell({ tone, children }: { tone: "idle" | "drag" | "error"; children: 
         minHeight: 220,
         justifyContent: "center",
         width: "100%",
+        // A file over the zone: it grows by 1 percent, so the drop reads as live. Transform only, so nothing around it moves.
+        transform: tone === "drag" ? "scale(1.01)" : "none",
+        transition: "transform var(--dur-press) var(--ease-out)",
       }}
     >
       {children}

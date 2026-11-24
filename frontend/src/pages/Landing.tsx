@@ -51,6 +51,27 @@ const GROUPS = GROUP_ORDER.map((group) => {
   return { group, names: rows.map((c) => c.label), later: rows.every((c) => c.id.startsWith("in.")) };
 });
 
+/* The three CUAD figures that § 1 states in words, set as a ruled ledger in the aside. The paragraph carries the same facts, so the
+   ledger is a specimen: hidden from assistive technology, and it rises into view once. */
+const LEDGER: [string, string][] = [
+  ["41", "kinds of clause"],
+  ["510", "commercial contracts"],
+  ["13,000+", "annotations"],
+];
+
+function Ledger() {
+  return (
+    <dl className="m-0">
+      {LEDGER.map(([figure, label]) => (
+        <div key={label} className="flex items-baseline gap-4 border-t py-3 last:border-b" style={{ borderColor: "var(--rule-default)" }}>
+          <dt className="t-section-mark min-w-[6rem]">{figure}</dt>
+          <dd className="t-marginal-note m-0">{label}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function RoleFragment() {
   const pick = (role: string) => ROLES.find((r) => r.role === role)!;
   return (
@@ -110,9 +131,9 @@ export default function Landing() {
     <div>
       <title>ClauseAnchor | Know which clauses to ask a lawyer about</title>
 
-      <section aria-labelledby="hero-title" className="pb-16 pt-8 md:pb-24 md:pt-12 lg:pt-16">
+      <section aria-labelledby="hero-title" className="pb-12 pt-8 md:pb-16 md:pt-12 lg:pt-16">
         <Container>
-          <MarginGrid>
+          <HeroDemo>
             <h1 id="hero-title" className="t-display-xl" style={{ color: "var(--ink-primary)" }}>
               Know which clauses to ask a lawyer about.
             </h1>
@@ -122,19 +143,24 @@ export default function Landing() {
             <div className="mt-6">
               <Ctas />
             </div>
-            <p className="mt-4 text-[14px] leading-[20px]" style={{ color: "var(--ink-secondary)" }}>{PRIVACY_LINE}</p>
-          </MarginGrid>
-          <div className="mt-10 md:mt-14">
-            <HeroDemo />
-          </div>
+            <p className="mt-4 text-[15px] leading-[24px]" style={{ color: "var(--ink-secondary)" }}>{PRIVACY_LINE}</p>
+          </HeroDemo>
         </Container>
       </section>
 
       <Section
+        compact
         id="problem"
         labelledBy="problem-title"
         mark={mark()}
-        aside={<p className="t-marginal-note">Source: CUAD v1, The Atticus Project. Licence CC BY 4.0.</p>}
+        aside={
+          <>
+            <Specimen>
+              <Ledger />
+            </Specimen>
+            <p className="t-marginal-note mt-4">Source: CUAD v1, The Atticus Project. Licence CC BY 4.0.</p>
+          </>
+        }
       >
         <h2 id="problem-title" className="t-display-md">Contracts run long. The clause types worth asking about are a known list.</h2>
         <p className="t-prose-lg mt-4">
@@ -147,17 +173,18 @@ export default function Landing() {
         <MarginGrid margin={<Mark>{mark()}</Mark>}>
           <h2 id="how-title" className="t-display-md">Three steps. Every finding can be checked.</h2>
         </MarginGrid>
-        <ol className="mt-12 flex flex-col gap-12">
+        {/* Ruled rows: from 1280px a step's number, text and visual share one midline, so the row's own padding is the only space around them. */}
+        <ol className="mt-6">
           {STEPS.map((s, i) => (
-            <li key={s.title}>
-              <MarginGrid margin={<Mark>{String(i + 1)}</Mark>} aside={<Specimen>{s.fragment}</Specimen>}>
+            <li key={s.title} className="border-t py-8 last:border-b" style={{ borderColor: "var(--rule-default)" }}>
+              <MarginGrid center margin={<Mark>{String(i + 1)}</Mark>} aside={<Specimen>{s.fragment}</Specimen>}>
                 <h3 className="font-sans text-[18px] font-semibold leading-[26px]" style={{ color: "var(--ink-primary)" }}>{s.title}</h3>
                 <p className="t-prose-lg mt-2">{s.body}</p>
               </MarginGrid>
             </li>
           ))}
         </ol>
-        <div className="mt-12">
+        <div className="mt-8">
           <MarginGrid>
             <Button to="/start" size="l">Review a contract</Button>
           </MarginGrid>
@@ -207,7 +234,7 @@ export default function Landing() {
         </div>
       </Section>
 
-      <Section id="privacy" labelledBy="privacy-title" mark={mark()}>
+      <Section compact id="privacy" labelledBy="privacy-title" mark={mark()}>
         <h2 id="privacy-title" className="t-display-md">Your contract is deleted within 60 minutes.</h2>
         <p className="t-prose-lg mt-4">
           {PRIVACY_LINE} Reloading the page ends your session, and nothing is written to your browser's storage. The Accuracy page will list the measured figures for each category in a later build.
@@ -217,7 +244,7 @@ export default function Landing() {
         </p>
       </Section>
 
-      <Section id="questions" labelledBy="questions-title" mark={mark()}>
+      <Section compact id="questions" labelledBy="questions-title" mark={mark()}>
         <h2 id="questions-title" className="t-display-md">Questions before you upload.</h2>
         <div className="mt-8">
           {QUESTIONS.map(([q, a]) => (
@@ -226,7 +253,7 @@ export default function Landing() {
         </div>
       </Section>
 
-      <SectionFrame id="start" labelledBy="start-title">
+      <SectionFrame compact id="start" labelledBy="start-title">
         <MarginGrid>
           <h2 id="start-title" className="t-display-md">Start with the contract in front of you.</h2>
           <div className="mt-6">
