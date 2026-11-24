@@ -22,8 +22,8 @@
   <img src="https://img.shields.io/badge/React-19.2.4-149ECA?logo=react&logoColor=white" alt="React 19.2.4">
   <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.9.3">
   <img src="https://img.shields.io/badge/model-RoBERTa--base-FFD21E?logo=huggingface&logoColor=black" alt="Model: RoBERTa-base">
-  <img src="https://img.shields.io/badge/backend_tests-1787_passed-2E7D32" alt="Backend tests: 1787 passed">
-  <img src="https://img.shields.io/badge/frontend_tests-136_passed-2E7D32" alt="Frontend tests: 136 passed">
+  <img src="https://img.shields.io/badge/backend_tests-1788_passed-2E7D32" alt="Backend tests: 1788 passed">
+  <img src="https://img.shields.io/badge/frontend_tests-170_passed-2E7D32" alt="Frontend tests: 170 passed">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT license"></a>
 </p>
 
@@ -40,11 +40,11 @@
 | **Input** | PDF or DOCX with selectable text, up to 10 MiB, 100 PDF pages and 500,000 characters |
 | **Your file** | Held in memory and deleted within 60 minutes, or at once with Delete document. The API writes no part of it to disk |
 | **Hosting** | One Docker image on Azure Container Apps, Central India, 2 vCPU and 4 GiB, scaled from 0 to 1 replica |
-| **Tests** | 1787 backend (27 skipped) and 136 frontend |
+| **Tests** | 1788 backend (27 skipped) and 170 frontend |
 
 **Live demo:** https://clauseanchor.icystone-c7631062.centralindia.azurecontainerapps.io/
 
-The app scales to zero, so the first visit after a quiet spell takes 1 to 3 minutes. The built-in sample contract is not available in this build yet, so upload a public or fictional agreement. Use sample contracts, not confidential ones.
+The app scales to zero, so the first visit after a quiet spell takes 1 to 3 minutes. The built-in sample contract is not available in this build yet. The landing page and the first step link a fictional sample agreement to download and upload, or you can upload a public one. This is a public demo, so use sample contracts, not confidential ones.
 
 ## Overview
 
@@ -111,24 +111,34 @@ The direction is called Marginalia: a finding looks like a careful reader's mark
   <a href="https://clauseanchor.icystone-c7631062.centralindia.azurecontainerapps.io/">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/landing-dark.png">
-      <img src="docs/assets/readme/landing-light.png" alt="ClauseAnchor landing page above the fold: the headline Know which clauses to ask a lawyer about, a short description, the Review a contract button, and the first of three hero examples, a Non-Compete passage from a fictional contract at characters 2595 to 2860 with its detail panel" width="95%">
+      <img src="docs/assets/readme/landing-light.png" alt="ClauseAnchor landing page above the fold: the headline Know which clauses to ask a lawyer about, a description that says each finding in this build is marked Needs a lawyer, the Review a contract button with a link to download a fictional sample agreement, and Example 1 of 3, a Non-Compete passage from a fictional contract at characters 2595 to 2860, beside a detail panel with the Needs a lawyer label and Confidence not validated" width="95%">
     </picture>
   </a>
 </p>
-<p align="center"><em>The landing page above the fold; its hero example is a prepared quote from a fictional contract, and a live review returns Needs a lawyer only.</em></p>
+<p align="center"><em>The landing page above the fold. The hero example quotes a fictional contract and shows what a live review returns: Needs a lawyer, with Confidence not validated.</em></p>
+
+<p align="center">
+  <a href="https://clauseanchor.icystone-c7631062.centralindia.azurecontainerapps.io/#/how-it-works">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/how-it-works-dark.png">
+      <img src="docs/assets/readme/how-it-works-light.png" alt="ClauseAnchor How it works page: the heading and a short introduction, a notice that the app is not legal advice, an On this page list of eight sections from § 1 Reading the contract to § 8 Credits, and the text of § 1 with the start of § 2, Looking for 41 kinds of clause" width="95%">
+    </picture>
+  </a>
+</p>
+<p align="center"><em>The How it works page: what happens to a contract, what the marks mean and where the limits are.</em></p>
 
 ## Features
 
 - **Quotes, never paraphrases.** Every string on screen is quoted contract text or a short label. The app writes no legal text.
 - **Exact offsets.** Each finding carries a start and an end into the canonical text, shown as `chars 3124 to 3336`.
 - **Status without a verdict.** Needs a lawyer and Confidence not validated on every live finding. A fixed scope notice sits on every result: "Unhighlighted text is not a safety assessment."
-- **46 listed categories.** Pick the ones to check in step 3 of the start flow, grouped under seven headings.
+- **46 listed categories, 41 that run.** Pick the ones to check in step 3 of the start flow, grouped under seven headings. The five India categories are not available in this build, and the Reader says so.
 - **PDF and DOCX parsing.** PDF columns, headers, footers and page numbers (marked as decoration, never deleted). DOCX auto-numbering, tables, text boxes, headers, footers and footnotes.
 - **Limits for hostile files.** One capped child process per parse, a 100-page limit, a decoded-content budget and archive checks against zip bombs.
 - **It says when it read only part.** A scanned page, an embedded object or a form field with text sets `partial`. The Reader then says part of the document could not be read.
 - **Private by default.** Memory only, 60-minute expiry, Delete document at any time, no cookies or local storage, and no request to a third party.
 - **Reader navigation.** Keyboard stepping between passages, a clickable margin ruler, a passage counter and a category filter.
-- **Accessible.** Contrast pairs tested, 44 px targets, a forced-colours fallback for the marks, reduced motion, and no axe violation in 154 captures during the frontend review.
+- **Accessible.** Contrast pairs tested, 44 px targets, a forced-colours fallback for the marks, reduced motion, and no axe violation in 154 captures during the frontend review or in 110 runs after the UI pass.
 - **Light and dark themes**, following the system setting with a toggle.
 - **One image, tested before it ships.** The CI workflow runs a real analysis inside the container before it publishes.
 
@@ -294,11 +304,11 @@ The full setup, with real mode, the environment variables and the command-line p
 1. **Not legal advice.** ClauseAnchor points to text in your contract and does not say what the law requires. Unhighlighted text is not a safety assessment.
 2. **Confidence is not validated.** All 46 categories are `not_validated`. Every finding is a review candidate with no confidence figure, so this build shows no Found result and no Not found result.
 3. **The output is noisy.** About four in five candidates are not matches, a contract averages 62.52 false highlights, and 1,176 of 4,182 questions were processing-incomplete in the evaluation. No time-saving claim is made.
-4. **Some features are not in this build.** Party binding and polarity, the PDF report, the Accuracy figures, the sample contract and the manual-review list belong to Phase 3. The app marks each as not available.
+4. **Some features are not in this build.** Party binding and polarity, the PDF report, the Accuracy figures, the built-in sample contract and the manual-review list belong to Phase 3. The app marks each as not available.
 5. **Narrow input.** English text in a PDF or DOCX with selectable text. CUAD, an English-language dataset, supplied the fine-tuning data and the test set, so the figures cover no other language. The API refuses a file that is scanned throughout, password protected or carries tracked changes. The limits are 10 MiB and 100 PDF pages.
 6. **The evaluation is CUAD only.** The five India categories are listed, unavailable and have no measured figures.
 7. **A public demo with small limits.** Cold starts take 1 to 3 minutes. One replica holds every session in memory, and a restart empties it. The API allows 25 live sessions with 5 documents each, and there is no per-client rate limit.
-8. **The landing hero is a prepared example.** It shows a Found status on a fictional contract. Live reviews return Needs a lawyer only.
+8. **The landing hero is a prepared example.** It quotes a fictional contract and shows the status a live review returns: Needs a lawyer, with Confidence not validated.
 
 ClauseAnchor is a research prototype. Do not rely on it for a decision about a real contract; ask a lawyer.
 
