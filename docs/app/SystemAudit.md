@@ -320,7 +320,7 @@ Low lock-in. A move costs about one working day [E] and no data. The design choi
 | Express billing | "Express and Sandboxes follow the same pay-per-second pricing as Consumption Plan." No Express price or grant is listed | [C] India pricing page |
 | Environment meters | Three rows, "Environment Management Hour", "Environment Planned Maintenance Hour" and "Environment Private Endpoint", at USD 0.10 an hour each, effective 2026-11-01. Which plan they apply to is not stated | [C] retail price API, 16 rows returned |
 | Egress, probe requests | Not priced on the pages read | [C] billing page |
-| The 10 request scale rule with a maximum of 1 | Not described. The rule adds replicas up to the maximum, and the maximum here is 1 | [C] scale page |
+| The HTTP scale rule with a maximum of 1 | Not described. The rule adds replicas up to the maximum, and the maximum here is 1. The spec set 10 concurrent requests, and Azure reports the live rule as `http-scaler` with `concurrentRequests` empty (`Architecture.md` section 8.1) | [C] scale page |
 | Azure for Students | USD 100, valid one year, no card, renewable each year while a student. When it runs out, "your subscription and products will be disabled" | [C] `azure.microsoft.com/en-in/free/students/` and the Learn page (updated 2026-08-03) |
 | Budget | `clauseanchor`, monthly, INR 850 (about USD 10), email at 80 percent of actual cost | `Deploy.md` step 9 |
 | GHCR | Free for a public package | [C] GitHub packages billing page |
@@ -369,7 +369,7 @@ At 80 percent of INR 850 (about USD 8 [E]) the alert fires after 8 / 0.216 = 37 
 1. **The model sets the size.** 2 vCPU and 4 GiB at USD 0.000060 a second is paid for every second the replica is up, even for a visitor who only reads the landing page. A static landing page elsewhere would leave the replica asleep for most visits. This is the biggest lever and is not cheap to change.
 2. **In-memory state means scale to zero destroys sessions** (section 5), so keeping people's sessions alive means paying for awake time.
 3. **Anything wakes it.** Any request wakes the app, including a bot, a link preview or a refused `SESSION_LIMIT`.
-4. **The 10 request scale rule does nothing here.** With a maximum of 1 it only wakes the app from zero.
+4. **The HTTP scale rule does nothing here.** With a maximum of 1 it only wakes the app from zero. The spec set 10 concurrent requests, and Azure reports the live rule with no number (`Architecture.md` section 8.1).
 5. **No egress control.** Uncompressed assets and `no-store` fonts raise outbound data (SA10).
 
 Cheapest safeguards: never leave the minimum at 1; a second budget alert at 50 percent and a forecast alert; a look at Cost Management for environment and outbound lines this week; IP restrictions for a known abuser; no pinger. None needs a code change.
@@ -406,7 +406,7 @@ The case: a class of 60 opens the link at once during the viva. The app is eithe
 | 3 | The 25 admitted users upload together. Only 4 uploads can be in flight and only 3 parses can be running or waiting. The rest get 429 `QUEUE_FULL`, marked retryable | up to 21 of 25 on the first try | [E] |
 | 4 **slows first** | The parse worker takes one file at a time. About 25 x 3 s of work (4 s is the measured time for 33 to 44 pages, 1.1 s for 14) | about 80 s on the laptop's figures, and longer on 2 vCPU | [E], unmeasured on Azure |
 | 5 | Analyses. 3 places, then `ANALYSIS_QUEUE_FULL`. One analysis runs at a time | 25 x T: 22 to 34 minutes at the laptop's 54 to 82 s, and 45 minutes to 2.3 hours at the Azure estimate of 108 to 326 s | [E] |
-| 6 | The scaler. 60 concurrent requests are above the 10 request rule, and the maximum is 1 | The rule adds nothing. The single replica serves everything, and the page does not describe the behaviour for a maximum of 1 | [C] |
+| 6 | The scaler. 60 concurrent requests, a rule the spec set at 10 (Azure reports it with no number), and a maximum of 1 | The rule adds nothing. The single replica serves everything, and the page does not describe the behaviour for a maximum of 1 | [C] |
 | 7 | Memory. The model plus 25 documents | about 1.0 to 1.3 GiB [M] plus 48 MiB [E] of 4 GiB. No out-of-memory kill from this load | [M], [E] |
 | 8 | Polling. 25 readers poll 2 calls every 700 ms, which is 71 requests a second [E: 25 x 2 / 0.7]. The 2 vCPU also run the model with 2 threads | The cost of a poll in CPU was not measured. It competes with inference and may slow it | [E], to measure in 4-C |
 
@@ -554,7 +554,7 @@ Findings about hostile files, ids and tokens are **handled** and are not triage 
 
 ## 9. Status after 4-B.3
 
-Part 4-B.3 (the UI pass) built the three frontend decisions and closed SA10. Nothing under `backend/` changed for them, and the cap and the lifetime in `API.md` section 8 are as they were. Every change below is in `frontend/` and is covered by the frontend tests. None of it was seen against the live server, because the live image still has the old interface until it is rebuilt and deployed.
+Part 4-B.3 (the UI pass) built the three frontend decisions and closed SA10. Nothing under `backend/` changed for them, and the cap and the lifetime in `API.md` section 8 are as they were. Every change below is in `frontend/` and is covered by the frontend tests. The build of `5beecc9` was deployed on 24 November 2026 and the app was checked live (`Phases.md` 4-B.3, `BuildLog.md`): `/api/v1/ready` answered 200, the sample agreement downloaded with the Word content type, and one upload, a 24 category review and two deletes ran with no console errors and showed the new interface. That run recorded neither the session end that follows the last delete nor the Expired page, so SA3 and SA4 are built and tested and not yet seen live.
 
 | Id | Status | What was built or found |
 |---|---|---|
@@ -563,4 +563,4 @@ Part 4-B.3 (the UI pass) built the three frontend decisions and closed SA10. Not
 | SA16 | Built | One line on the landing page by the call and on `/start` by the dropzone: "This is a public demo. Use a sample or a public contract, not a confidential one." Beside it, a plain download of a fictional agreement (`frontend/public/samples/fictional-services-agreement.docx`, 4,768 bytes: two invented parties, two invented signatories, its first line says it is fictional and not legal advice). The built-in sample mode stays a 3-C feature and stays off. |
 | SA10 | Closed | Checked by Aryan on 11 November 2026 in Cost Management, Resources view, November 2026, Azure for Students subscription. One resource, `clauseanchor` (Container App), total INR 24.47, average INR 1.15 a day. Two meters only: Standard vCPU Active Usage INR 19.57 and Standard Memory Active Usage INR 4.89. There is no row for `clauseanchor-env` and no environment management, planned maintenance or private endpoint meter, so the Express environment meters in section 4.3 do not apply to this app. No requests line and no egress line appeared. **Unknown:** whether the monthly free grant is netted off in this view, because the view does not show it. |
 
-The live `DELETE` route and the live image were not exercised by this part. The one backend change that came with it is outside this audit: the static file handler now registers the `.docx` type, so that the sample downloads with its own content type (`BuildLog.md`, 4-B.3).
+The build session did not exercise the live `DELETE` route or the live image. The deploy run of 24 November did, as section 9 says above. The one backend change that came with it is outside this audit: the static file handler now registers the `.docx` type, so that the sample downloads with its own content type (`BuildLog.md`, 4-B.3).

@@ -4727,3 +4727,73 @@ Line ends: LF in `README.md`, `Deploy.md` and the spec file, CRLF in `BuildLog.m
 `docs: retake the live README shots and record the deploy`, body `Retake start, reader and reader-review from the redeployed app, update their alt text and captions, record the image, the update and the scale rule Azure reports.` Files: `README.md`, `deploy/azure-containerapp.yaml`, `docs/app/Architecture.md`, `docs/app/BuildLog.md`, `docs/app/Deploy.md`, `docs/app/Phases.md` and the six images `start`, `reader` and `reader-review` under `docs/assets/readme/`.
 
 Next action: Aryan reads the README on GitHub, commits, and pushes. Then 4-C.
+
+## 2026-11-24: Part 4-B.4, the Processing incomplete band says what was left out
+
+Aryan's brief (`.handoff/partial_band_prompt.md`): find why the live Reader reads "Processing incomplete" with no Unavailable row, make the toolbar, the Review scope band and View list say what happened, and close three stale doc lines from 4-B.3. `ml/`, `docs/ml/` and `backend/` are unchanged. No server and no browser ran, and nothing was installed.
+
+### Start
+
+- `git status --short` printed nothing and `git log --oneline -6` began at `1f80aec`, which is HEAD. That matched the brief.
+- Baselines before any change: frontend 170 passed. Backend 1788 passed and 27 skipped in 250.76 s. The first backend run used the system Python and stopped at import (`No module named 'clauseanchor_core'`, no test ran). The second used `backend/.venv` and gave the counts above.
+
+### The cause
+
+- An analysis ends `partial` when the parse was partial or any requested category has `search_complete` false (`backend/app/services/analysis.py` line 84, `analysis_jobs.py` line 235, `API.md` section 10).
+- The demo parse was clean (`partial` false, 0 warnings, see 4-B.3), so a category's search was incomplete.
+- The core sets that when a category's question is longer than 64 tokens: `ml/clauseanchor_core/analyzer.py` line 121 compares the original length with 64, line 162 adds `question_truncated_first64`, and line 174 makes the category incomplete. `docs/ml/RealAnalyzer.md` says the same.
+- The 24 categories of the live run include Exclusivity, Change of Control and Cap on Liability. The questions for the first two hold 80 and 69 words (`ml/configs/category_questions.json`), and each word is at least one token, so both pass 64 without a tokenizer. The tokenizer is not installed here, so no exact count was taken. Cap on Liability is the core's own recorded case (`docs/ml/RealAnalyzer.md`, `ml/scripts/check_candidate_release.py` line 84).
+- Not proved: which other categories were incomplete in the live run. The run recorded the statuses and not the flags, and a boundary review also sets the flag. The band shows the real count from now on.
+- Reproduced without the live app. `backend/tests/test_analysis_adapter.py` pins the rule on synthetic results, and a new frontend test builds the live shape from synthetic categories (a clean parse, every category abstained, three with `search_complete` false).
+- Not a backend bug, so nothing is recorded for the backend. The consequence for Aryan and Tanishq (any review with one of those questions ends `partial`) is in `Phases.md` 4-B.4.
+
+### What changed
+
+- `frontend/src/lib/reader.ts`: `partialLine` (toolbar) and `incompleteBand` (Review scope) count the gaps that View list names. The four notes View list uses are now constants.
+- `frontend/src/pages/Reader.tsx`: the toolbar note for a `partial` job calls `partialLine`, and the unused `unavailableNames` is gone. The cancelled, timed out and failed lines are as they were.
+- `frontend/src/components/ScopePanel.tsx`: the band calls `incompleteBand`.
+- `frontend/src/pages/Gallery.tsx`: the toolbar specimen uses the new sentence.
+- Tests first: `reader.test.ts` (six), `Reader.test.ts` (two) and `copy.test.ts` (one).
+- Docs: `Phases.md` (4-B.4), `FrontendDesign.md` (17.10 and the shots paragraph of 17.9), `SystemAudit.md` (section 9 and lines 323, 372 and 409), and this entry. `API.md` and `Architecture.md` are unchanged: they describe `partial` correctly, and `Architecture.md` already records what Azure reports for the scale rule.
+
+### Tests
+
+| Run | Result |
+|---|---|
+| Red, after the tests and before the change | 151 ran, 148 passed, 3 failed. `reader.test.ts` did not load (`does not provide an export named 'incompleteBand'`), and the two source checks failed (Reader and scope card, Gallery specimen) |
+| Green, after the change and the one cut from the review | frontend 179 passed, 0 failed (170 and nine new). `pnpm typecheck`, `pnpm build` and `pnpm check:dist` pass (36 files) |
+| Backend | one full run, before any docs change and with `backend/` untouched: 1788 passed, 27 skipped. After the docs changes, the five files that read them (`test_docs.py`, `test_catalogue.py`, `test_real_catalogue.py`, `test_openapi_export.py`, `test_frontend.py`): 71 passed, 1 warning |
+
+### Reviews
+
+- Over-engineering review of the diff: one cut applied. The pointer to View list tests `list.length` and no longer compares each note with the India reason, which also removed a test loop. Kept: one helper behind both lines, four constants used twice, and the fallback sentence, because the fixed sentence the fix replaces is the bug.
+- Jury of three readings, one verdict. A first-time user finds the lines plain, and "View list" sits in the scope card, which is behind Show categories on a phone. A frontend engineer finds the wiring covered, and a document that loads after the analysis can leave out the page count for a moment before it corrects itself. A lawyer finds that nothing implies safety or completeness, and that "24 categories reviewed" counts the three checked in part. Verdict: ship, and record the last two points. They are in `Phases.md` and 17.10 and are not changed.
+- Copy passes over the new docs prose, in this order: copywriting, copy-editing, stop-slop. They cut a passive ("was not read"), the adverbs "already" and "still", and one long cause paragraph into shorter sentences. No number, path, line number or quoted string changed. No outside review tool was used.
+- Docs read and checked against the code: `API.md` (job status, the analysis fields, section 10), `docs/ml/RealAnalyzer.md`, `CandidateReleaseVerification.md`, `CUAD_Calibration.md` and `CUAD_FinalEvaluation.md` (read only), `DesignSystem.md` section 4 (voice), and `FrontendDesign.md` 17.9. A search of the repo for the old sentences found them only in the three files changed, and in the history of this log and the 4-B.3 entry of `Phases.md`, which stay.
+
+### Checks
+
+| Check | Result |
+|---|---|
+| Attribution scrub (Rules section 1, as written) | no output |
+| Tool-name grep, both forms, and the same grep over the added frontend lines | no output. A control string (`ponytail`) matched the pattern |
+| Dash scan, U+2010 to U+2015 and U+2212, with a control string | control found. 0 hits in the seven frontend files, `SystemAudit.md`, `FrontendDesign.md` and `Phases.md`, and 0 in this file after the entry was written |
+
+Line ends: LF in `FrontendDesign.md`, `SystemAudit.md` and the frontend files, CRLF in `Phases.md` and this log. Each edit kept its file's ending.
+
+### Processes
+
+- Servers 0 and browsers 0. 11 processes started and 11 closed: 8 `pnpm` runs (tests, typecheck, build, dist check) and 3 `pytest` runs (the first stopped at import). Each ran in the foreground or as one background job and exited on its own. The short `git`, `grep` and `python` commands are not counted. Git was read-only: `status`, `diff` and `log`.
+
+### Seen and left alone
+
+- The scope card says "24 categories reviewed" over a band that says three were checked in part.
+- View list does not say why a category was checked in part. The reason is in warning codes that the core owns.
+- README line 72 says Unavailable shows "when processing did not finish". That is wider than the Reader now says. The alt text of the Reader shots says an amber note "says processing was incomplete", which stays true.
+
+### Suggested commits
+
+1. `fix(frontend): say what an incomplete review left out`, body `Count what a partial review left out, and stop saying rows are Unavailable when none is.` Files: `frontend/src/components/ScopePanel.tsx`, `frontend/src/lib/reader.test.ts`, `frontend/src/lib/reader.ts`, `frontend/src/pages/Gallery.tsx`, `frontend/src/pages/Reader.test.ts`, `frontend/src/pages/Reader.tsx` and `frontend/src/pages/copy.test.ts`.
+2. `docs: record the incomplete-review wording fix`, body `Add 4-B.4 and 17.10, and close the stale 4-B.3 doc lines.` Files: `docs/app/BuildLog.md`, `docs/app/FrontendDesign.md`, `docs/app/Phases.md` and `docs/app/SystemAudit.md`.
+
+Next action: Aryan commits and pushes, runs the image workflow, runs `az containerapp update` with the new full SHA, then `node .handoff/readme_demo/capture.mjs --reader-only` to retake the Reader shots. The README captions need no change unless Aryan wants the alt text to name the new band line.
