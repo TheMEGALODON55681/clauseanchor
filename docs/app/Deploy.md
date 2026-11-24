@@ -131,7 +131,8 @@ Keep the maximum at 1. Sessions live in the memory of one replica, so a second c
 **1. Landing**
 
 - [ ] The page loads and the browser console shows no red error.
-- [ ] **Review a contract** opens the upload step. Under it, a note says the sample contract is not available in this build yet.
+- [ ] **Review a contract** opens the upload step. Under the dropzone, a notes block says the contract is processed in memory and deleted within 60 minutes, and that this is a public demo, with a link to **Download a fictional sample agreement**.
+- [ ] The link saves `fictional-services-agreement.docx`, which opens in Word, and the same file can be chosen on the upload step. (The server sends it with the Word content type, `API.md` section 4.)
 - [ ] Nothing on the page says a clause is a burden, a benefit or "favours you".
 
 **2. Upload, PDF then Word**

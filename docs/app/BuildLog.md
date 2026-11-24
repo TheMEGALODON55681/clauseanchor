@@ -4581,3 +4581,80 @@ Three, because the code fixes are two areas and the audit is docs:
 - `docs: audit the system against scale, security, cost and failure`, body: `Add the six audits with their juries and the triage of 20 findings, record the open items with owners in Phases.md, and correct the capacity, cost and billing statements in the deploy guide, the architecture notes and the API limits.` Files: `docs/app/SystemAudit.md`, `Phases.md`, `Architecture.md`, `API.md`, `Deploy.md`, `BuildLog.md` and `README.md`.
 
 Next action: Aryan reads `SystemAudit.md`, decides SA3, SA4 and SA16, checks Cost Management for the environment meter (SA10), confirms with Tanishq that the model may sit in a public image, and commits. Then the image workflow and an update by the full SHA, well before the viva, because an update ends every session. Then 4-C.
+
+## 2026-11-24: Part 4-B.3, the UI pass: page structure, truth in the copy and state motion
+
+Aryan's brief (`.handoff/ui_pass_prompt.md`, with the resume note `.handoff/ui_pass_resume.md`) asked to close the layout gaps, make every screen state what the live build does, and add a little purposeful motion, inside Marginalia, the tokens and WCAG 2.2 AA. It ran in two sessions. The first (11 November) wrote the plan, took the before captures, and built the truth fixes, SA3, SA4, SA16 and the sample download. The second (24 November, after a usage stop) built the structure, the motion and the one backend exception, ran the checks, retook three README screenshots and wrote the docs. The plan, the gap table with before and after figures for every row, the deviations, the keyboard and axe results and the review verdicts are in `FrontendDesign.md` 17.9, and this entry does not repeat them. `ml/` and `docs/ml/` are unchanged. `backend/` changed once, by the exception Aryan approved.
+
+### Start
+
+- Second session: `git status --short` was clean and `git log --oneline -6` began at `662634c`, pushed. The first session's work sits in three commits on top of `031d197`: `85f1324` (labelled "say a full house can last an hour", but it holds the session-end tests in `http.test.ts` and the new SA4 message), `0031ece` (labelled as the audit, but it holds amendment 17.9) and `662634c` (the rest). The labels stay as committed.
+- Counts before this part: backend 1787 passed and 27 skipped, frontend 136 (both after 4-B.2). After the first session, on Aryan's laptop at `662634c`: `pnpm typecheck` clean, `pnpm test` 153 of 153, `pnpm build` 174 modules, `pnpm check:dist` passed (36 files, 3 probes found, all in the landing demo).
+- Aryan's answers in the resume note: the hero panel sits beside the headline block from 1280 px; a new upload on `/start` clears an earlier review's document and adds no control; the "sample contract is not available" line goes wherever the download is offered; the DU row reads "Marks every finding Needs a lawyer, and shows no score"; and one backend change is allowed, the `.docx` type. At the close of the part he decided two open items: the § 1 ledger stays at 375 px, and the `SAMPLE_MODE_ONLY` message stays as it is. No code changed for either.
+
+### What changed since `662634c`
+
+- Frontend structure and motion: `Layout.tsx` (`compact` on `SectionFrame`, `center` on `MarginGrid`), `index.css` (the hero grid, the centred step rows, `ca-step-in`, `.ca-accept`, `.ca-bar`), `Landing.tsx` (compact sections, the § 1 ledger, ruled step rows), `landing/HeroDemo.tsx` (one grid with the control row above the sheet), `Start.tsx` (the notes block and the step fade), `UploadDropzone.tsx` (the 1 percent grow on drag-over and the accepted file's pop), `Reader.tsx` (the 2 px progress bar on the review band), `ConfidenceBand.tsx` (the row wraps and the label stays whole), `AppHeader.tsx`, `AppFooter.tsx` and `Root.tsx` (header and footer on the page width, except in the Reader).
+- Frontend tests: `structure.test.ts` (new, 16 tests read from the source) and one test in `tokens.test.ts` (each mark tint blended over both surfaces in both themes, asking 4.5 of body ink). The frontend count went from 153 to 170, and from 136 over the whole part.
+- Backend, the approved exception: `backend/app/main.py` registers the Word type for `.docx` next to `.woff2`, and `backend/tests/test_frontend.py` has one test. The backend count went from 1787 to 1788.
+- README: the badges and the test row, the sample paragraph, limitation 4 ("built-in sample contract") and limitation 8 (the hero shows Needs a lawyer), the features line (46 listed, 41 run), the landing caption and alt text, a new How it works image with its alt text and caption, and `docs/assets/readme/` (landing and social preview retaken, how-it-works added).
+- Docs: `FrontendDesign.md` (17.9 results, the deviations, the reviews and a "Decided by Aryan" paragraph), `DesignSystem.md` (section 6: the new patterns and the four motions with name, token, reason and reduced-motion behaviour), `Phases.md` (the 4-B.3 entry, and the 4-B.1 items it closes), `SystemAudit.md` (a status section for SA3, SA4, SA10, SA16 and SA17), `API.md` (the static file note and the `MAX_SESSIONS` row), `Architecture.md` (the test tree and count, the sample folder, the session end), `Deploy.md` (the Review a contract check list), `Development.md` (the sample line and the dist check wording), and this entry.
+
+### Red before green
+
+- Backend. The new `.docx` test removes the Word type from Python's table first, as a slim Linux image has it (a laptop with Word installed supplies the type and would pass without the fix). Red: the file came back as `application/octet-stream` (the live image sent `text/plain`). Green: the Word type, `Cache-Control: no-store` and the bytes unchanged. The full suite then ran green (below).
+- Frontend, second session. No log of the red runs made while building was kept in the repository or the handoff files, so this run was made on 24 November at the end of the part: the two new test files, copied into an extract of `git archive HEAD frontend` (the sources of `662634c`) in the session scratchpad. 33 tests ran, 17 passed and 16 failed. All 16 tests of `structure.test.ts` failed: section padding, the ledger, the ruled steps, the hero grid and its fourth row, the control row, the type sizes, the header and footer edges, the notes block, the band wrap, the one reduced-motion block, the step fade, the dropzone and accepted icon, the bar, and the transform and opacity rule. The 17 that passed are the existing token tests plus the new mark-tint test, which passes on the old sources because the contrast was already fine: it covers a risk that `incomplete` axe results leave open and is not a red test.
+- Frontend, first session. The tests for `endSession`, the session end on page hide, the copy and the hero examples (`http.test.ts`, `session.test.ts`, `useStartFlow.test.ts`, `copy.test.ts`, `heroExamples.test.ts`, `Reader.test.ts`) went into the commits with their code, so no red run against the old source can be rerun from the repository. The plan in 17.9 says they were written first, and I have no log of those runs.
+
+### Reviews
+
+- Over-engineering review of the diff (24 November): one finding applied, an assertion in `structure.test.ts` that joined two patterns with an "or", where the first matched a name the source never had. It now pins the dropzone as the first child of the notes block's parent. Kept, each with its reason in 17.9: two class strings for the contained and full-width header and menu, the one-test backend fixture, and the `center` prop on `MarginGrid`.
+- Jury of five readings (design lead, accessibility, frontend engineer, first-time user, recruiter at 30 seconds), one verdict: ship, with the open items below. No outside review tool was used.
+- The copy passes (copywriting, copy-editing, stop-slop) ran in that order over the README strings written in the second session. They are written for marketing pages, so the rules on clarity, specificity and active voice applied, and no phrase changed after them.
+
+### Checks, on the final code
+
+| Check | Before (after 4-B.2) | After |
+|---|---|---|
+| `ruff format --check .` | 65 files already formatted | 65 files already formatted |
+| `ruff check .` | all checks passed | all checks passed |
+| `pytest` | 1787 passed, 27 skipped | 1788 passed, 27 skipped, 1 warning (218.81 s) |
+| `pnpm typecheck` | exit 0 | exit 0 |
+| `pnpm test` | 136 of 136 | 170 of 170 |
+| `pnpm build` | 174 modules | 174 modules |
+| `pnpm check:dist` | passed (35 files) | passed (36 files, 47 lines probed, 3 found, all in the landing demo's three quoted paragraphs) |
+| axe, 24 November | not run | 0 violations in 110 runs (11 states, 5 widths, both themes), 0 console errors |
+
+The full backend run was the last one after the final backend edit. The five test files that read the docs or serve the frontend (`test_docs.py`, `test_catalogue.py`, `test_real_catalogue.py`, `test_openapi_export.py` and `test_frontend.py`) ran again on the final text of the docs: 71 passed. The frontend checks ran after the last edit to `frontend/`, and the README and docs edits that followed touch no frontend file. The before and after screenshots (154 and 168), the geometry probes and the axe and check files are in `frontend/.screens/4-B.3/` and are ignored by git.
+
+Rules section 1: the attribution scrub, the tool-name grep (the README, the backend, and the lines added to the tracked docs outside this file) and the dash scan for U+2010 to U+2015 and U+2212 over every changed or new text file, with a control file holding an en dash, an em dash and a minus sign (1 hit, as expected): no output and 0 hits on the changed files. The dash scan and the attribution scrub ran once more over this file after the entry was written. Line ends by byte count: LF in `README.md`, `FrontendDesign.md`, `SystemAudit.md` and the code files, CRLF in `BuildLog.md`, `Phases.md` and `DesignSystem.md`. Git warns about the LF files and normalizes on commit.
+
+### Docs checked
+
+`Rules.md` section 6: `BuildLog.md`, `Phases.md`, `Architecture.md`, `API.md`, `Deploy.md`, `Development.md`, `DesignSystem.md`, `FrontendDesign.md`, `SystemAudit.md` and `README.md`. `ParserContract.md` and `openapi.json` did not change: no parser output, route or response model moved. Test counts (170 and 1788) agree in the README (badges and table), `Phases.md`, `Architecture.md` and this entry.
+
+### Not run
+
+- Nothing ran on Azure or against the live URL. The live image has the old UI and serves the sample under `text/plain` until Aryan builds the image and updates the app (`Deploy.md` steps 2 and 6). Until then the live landing page still says what the old build said.
+- The README `start`, `reader` and `reader-review` shots are from the build before this part. They need the live app, which still has the old UI, so Aryan retakes them after the redeploy with `node .handoff/readme_demo/capture.mjs`.
+- Browser proof for the two kinds of axe result that need review (the highlight marks, and the footer at 375) is still open, as 17.9 records.
+- The hero's height across the three examples, and layout shift for input-driven changes, are not measured.
+- The first-session red runs (above), and no outside review tool.
+
+### Processes
+
+- 24 November, README retake: `node .handoff/readme_demo/capture.mjs --local` ran once with Aryan's approval for that launch. It started 16 processes (one `vite preview` and 15 Edge processes of one headless launch with a fresh profile, extensions and sync off) and closed 16: Edge through the DevTools close, the preview by its PID, and the profile folder was removed. Port 4173 had no listener afterwards. The ledger is `.handoff/readme_demo/ledger.txt`. The script's process query, which matched its own PowerShell, worked in this run. The Edge processes that were already running before it (the pre-check listed PIDs 20076 and 27940) were running after it, and none of them is in the ledger.
+- 24 November, after screenshots, axe and keyboard run: two launches of one preview server and two Edge processes each, 3 started and 3 closed each time (the first run was thrown away, see 17.9). The ledger is `.handoff/ui-pass-ledger.txt`.
+- 11 November, before captures: five completed launches, 14 started and 14 closed, and one interrupted run whose Edge root and seven children were ended by PID after the capture script was stopped. Same ledger.
+- Checks (`pnpm`, `pytest`, `ruff`, `node --test`) ran in the foreground and exited by themselves. Read-only `git` only: `status`, `diff`, `log` and `archive`. The scratch extract for the red run sits in the session scratchpad, outside the repository.
+
+### Suggested commits
+
+Four, each by area, so no file lands in the wrong one (the first session's work is already committed):
+
+1. `fix(api): serve the sample DOCX with its own type`, body `The sample agreement went out as text/plain. It now has the Word type.` Files: `backend/app/main.py`, `backend/tests/test_frontend.py`.
+2. `feat(frontend): tighten the page structure and add state motion`, body `Fit section padding to content, join the hero, and add four motions.` Files: the twelve changed files under `frontend/src/` and the new `frontend/src/pages/structure.test.ts`.
+3. `docs: record the UI pass and close the audit items it built`, body `Add the 17.9 results, the motion table, SA3 SA4 SA10 SA16 and counts.` Files: the nine files under `docs/app/` that this part changed, this log included.
+4. `docs: retake the README screenshots after the UI pass`, body `Retake landing and the social preview, add how-it-works, fix the counts.` Files: `README.md` and five images under `docs/assets/readme/`.
+
+Next action: Aryan runs the four commits in that order, then the image workflow and `az containerapp update` with the new SHA, then retakes the `start`, `reader` and `reader-review` shots against the redeployed app.

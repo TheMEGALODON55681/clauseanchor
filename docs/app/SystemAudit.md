@@ -522,21 +522,21 @@ Every finding is one of three. **Fix now** means small, real on the live demo to
 |---|---|---|---|---|
 | SA1 | A stopped waiting analysis stays in the queue with its ids, and `submit` counts them all (about 4.1 KB a round [E]) | **Fix now, done** | | Red and green tests. Needs a new image and a deploy |
 | SA2 | `SESSION_LIMIT` says "a few minutes" when a place can take up to an hour | **Fix now, done** | | One string and one test. Needs a new image and a deploy |
-| SA3 | A visitor holds a session slot for 60 minutes and the frontend never ends it, so the app serves 25 users an hour at most | Record | Aryan decides, then 4-C | The options are an end-session call on delete and on leaving, or 60 sessions of 2 documents (120 documents, under today's 125). Both change `API.md` section 8 and `config.py`, and the cap is a proposal Aryan owns |
-| SA4 | Scale to zero ends every session while a reader is silent, after about 300 s [C] | Record | Aryan decides, then 4-C | A keep-alive from the Reader would hold the replica awake and cost money. Correctness and cost pull in opposite directions |
+| SA3 | A visitor holds a session slot for 60 minutes and the frontend never ends it, so the app serves 25 users an hour at most | **Built in 4-B.3 (frontend)** | | Aryan chose the end-session call. The cap and the lifetime did not change (section 9) |
+| SA4 | Scale to zero ends every session while a reader is silent, after about 300 s [C] | **Accepted, and said on the page (4-B.3)** | | Aryan chose to say it. No heartbeat and no pinger (section 9) |
 | SA5 | No limit per client on sessions, uploads, parse places, analysis places or public routes, and sessions can be made from other people's browsers. Widens R5 | Accepted | Only at real scale (a proxy with the client's address) | Bounded by the caps: a refusal for others for up to 60 minutes, and nothing is lost. Block an address by hand at the ingress |
 | SA6 | Job rows are never pruned. About 300 bytes a row [E], 110 MB for a start and cancel loop at 100 rounds a second for an hour | Accepted | Only at real scale | Bounded by the 60 minute lifetime. Pruning would change "the old job stays readable" in `API.md` |
 | SA7 | Four async call sites take the store lock on the event loop (`create_session`, `delete_current_session`, `ready`, the sweep). Restates R19 | Accepted | 4-C (R19, unchanged) | A stall is at most 5 s and a killed child exits in milliseconds [E]. One liveness failure of three |
 | SA8 | No `X-Content-Type-Options`, frame, CSP or referrer header | Record | 4-R | Low severity. A browser must check the set first |
 | SA9 | Floating base images, a tag-pinned action, installs without hashes | Record | 4-R | Low to Medium. Pin by digest and commit |
-| SA10 | Cost unknowns: an environment meter (USD 0.10 an hour from 2026-11-01), outbound data, and whether a minimum of 1 takes on Express | Record | Aryan, this week | A look in Cost Management. If the management meter applies, the credit lasts about 42 days [E] |
+| SA10 | Cost unknowns: an environment meter (USD 0.10 an hour from 2026-11-01), outbound data, and whether a minimum of 1 takes on Express | **Closed** | | Aryan read Cost Management on 11 November 2026. The environment meters do not apply to this app (section 9) |
 | SA11 | Fonts and the favicon are `no-store`, and nothing is compressed | Record | 4-C | 352,186 bytes of fonts fetched again on every visit [M] |
 | SA12 | A 41 category review of a 33 page contract is estimated at 27 to 75 minutes on 2 vCPU against a 30 minute limit. Widens R6 | Record | 4-C (R6) | The estimate rests on k of 2 to 4 and is unmeasured |
 | SA13 | Polling costs 71 requests a second for 25 readers [E] on the CPU that runs the model | Record | 4-C | A measurement and then a back-off |
 | SA14 | The platform behaviours the app relies on are not written down: TLS, the 240 s limit, the restart loop, no previous revision to return to | Record | 4-R | A note in `Deploy.md` and a rollback line |
 | SA15 | The Linux memory cap and `preexec_fn` in a multithreaded process have run once, in the CI smoke test | Record | 4-C | It is in 4-C already ("that the cap itself kills an overshoot stays untested") |
-| SA16 | No line on any page says this is a public demo for sample contracts | Record | Aryan, before the link goes wide | Copy is Aryan's call. One sentence on Start and Landing |
-| SA17 | The Expired page does not name a server restart or a scale to zero | Record | 4-C | True and useful, but incomplete |
+| SA16 | No line on any page says this is a public demo for sample contracts | **Built in 4-B.3 (frontend)** | | One line on Landing and on Start, with a fictional sample to download (section 9) |
+| SA17 | The Expired page does not name a server restart or a scale to zero | Record, partly covered | 4-C | 4-B.3 made the page name the sleep and the cleared memory (SA4). It still does not name an update, which also ends every session |
 | SA18 | Public routes (`/ready`, `/capabilities`, `/openapi.json`) are open | Accepted | | The repository is public and the routes hold no user data |
 | SA19 | No request id in logs, no count of refusals, no capacity figure in `/ready`. Restates R27 and R18 | Record | Before a wider launch (4-C) | The signals this audit needed cannot be read from the app |
 | SA20 | `Reader.tsx` is 1,150 lines with two hook suppressions. Routes and the store are large | Record | Only at real scale | Separation debt with no failure today |
@@ -545,9 +545,22 @@ Findings about hostile files, ids and tokens are **handled** and are not triage 
 
 ## 8. What Aryan has to do, in order
 
-1. **Read this file and decide SA3, SA4 and SA16.** They are product choices and not defects.
-2. **Look in Cost Management for an environment line and for outbound data** (SA10), and set a second budget alert at 50 percent.
+1. **Read this file and decide SA3, SA4 and SA16.** They are product choices and not defects. *Done: Aryan decided, and 4-B.3 built them (section 9).*
+2. **Look in Cost Management for an environment line and for outbound data** (SA10), and set a second budget alert at 50 percent. *The look is done (section 9). The second alert is not recorded here.*
 3. **Confirm with Tanishq that the model may sit in a public image** (`Deploy.md` step 2.7). The record does not show the answer.
 4. **Commit** the audit and the two fixes, as the commits in the report suggest.
 5. **Run the image workflow, then update the app by the full commit SHA** (`Deploy.md` steps 2 and 6). The two fixes (SA1, SA2) are in `backend/` and `frontend/`, so they reach the live app only after a new image and an update. An update ends every session, so do it well before the viva and not during it.
 6. **For the viva**, follow section 5.4: minimum 1 fifteen minutes early, read it back, two log tabs, under 25 sessions, minimum 0 afterwards.
+
+## 9. Status after 4-B.3
+
+Part 4-B.3 (the UI pass) built the three frontend decisions and closed SA10. Nothing under `backend/` changed for them, and the cap and the lifetime in `API.md` section 8 are as they were. Every change below is in `frontend/` and is covered by the frontend tests. None of it was seen against the live server, because the live image still has the old interface until it is rebuilt and deployed.
+
+| Id | Status | What was built or found |
+|---|---|---|
+| SA3 | Built | `ApiClient.endSession(token, { keepalive })` calls `DELETE /api/v1/sessions/current`. A 401 counts as done, because a session the API no longer knows is what ending one wants. The Reader calls it after the last document is deleted. A `pagehide` handler calls it with `keepalive: true` and the `Authorization` header, and does nothing when the page enters the back-forward cache. The token lives in React memory, so the handler reads it through a ref. A new upload on `/start` first deletes a document that an earlier review of the same session left behind. Opening `/start` alone deletes nothing, and there is no new control. **Effect:** a visitor who deletes the document or closes the tab frees the slot at once. A visitor who leaves a tab open still holds it until the lifetime ends, so the ceiling is higher than 25 an hour and is not removed. |
+| SA4 | Accepted, said on the page | The Expired page and the `SESSION_INVALID` message say that the demo server sleeps after a few quiet minutes and clears its memory, so the file has to be uploaded again, and that a slow first answer is the server waking up. The cause and the timing come from sections 4.3 and 5.2: about 300 seconds, cited from the platform's pages, not measured on this app, and not stated for HTTP rules. A session ended by the user ("deleted") keeps its own words and adds no sleep text. No heartbeat, no pinger: a request every few minutes keeps the replica awake and costs about USD 152 a month (section 4.3). |
+| SA16 | Built | One line on the landing page by the call and on `/start` by the dropzone: "This is a public demo. Use a sample or a public contract, not a confidential one." Beside it, a plain download of a fictional agreement (`frontend/public/samples/fictional-services-agreement.docx`, 4,768 bytes: two invented parties, two invented signatories, its first line says it is fictional and not legal advice). The built-in sample mode stays a 3-C feature and stays off. |
+| SA10 | Closed | Checked by Aryan on 11 November 2026 in Cost Management, Resources view, November 2026, Azure for Students subscription. One resource, `clauseanchor` (Container App), total INR 24.47, average INR 1.15 a day. Two meters only: Standard vCPU Active Usage INR 19.57 and Standard Memory Active Usage INR 4.89. There is no row for `clauseanchor-env` and no environment management, planned maintenance or private endpoint meter, so the Express environment meters in section 4.3 do not apply to this app. No requests line and no egress line appeared. **Unknown:** whether the monthly free grant is netted off in this view, because the view does not show it. |
+
+The live `DELETE` route and the live image were not exercised by this part. The one backend change that came with it is outside this audit: the static file handler now registers the `.docx` type, so that the sample downloads with its own content type (`BuildLog.md`, 4-B.3).

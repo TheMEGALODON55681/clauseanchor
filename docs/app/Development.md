@@ -174,7 +174,7 @@ Use two terminals.
 
 The command in step 1 runs the stub analyzer, the default. The stub answers every upload with 409 `SAMPLE_MODE_ONLY`, because the prepared sample it serves needs the sample route that 3-C adds. To see highlights on your own file, run real mode: set the three variables from "Real mode" above before step 1. Real mode returns review candidates with no confidence figure. The India-specific categories are Unavailable: with the switch on step 3 turned on, the Reader lists all five as "Not available in this build yet".
 
-Not available in this build yet, each with the part that adds it: your side and the party (3-A), the PDF report (3-B), the accuracy figures and the sample contract (3-C) and the manual review list (3-D).
+Not available in this build yet, each with the part that adds it: your side and the party (3-A), the PDF report (3-B), the accuracy figures and the built-in sample contract (3-C) and the manual review list (3-D). Until 3-C, the landing and Start pages offer a fictional sample agreement as a plain download from `frontend/public/samples/`.
 
 ### Build and check
 
@@ -185,7 +185,7 @@ pnpm build
 pnpm check:dist
 ```
 
-`pnpm test` runs the unit tests with Node's built-in runner. `pnpm build` writes the production files to `frontend/dist/`. `pnpm check:dist` runs after the build and fails if `dist` holds a mock or contract chunk, the host `example.org` or sample contract text beyond the three paragraphs that the landing demo quotes.
+`pnpm test` runs the unit tests with Node's built-in runner. `pnpm build` writes the production files to `frontend/dist/`. `pnpm check:dist` runs after the build and fails if `dist` holds a mock or contract chunk, the host `example.org` or sample contract text beyond the three paragraphs that the landing demo quotes. It does not read the fictional sample agreement in `public/samples/`, which is a download and not what the check guards.
 
 To see the build served by the API on one address, start the API from `backend/` with `CLAUSEANCHOR_FRONTEND_DIST=../frontend/dist` set, and open http://127.0.0.1:8000.
 
