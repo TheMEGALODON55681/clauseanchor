@@ -4797,3 +4797,81 @@ Line ends: LF in `FrontendDesign.md`, `SystemAudit.md` and the frontend files, C
 2. `docs: record the incomplete-review wording fix`, body `Add 4-B.4 and 17.10, and close the stale 4-B.3 doc lines.` Files: `docs/app/BuildLog.md`, `docs/app/FrontendDesign.md`, `docs/app/Phases.md` and `docs/app/SystemAudit.md`.
 
 Next action: Aryan commits and pushes, runs the image workflow, runs `az containerapp update` with the new full SHA, then `node .handoff/readme_demo/capture.mjs --reader-only` to retake the Reader shots. The README captions need no change unless Aryan wants the alt text to name the new band line.
+
+## 2026-11-25: Part 4-B.5, the README rebuild: a live session, refusals and numbers
+
+Aryan's brief (`.handoff/readme_v2_prompt.md`): retake the four Reader shots against the live app, which runs the 4-B.4 wording, and rebuild `README.md` to the standard of his Weft README: a replayed session at the top, a numbered live session, an animated refusal run, a By the numbers figure, an architecture figure with two Mermaid diagrams, a code map, a claims table and the roadmap in three tiers. `ml/`, `docs/ml/`, `backend/` and `frontend/` are unchanged. Git was read-only: `status`, `diff`, `log` and `check-ignore`.
+
+### Start
+
+- `git status --short` printed nothing and HEAD was `d64e275`, as the brief said.
+- Baselines before any change: frontend 179 passed. Backend 1788 passed and 27 skipped in 7 min 28 s (`backend/.venv`).
+- Read first: the Weft README and its images (it has no asset scripts, so the method came from the images), the current README, `Rules.md` sections 1, 6 and 8, `DesignSystem.md`, `Phases.md`, and `API.md`, `Architecture.md` and this log where a figure needed a source.
+- Skills run in the brief's order: the frontend design skill (the figure pages), the two motion skills (the pacing of both GIFs), then the UI check of every image at the end. No animation-review skill is installed, so both GIFs were audited by measurement.
+
+### What was built (all under `.handoff/readme_demo/`, which git ignores)
+
+- `capture.mjs` gained three flags. `--render` draws `figures/*.html` to PNG and the gauntlet page to 271 frames at 14 frames a second, with no network. `--session` runs one live review and records frames: a key frame for each screen, 11 eased frames for the scroll of step 2, and the progress run as a capture about every 800 ms with its real elapsed time. It also retakes the four Reader shots, takes the View list shots into `candidates/`, deletes the document with the app's button, and then captions every frame. `--label` redraws the captions from local files. If a run stops with the document still uploaded, it deletes it once before Edge closes.
+- `figures/`: `numbers.html`, `architecture.html`, `refusals.html`, `gauntlet.html` (a pure `render(t)`), `frame.html` (the caption bar), with the fonts embedded and the Marginalia tokens, in light and dark.
+- `gauntlet.py`: 22 `curl` calls against the live API with synthetic files (an empty file, PNG data named `.pdf`, a PDF header padded to 10 MiB plus one byte) and the encrypted, scanned and tracked-changes files that `backend/tests/fixtures/build.py` makes, read only. `count_lines.py`: the Code row. `encode_gif.py` and `trim_progress.py`: Pillow from `backend/.venv`.
+
+### Capture runs
+
+- Gauntlet, before any browser: ready on the first poll after 0.8 s, 22 calls, four documents and the session deleted with 204 each. No analysis ran.
+- Launch 1, `--render --session`, approved by Aryan after a preview of the five figure pages in the app's browser pane. The app answered ready after 13 s. One analysis of 24 categories finished after 47 s, status partial, band "Partial result. 6 categories were checked in part. View list has the details." Both DELETE calls answered 204. Console errors 0. 78 frames in 11 scenes. 18 Edge processes started, 18 closed.
+- Launch 2, `--render --label`, approved by Aryan, offline from local files. It redrew the figures and the captions after the visual check. 17 started, 17 closed. No profile folder was left.
+- Analyses used on the live app: 1 of the 2 allowed. The gauntlet calls count toward nothing.
+
+### Encode settings
+
+- `demo.gif`: 1200 by 804 (the 1440 by 900 frame at 1200 wide plus a 54 px caption bar), 14 frames a second, 6 blend frames between scenes on an ease-out quad curve, one 128 colour palette from a sample of every frame, unchanged pixels stored as transparent, loops to its first frame. 135 frames, 29.2 s, 6,873,654 bytes. The scroll of step 2 starts on the frame before it, so the two scenes join with a cut. The progress run drops the loading skeleton and ends before the frame in which the review finished, so the blend into the Reader carries the finish.
+- Tuning: 255 colours with 8 blend frames gave 7.55 MB, and 255 colours with the smoother curve gave 8.9 MB, over the 8 MB budget. 128 colours with 6 blend frames is 6.87 MB. The first curve tried, `cubic-bezier(.22,1,.36,1)`, put 53 percent of the change into the first blend frame and left the last two as copies, so it was replaced.
+- `gauntlet.gif`: 1200 by 720, 19.2 s, 255 colours, 1,054,146 bytes, light only. The page is a function of time, so the frames are exact and the last one is the empty first one.
+- Audit by measurement: the largest mean change between recorded frames is 10.9, in the eased scroll of step 2. Inside the progress run it is 0.06. The last frame of `demo.gif` is within 0.22 of the first. The largest blend step is 17.7. A contact sheet of every 10th frame was opened for both GIFs.
+
+### Checks
+
+- Every new and retaken image was opened. The Reader shots show the new wording, no loading or cold-start state, nothing cut off and only the fictional agreement. The first crop of the View list cut contract text at the right edge, so it was cut again at the document column.
+- The figure pages were previewed in the browser pane before launch 1, which found a dangling arrow under the last lane, a file card that clipped the longest name, and type that GitHub would shrink below legibility. The visual check then found a frontend bar at 2.3:1 on the paper (now 3.1:1), the wrong claim "nothing written to disk" in the architecture subtitle (now "no document written to disk"), and a session box that said it ends on Delete document (it ends when the last document is deleted). Text pairs in both themes are all at 4.5:1 or better.
+- Every local image path exists, every anchor in the link row resolves, both `<picture>` files exist for every themed image, and `docs/assets/readme/` is 14,970,625 bytes against a limit of 20 MB.
+- The claims table is `docs/app/ReadmeClaims.md`. A script matched every figure against its source file: 0 missing. The rows without a file are the baseline runs and the counts, which the second half of the file gives with their commands.
+- The Mermaid blocks follow the syntax rules and were not rendered here. They need one look on GitHub.
+
+### Reviews
+
+- YAGNI review of the scripts: the encoder lost an option nobody set (`dither`) and one it no longer used (`soften`), 8 lines, and its output stayed byte for byte the same. Left alone, because earlier parts record them: `--attach`, `--redo-start` and `--local` in `capture.mjs`, about 50 lines.
+- Jury on the README, four readers and one verdict. A recruiter on a 30 second skim: the title, the tagline, the GIF and the table carry it. An ML engineer on every figure: each matches its source, and the 68 frontend tests under 1-R are in this log. A frontend engineer on every image against the live app: the alt text of the Reader shots needed the new toolbar line, and it has it. A lawyer on advice: nothing reads as advice, and the Needs a lawyer wording is unchanged. Verdict: ship, after those fixes.
+- Copy passes in order, `copywriting`, `copy-editing`, then `stop-slop`, over the new prose: 9 edits, mostly an inanimate subject given a verb ("give" and "names" became "show" and "lists"), a few sentences made active, and the Code row split by language. No dash anywhere.
+
+### Tests
+
+- Frontend after the work: 179 passed. `pnpm typecheck`, `pnpm build` and `pnpm check:dist` pass (36 files).
+- Backend after the work: 1788 passed, 27 skipped, 1 warning, as before. The run's own timer reads 9:05:18 against 7 min 28 s at the start. The cause was not examined.
+
+### Scrubs
+
+| Check | Result |
+|---|---|
+| Attribution scrub (Rules section 1, as written) | no output |
+| Tool-name grep over `README.md`, `ReadmeClaims.md` and the added `Phases.md` lines | no output. A control string (`ponytail`) matched the pattern |
+| Dash scan, U+2013 and U+2014, with a control string | control found. 0 hits in `README.md`, `ReadmeClaims.md`, `Phases.md` and this file |
+
+Line ends: CRLF in `README.md`, `Phases.md` and this log. `ReadmeClaims.md` is new and uses the same.
+
+### Processes
+
+- Edge: 35 started and 35 closed over two launches, none left, closed by pid from the ledger and never by image name. Aryan's own browser was not touched. No server ran.
+- Not in the ledger: one `node` run for each launch, the `python` runs of the encoder and the checks, 22 `curl` calls, one `pytest` run and four `pnpm` runs. Each ran in the foreground or as one background job and exited on its own.
+
+### Seen and left alone
+
+- The workflow does not run the suites, so the badges for the test counts are the author's runs. The README now says so (limitation 10). Running the suites in CI is Aryan's call and is not on the roadmap.
+- The demo shows a review that ends partial. That is the 4-B.4 consequence, stated in limitation 4. The question text and the 64 token limit belong to the core.
+- `.handoff/readme_demo/capture.mjs` keeps the recovery flags of earlier parts.
+
+### Suggested commits
+
+1. `docs: retake the Reader shots after the wording fix`, body `Retake reader and reader-review from the live app that runs the 4-B.4 wording.` Files: `docs/assets/readme/reader-dark.png`, `docs/assets/readme/reader-light.png`, `docs/assets/readme/reader-review-dark.png` and `docs/assets/readme/reader-review-light.png`.
+2. `docs: rebuild the README with a live session, refusals and numbers`, body `Add a replayed demo, a numbered session, a refusal run, the numbers, diagrams and a claims table.` Files: `README.md`, `docs/app/BuildLog.md`, `docs/app/Phases.md`, `docs/app/ReadmeClaims.md`, `docs/assets/readme/architecture-dark.png`, `docs/assets/readme/architecture-light.png`, `docs/assets/readme/demo.gif`, `docs/assets/readme/gauntlet.gif`, `docs/assets/readme/numbers-dark.png`, `docs/assets/readme/numbers-light.png`, `docs/assets/readme/partial-dark.png`, `docs/assets/readme/partial-light.png`, `docs/assets/readme/refusals-dark.png` and `docs/assets/readme/refusals-light.png`.
+
+Next action: Aryan reads the README on GitHub, checks that both Mermaid diagrams draw, commits and pushes. Then 4-C.
